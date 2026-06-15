@@ -87,11 +87,65 @@ This document provides a comprehensive overview of all features implemented in t
 
 ---
 
-## 🏏 8. Sports Hub & Donors Directories (`app/(tabs)/sports.tsx`, `donors.tsx`)
-**Objective**: Context landing zones for village tournaments and donor details.
+## 🏏 8. Sports Hub: Cricket Player Onboarding & Feed (Phase 1)
+**Objective**: Build a premium sports community starting with Cricket Player Profiles, featuring a multi-step onboarding registration wizard, personal player cards, and a paginated list of all community players.
 
-*   **Sports Hub**: Landing tab for cricket tournament fixtures, player standings, and squad sheets.
-*   **Donors Directory**: Directory tab to track charitable contributions and community sponsors.
+*   **Initialization & State Verification**:
+    *   On screen mount, the app performs a silent check against the backend: `GET /sports/cricket/players/me`.
+    *   If a player profile is returned (`200 OK`), the Zustand store `registrations` is updated to cache the profile locally, ensuring instant loading next time.
+    *   If `404 Not Found` is returned, the local cache is cleared.
+*   **Opt-In / Just Browsing Toggle**:
+    *   Renders a full-screen welcome overlay (`SportsOptIn.tsx`) if the user is unregistered and has not yet completed/skipped onboarding (`seenOptIn` is false).
+    *   "Just Browsing" sets `seenOptIn` to true in the persistent Zustand store, transitioning to the Browser Feed.
+    *   Unregistered users in the Browser Feed see a premium green CTA banner (`SetupBanner.tsx`) prompting them to "Register as a Player".
+*   **3-Step Onboarding Stack (`app/sports/cricket/onboarding/`)**:
+    *   **Step 1 (Role Selection - `role.tsx`)**: Selected specialized role: `batsman`, `bowler`, `allrounder`, or `keeper`. The "Next" button remains disabled until a selection is confirmed.
+    *   **Step 2 (Play Style - `style.tsx`)**: Choose batting hand (Right/Left) and bowling arm/type (Right, Left, Spin, Fast, Medium). It applies dynamic form logic: if the user is a batsman/keeper, they can select "I don't bowl", which smoothly hides the bowling type options. If they are a bowler/all-rounder, bowling parameters are mandatory.
+    *   **Step 3 (Preview & Setup - `preview.tsx`)**: Renders a card preview. Clicking "Complete Setup" fires a `POST /sports/cricket/players/me` payload, updates the Zustand store with the backend profile, clears temporary onboarding memory, and redirects to the sports feed.
+*   **Premium Player Card (`CricketPlayerCard.tsx`)**:
+    *   Features a dark green linear gradient, radial glow highlights, a cricket watermark bat emoji, user avatar, specialized role badges, style summaries, and a grid displaying statistics.
+*   **Sub-Tabs Directory**:
+    *   Includes a horizontal tab selector bar (Players, Teams, Matches, Leaderboard) styled in Swabi green.
+    *   **Players Tab**: Displays the user's personal player card at the top (if registered), followed by a list of other players in the community.
+    *   **Teams, Matches, Leaderboard**: Renders custom `ComingSoonState` placeholders.
+*   **Paginated Player Feed**:
+    *   Fetches community players via infinite-scroll pagination (`GET /sports/cricket/players?page=N&limit=10`), appending items as the user scrolls.
+    *   Implements `RefreshControl` (pull-to-refresh) to sync the latest players and recheck the user's registration status.
+
+### 📊 Step-by-Step Flowchart
+
+```mermaid
+graph TD
+    Start[User Navigates to Sports Tab] --> CheckReg{Is Player Registered?}
+    CheckReg -- Yes --> ShowFeed[Render Player Feed with user's Player Card]
+    CheckReg -- No --> CheckSeen{Has Seen Opt-In?}
+    
+    CheckSeen -- No --> ShowOptIn[Display SportsOptIn Welcome Screen]
+    ShowOptIn --> OptRegister[Click 'Register'] --> StartOnboarding[Start Onboarding Flow]
+    ShowOptIn --> OptBrowse[Click 'Just Browsing'] --> SetSeenOptIn[Mark seenOptIn = true] --> ShowBrowser[Show Browser Feed with SetupBanner]
+    
+    CheckSeen -- Yes --> ShowBrowser
+    ShowBrowser --> ClickSetupBanner[Click 'Get Started'] --> StartOnboarding
+    
+    StartOnboarding --> Step1[Select Role: Batsman, Bowler, etc.]
+    Step1 --> Step2[Select Styles: Batting, Bowling]
+    Step2 --> Step3[Review Card Preview & Complete Setup]
+    Step3 --> API_POST[POST /api/v1/sports/cricket/players/me]
+    API_POST --> Success[Update Zustand registrations Store & Clear Onboarding Cache]
+    Success --> ShowFeed
+```
+
+### ⏭️ What's Next (Phase 2 Roadmap)
+- [ ] **Teams Module**: Support team registration, captain designations, player invitations, and squad acceptance requests.
+- [ ] **Matches & Schedules**: Render upcoming tournament fixture cards, calendar dates, ground locations, and live match score tracking interfaces.
+- [ ] **Leaderboards**: Compute runs, wickets, averages, and MVP standings dynamically, updating the Leaderboards directory in real-time.
+
+---
+
+## 💝 9. Donors Directory (`app/(tabs)/donors.tsx`)
+**Objective**: Context landing zones to highlight charitable contributions and community sponsors.
+
+*   **Registry Board**: List of active sponsors, project contributions, and donations.
 
 ---
 

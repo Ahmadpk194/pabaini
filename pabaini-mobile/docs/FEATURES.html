@@ -720,12 +720,12 @@
         </div>
       </div>
 
-      <!-- 8. Sports Hub & Donors Directories -->
+      <!-- 8. Sports Hub: Cricket Player Onboarding & Feed -->
       <div class="accordion-item" id="item-sports">
         <div class="accordion-header" onclick="toggleAccordion('item-sports')">
           <div class="accordion-header-left">
             <span class="accordion-icon">🏏</span>
-            <span class="accordion-title">Sports Hub & Donors Directories</span>
+            <span class="accordion-title">Sports Hub: Cricket Onboarding & Feed</span>
           </div>
           <div class="accordion-meta">
             <span class="badge badge-all">All Users</span>
@@ -734,18 +734,87 @@
         </div>
         <div class="accordion-content">
           <div class="content-body">
-            <p class="feature-objective">Objective: Virtual landing tabs grouping community activities (cricket tournaments fixtures) and tracking sponsor contributions.</p>
+            <p class="feature-objective">Objective: Build a premium sports section starting with Cricket Player Profiles, featuring a multi-step registration wizard, personal player cards, and a paginated list of all community players.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <!-- Onboarding Path -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Onboarding Wizard</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node active-node">1. Choose Role</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">2. Set Style Form</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">3. Card Preview</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">POST /players/me</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Sync Store & Redirect)</div>
+                
+                <!-- Feed Path -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Player Feed View</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Render user profile card</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">GET /players (Paginated)</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Render player list feed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="section-title">Technical Specifications</div>
             <ul class="feature-list-bullets">
-              <li><strong>Sports:</strong> Tab displaying team fixtures, player standings, tournament dates, and match sheets.</li>
-              <li><strong>Donors:</strong> Directory highlighting charitable projects and local community sponsor registries.</li>
-              <li><strong>Entry Points:</strong> <span class="tech-badge">app/(tabs)/sports.tsx</span>, <span class="tech-badge">donors.tsx</span>.</li>
+              <li><strong>Verification & Sync:</strong> App queries <span class="tech-badge">GET /sports/cricket/players/me</span> on mount to dynamically update Zustand local caching store (`registrations`). If 404 is returned, it handles it gracefully.</li>
+              <li><strong>Opt-In Overlay:</strong> Renders <span class="tech-badge">SportsOptIn.tsx</span> with circular icons, highlights, and buttons. "Just Browsing" sets <span class="tech-badge">seenOptIn</span> to true.</li>
+              <li><strong>Onboarding wizard stack:</strong>
+                <ul>
+                  <li>Step 1 (<span class="tech-badge">role.tsx</span>): Interactive spring-animated role cards (batsman, bowler, allrounder, keeper).</li>
+                  <li>Step 2 (<span class="tech-badge">style.tsx</span>): Batting and bowling details with dynamic layouts (bowlers must bowl; batsmen can select "I don't bowl" to hide bowling type options with ease-out layout animations).</li>
+                  <li>Step 3 (<span class="tech-badge">preview.tsx</span>): Preview of the premium player card + Axios profile post submittal.</li>
+                </ul>
+              </li>
+              <li><strong>Premium Player Card:</strong> Styled with <span class="tech-badge">expo-linear-gradient</span>, watermark bat, avatar, role badges, style rows, and static/placeholder stats grid.</li>
+              <li><strong>Community List & Pagination:</strong> Renders paginated listings (`GET /sports/cricket/players?page=N`) via infinite scrolling FlatList and RefreshControl.</li>
+              <li><strong>Next Steps (Phase 2):</strong> Teams registration & squad roster requests, upcoming match fixtures calendars, and MVP standings leaderboard calculators.</li>
+              <li><strong>Entry Points:</strong> <span class="tech-badge">app/(tabs)/sports.tsx</span>, <span class="tech-badge">app/sports/cricket/onboarding/</span>.</li>
             </ul>
           </div>
         </div>
       </div>
 
-      <!-- 9. Push Notifications -->
+      <!-- 9. Donors Directory -->
+      <div class="accordion-item" id="item-donors">
+        <div class="accordion-header" onclick="toggleAccordion('item-donors')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">💝</span>
+            <span class="accordion-title">Donors Directory</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Directory listing village donors, charitable project budgets, and community sponsors.</p>
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Sponsors board:</strong> Displays donor contributions, name listings, and projects highlights.</li>
+              <li><strong>Entry Points:</strong> <span class="tech-badge">app/(tabs)/donors.tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Push Notifications -->
       <div class="accordion-item" id="item-push">
         <div class="accordion-header" onclick="toggleAccordion('item-push')">
           <div class="accordion-header-left">
