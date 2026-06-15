@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pabaini Mobile - Feature & Flow Index</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #F4F6F5;
+      --surface-color: #FFFFFF;
+      --primary-color: #004D26;
+      --primary-dark: #00361A;
+      --primary-light: #1F4A2E;
+      --accent-color: #EAF3DE;
+      --accent-text: #27500A;
+      --text-main: #1A1A1A;
+      --text-secondary: #555855;
+      --border-color: #E2E5E2;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.06);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 32px 24px;
+      background: var(--surface-color);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .logo-badge {
+      display: inline-block;
+      background-color: var(--accent-color);
+      color: var(--accent-text);
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-top: 6px;
+    }
+
+    /* Accordion Container */
+    .accordion-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .accordion-item {
+      background: var(--surface-color);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .accordion-item:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Header styling with toggle trigger */
+    .accordion-header {
+      padding: 20px 24px;
+      background: var(--surface-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+
+    .accordion-header:hover {
+      background-color: #FAFBFB;
+    }
+
+    .accordion-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .accordion-icon {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .accordion-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .accordion-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    .badge-all {
+      background-color: var(--accent-color);
+      color: var(--accent-text);
+    }
+
+    .badge-admin {
+      background-color: #FCEBEB;
+      color: #791F1F;
+    }
+
+    .toggle-chevron {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--text-secondary);
+      transition: transform 0.2s;
+    }
+
+    .accordion-item.active .toggle-chevron {
+      transform: rotate(180deg);
+    }
+
+    /* Content styling (collapsed by default) */
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease-out;
+      border-top: 1px solid transparent;
+    }
+
+    .accordion-item.active .accordion-content {
+      max-height: 2500px; /* high limit to accommodate large content */
+      border-top-color: var(--border-color);
+    }
+
+    .content-body {
+      padding: 24px;
+    }
+
+    .feature-objective {
+      font-style: italic;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      border-left: 3.5px solid var(--primary-color);
+      padding-left: 12px;
+      font-size: 1rem;
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--primary-light);
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .feature-list-bullets {
+      margin-left: 4px;
+      margin-bottom: 24px;
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .feature-list-bullets li {
+      position: relative;
+      padding-left: 20px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .feature-list-bullets li::before {
+      content: "•";
+      color: var(--primary-color);
+      font-size: 1.3rem;
+      position: absolute;
+      left: 6px;
+      top: -2px;
+    }
+
+    .feature-list-bullets li strong {
+      color: var(--text-main);
+    }
+
+    .tech-badge {
+      font-family: monospace;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #444;
+    }
+
+    /* Diagrams & Flowcharts */
+    .flowchart-container {
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .swimlanes {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 600px;
+    }
+
+    .swimlane {
+      display: flex;
+      align-items: center;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      position: relative;
+    }
+
+    .swimlane-label {
+      width: 110px;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      border-right: 2px solid var(--accent-color);
+      padding-right: 12px;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .swimlane-steps {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+    }
+
+    .step-node {
+      background: var(--bg-color);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      max-width: 150px;
+    }
+
+    .step-node.active-node {
+      background: var(--accent-color);
+      border-color: var(--primary-color);
+      color: var(--accent-text);
+      font-weight: 600;
+    }
+
+    .step-arrow {
+      font-size: 1.2rem;
+      color: var(--primary-color);
+      font-weight: bold;
+      user-select: none;
+    }
+
+    /* Vertical Flow connection line (dotted) */
+    .vertical-connect {
+      text-align: center;
+      font-size: 1.2rem;
+      color: var(--primary-color);
+      line-height: 1;
+      margin: -10px 0;
+      font-weight: bold;
+    }
+
+    /* Footer styling */
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-badge">Mobile Engineering Docs</div>
+      <h1>Mobile Feature Directory</h1>
+      <p class="subtitle">Interactive list of screens, validation logic, and full-stack system flows</p>
+    </header>
+
+    <div class="accordion-list">
+      
+      <!-- 1. Authentication & OTP Flow -->
+      <div class="accordion-item" id="item-auth">
+        <div class="accordion-header" onclick="toggleAccordion('item-auth')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">🔑</span>
+            <span class="accordion-title">Authentication & Login Screen</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Secure login and registration using phone OTP verification or Google credentials, synced to PostgreSQL database via Firebase tokens.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <!-- Frontend Lane -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Frontend (Mobile)</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node active-node">Enter Phone No</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Enter 6-Digit SMS OTP</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Firebase returns ID Token</div>
+                  </div>
+                </div>
+                
+                <!-- Connection -->
+                <div class="vertical-connect">↓ (Forward HTTP Post)</div>
+                
+                <!-- Backend Lane -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Backend (API)</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Verify with Firebase Admin SDK</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Look up or Create User in PostgreSQL</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Generate & Return Profile JSON</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>OTP Code Resending:</strong> Renders countdown lock timer on Phone Screen to prevent multiple SMS requests.</li>
+              <li><strong>Authorization Token:</strong> The Firebase ID token is saved securely and attached as <span class="tech-badge">Authorization: Bearer Token</span> in every HTTP request header.</li>
+              <li><strong>Auth Entry Points:</strong> <span class="tech-badge">app/(auth)/login.tsx</span>, <span class="tech-badge">src/context/AuthContext.tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Onboarding Flow -->
+      <div class="accordion-item" id="item-onboarding">
+        <div class="accordion-header" onclick="toggleAccordion('item-onboarding')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">📱</span>
+            <span class="accordion-title">Post-Login Onboarding Gate</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">New Accounts</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Prevent accounts with incomplete details from accessing the app. Forces setup of Name and profile pictures.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <!-- Frontend Gate -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Startup Check</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Read Profile name</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Is empty? Route to profile-setup</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Select Avatar / Set Diaspora Toggle</div>
+                  </div>
+                </div>
+                
+                <!-- Connection -->
+                <div class="vertical-connect">↓ (Http Multipart POST)</div>
+                
+                <!-- Backend Lanes -->
+                <div class="swimlane">
+                  <div class="swimlane-label">Server Upload</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Upload raw image to Supabase Bucket</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Save URL & details to User Entity</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Refresh frontend session data</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Redirection Gate:</strong> Managed dynamically inside <span class="tech-badge">app/index.tsx</span>, checking name inputs.</li>
+              <li><strong>Image Handling:</strong> Utilizes <span class="tech-pill">expo-image-picker</span> for library retrieval. Automatically deletes Content-Type headers for FormData instances so boundaries can bind natively.</li>
+              <li><strong>Form Entry Points:</strong> <span class="tech-badge">app/(onboarding)/profile-setup.tsx</span>, API endpoint: <span class="tech-badge">POST /users/me/avatar</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Notice Board Feed -->
+      <div class="accordion-item" id="item-feed">
+        <div class="accordion-header" onclick="toggleAccordion('item-feed')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">📢</span>
+            <span class="accordion-title">Announcements Notice Feed</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Display notices grouped by category with support for pinning, landmark details, and optimistic likes.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <div class="swimlane">
+                  <div class="swimlane-label">Notices Feed</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node active-node">GET /announcements query</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Category Filter Bar selected</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Heart Like pressed</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Optimistic Mutation)</div>
+                
+                <div class="swimlane">
+                  <div class="swimlane-label">UI Sync</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Bounce heart scale animation</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Instant counter increment</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">POST /announcements/:id/like (Backend updates count)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Optimistic UI:</strong> Toggling likes updates the cache instantly before HTTP resolution, rolling back only on failure.</li>
+              <li><strong>Landmarks & Badges:</strong> Reads <span class="tech-badge">location</span> from announcements. Integrates a pushpin icon (`Pin` from `lucide-react-native`, rotated 45 degrees) inline with pinned notice titles.</li>
+              <li><strong>Feed Entry Points:</strong> <span class="tech-badge">app/(tabs)/index.tsx</span>, <span class="tech-badge">src/components/notice/AnnouncementCard.tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Settings Drawer Sheet -->
+      <div class="accordion-item" id="item-settings">
+        <div class="accordion-header" onclick="toggleAccordion('item-settings')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">⚙️</span>
+            <span class="accordion-title">Moderation Actions Settings Sheet</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-admin">Author / Admins / Mods</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Moderation actions sliding up from the bottom (Pin/Unpin notices, Soft Deleting notices) with proper roles gatekeeping.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <div class="swimlane">
+                  <div class="swimlane-label">Role Check</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Tap Ellipsis settings trigger</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Is Admin/Mod or Post Author?</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Open sliding bottom sheet</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Action Dispatch)</div>
+                
+                <div class="swimlane">
+                  <div class="swimlane-label">Moderation</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Pin (Admins/Mods) or Delete (Admins/Author)</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Set activeAction loading state</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">PATCH /announcements/:id - Refresh Feed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Granular Loading States:</strong> Employs an <span class="tech-badge">activeAction: 'pin' | 'delete' | null</span> state so only the clicked button activates a loading indicator, keeping the other action button disabled to block concurrent triggers.</li>
+              <li><strong>Soft Deletes:</strong> Backend flags <span class="tech-badge">is_deleted = true</span>, retaining PostgreSQL audit trails and preserving Supabase images.</li>
+              <li><strong>Drawer Entry Points:</strong> <span class="tech-badge">app/(tabs)/index.tsx</span>, Backend softDelete: <span class="tech-badge">PATCH /announcements/:id/soft-delete</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Create Announcement Screen -->
+      <div class="accordion-item" id="item-create">
+        <div class="accordion-header" onclick="toggleAccordion('item-create')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">📝</span>
+            <span class="accordion-title">Announcement Publishing</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-admin">Admin & Moderator Only</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Allow community leaders to publish new notices with validation limits, location landmarks, and photo attachments.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <div class="swimlane">
+                  <div class="swimlane-label">Form Inputs</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node active-node">Enter fields: Title, Content, Category, Location</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Attach optional Photo</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Click Post (Validation verified)</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Sequenced Submits)</div>
+                
+                <div class="swimlane">
+                  <div class="swimlane-label">Publishing</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">POST /announcements (Create record)</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">POST /announcements/:id/image (Upload Photo)</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">TanStack Invalidation & Redirect back</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Validation Rules:</strong> Title (3-100 chars), content (10-500 chars with interactive character counter).</li>
+              <li><strong>Photo handling:</strong> Renders a full width preview with an overlay X button to reset selection.</li>
+              <li><strong>Publishing Entry Points:</strong> <span class="tech-badge">app/announcement/create.tsx</span>, API endpoint: <span class="tech-badge">POST /announcements</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Native Share Sheet -->
+      <div class="accordion-item" id="item-share">
+        <div class="accordion-header" onclick="toggleAccordion('item-share')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">📤</span>
+            <span class="accordion-title">Native Share Sheet Integration</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Share announcements externally to installed mobile applications like WhatsApp, SMS, or Mail.</p>
+            
+            <div class="section-title">Step-by-Step Flowchart</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <div class="swimlane">
+                  <div class="swimlane-label">Share Press</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Tap share button in Feed or Details</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Trigger RN Share API</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Fetch device list (WhatsApp, Messenger, SMS, Mail)</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Action Dispatch)</div>
+                
+                <div class="swimlane">
+                  <div class="swimlane-label">Send payload</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">Format text payload with notice details</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">Embed placeholder link (https://pabaini.app)</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Open native system tray sheet</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Cross-Platform Compatibility:</strong> Uses React Native's built-in <span class="tech-badge">Share</span> module, which automatically calls the native OS share sheet (Android / iOS) without styling conflicts.</li>
+              <li><strong>Share Entry Points:</strong> <span class="tech-badge">app/(tabs)/index.tsx</span>, <span class="tech-badge">app/announcement/[id].tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Member Profile Screen -->
+      <div class="accordion-item" id="item-profile">
+        <div class="accordion-header" onclick="toggleAccordion('item-profile')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">👤</span>
+            <span class="accordion-title">Member Profile Screen</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Allow members to inspect database status parameters, update profile names, change diaspora residence states, or invoke logouts.</p>
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>User Details:</strong> Renders name, contact fields (phone/email), role badges (`resident`, `moderator`, `admin`), village origin, and diaspora labels.</li>
+              <li><strong>Edit Capabilities:</strong> Modifies text names and toggles diaspora switches, updating SQLite cache and dispatching API patches.</li>
+              <li><strong>Profile Entry Points:</strong> <span class="tech-badge">app/(tabs)/profile.tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Sports Hub & Donors Directories -->
+      <div class="accordion-item" id="item-sports">
+        <div class="accordion-header" onclick="toggleAccordion('item-sports')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">🏏</span>
+            <span class="accordion-title">Sports Hub & Donors Directories</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-all">All Users</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Virtual landing tabs grouping community activities (cricket tournaments fixtures) and tracking sponsor contributions.</p>
+            <div class="section-title">Technical Specifications</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Sports:</strong> Tab displaying team fixtures, player standings, tournament dates, and match sheets.</li>
+              <li><strong>Donors:</strong> Directory highlighting charitable projects and local community sponsor registries.</li>
+              <li><strong>Entry Points:</strong> <span class="tech-badge">app/(tabs)/sports.tsx</span>, <span class="tech-badge">donors.tsx</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Push Notifications -->
+      <div class="accordion-item" id="item-push">
+        <div class="accordion-header" onclick="toggleAccordion('item-push')">
+          <div class="accordion-header-left">
+            <span class="accordion-icon">🔔</span>
+            <span class="accordion-title">Push Notifications (Device Token Sync)</span>
+          </div>
+          <div class="accordion-meta">
+            <span class="badge badge-admin" style="background-color: #eef2f6; color: #1e293b; border: 1px solid #cbd5e1;">Partial: Token Active</span>
+            <span class="toggle-chevron">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content">
+          <div class="content-body">
+            <p class="feature-objective">Objective: Enforce device token registration hooks to link dynamic FCM targets to users, creating the scaffolding for background alerts.</p>
+            
+            <div class="section-title">Device Token Registration Flow (Completed)</div>
+            
+            <div class="flowchart-container">
+              <div class="swimlanes">
+                <div class="swimlane">
+                  <div class="swimlane-label">Login Flow</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node active-node">firebase.onAuthStateChanged</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">requestPermission()</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">getToken() FCM Registration</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">POST /users/device-token</div>
+                  </div>
+                </div>
+                
+                <div class="vertical-connect">↓ (Token rotates or User logs out)</div>
+                
+                <div class="swimlane">
+                  <div class="swimlane-label">Logout Flow</div>
+                  <div class="swimlane-steps">
+                    <div class="step-node">onTokenRefresh() fires OR User Logouts</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node active-node">DELETE /users/device-token</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">Clear secure token cache</div>
+                    <span class="step-arrow">➔</span>
+                    <div class="step-node">firebase.signOut()</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Technical Specifications & Handlers Status</div>
+            <ul class="feature-list-bullets">
+              <li><strong>Status: PARTIALLY IMPLEMENTED (Token Registration Active)</strong></li>
+              <li><strong>Completed Features:</strong> Device token extraction, permission verification, server POST/DELETE registration, and FCM token refresh listener updates.</li>
+              <li><strong>TODO / Incomplete (Notification Handlers):</strong>
+                <ul>
+                  <li>Firebase Console registration and credential linking.</li>
+                  <li>Foreground overlay alerts using <span class="tech-badge">messaging().onMessage()</span>.</li>
+                  <li>Background tray message handling using <span class="tech-badge">messaging().setBackgroundMessageHandler()</span>.</li>
+                  <li>Deep link parsing on notice tap using <span class="tech-badge">onNotificationOpenedApp()</span> and <span class="tech-badge">getInitialNotification()</span>.</li>
+                </ul>
+              </li>
+              <li><strong>Database Policy:</strong> Tokens are registered per-user. The backend must clear outdated or invalid tokens dynamically when Firebase API reports expired registration errors.</li>
+              <li><strong>Entry Points:</strong> <span class="tech-badge">src/context/AuthContext.tsx</span>, API: <span class="tech-badge">/users/device-token</span>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <p>© 2026 Pabaini Village Portal project. Created with pairing guidelines.</p>
+    </footer>
+  </div>
+
+  <script>
+    function toggleAccordion(itemId) {
+      const item = document.getElementById(itemId);
+      const isActive = item.classList.contains('active');
+      
+      // Close all items
+      document.querySelectorAll('.accordion-item').forEach(el => {
+        el.classList.remove('active');
+      });
+      
+      // Open clicked item if it was closed
+      if (!isActive) {
+        item.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>
