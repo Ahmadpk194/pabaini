@@ -176,8 +176,8 @@ export class AnnouncementsService {
   async softDelete(id: number, user: User): Promise<void> {
     const announcement = await this.findById(id);
 
-    // Only author or admin/moderator can delete
-    if (announcement.author_id !== user.id && user.role !== 'admin' && user.role !== 'moderator') {
+    // Only author or admin can delete
+    if (announcement.author_id !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You can only delete your own announcements');
     }
 
@@ -256,10 +256,13 @@ export class AnnouncementsService {
         },
       });
 
+      let likedByMe = false;
+
       if (existingLike) {
         // Unlike: remove the like record and decrement counter
         await transactionalEntityManager.delete(AnnouncementLike, existingLike.id);
         announcement.likes_count = Math.max(0, announcement.likes_count - 1);
+        likedByMe = false; // User unliked
       } else {
         // Like: create like record and increment counter
         // Try to insert, if duplicate key violation occurs, it means another request already created it
@@ -270,6 +273,7 @@ export class AnnouncementsService {
           });
           await transactionalEntityManager.save(like);
           announcement.likes_count += 1;
+          likedByMe = true; // User liked
         } catch (error: any) {
           // Handle duplicate key violation (race condition)
           if (error.code === '23505' || error.detail?.includes('already exists')) {
@@ -282,7 +286,11 @@ export class AnnouncementsService {
             });
             if (newlyCreatedLike) {
               // Like already exists, just return the announcement without incrementing
-              return announcement;
+              likedByMe = true; // User liked (by another request)
+              return {
+                ...announcement,
+                liked_by_me: likedByMe,
+              } as any;
             }
           }
           throw error;
@@ -290,7 +298,12 @@ export class AnnouncementsService {
       }
 
       await transactionalEntityManager.save(announcement);
-      return announcement;
+      
+      // Add liked_by_me field to the response (determined within transaction)
+      return {
+        ...announcement,
+        liked_by_me: likedByMe,
+      } as any;
     });
   }
 
@@ -317,7 +330,7 @@ export class AnnouncementsService {
           }
         } catch (error) {
           // Log warning but don't block the upload
-          console.warn(`Failed to delete old announcement image: ${error.message}`);
+          console.warn(`Failed to delete old announcement image: ${error}`);
         }
       }
 

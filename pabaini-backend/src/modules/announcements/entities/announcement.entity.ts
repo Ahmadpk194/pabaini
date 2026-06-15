@@ -51,6 +51,9 @@ export class Announcement {
     @Column({ default: false })
     is_deleted!: boolean;
 
+    @Column({ nullable: true })
+    location?: string;
+
     @Column()
     author_id!: number;
 

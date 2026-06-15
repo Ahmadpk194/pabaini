@@ -24,7 +24,6 @@ export class FCMService {
 
     try {
       const response = await getMessaging().sendEachForMulticast(message);
-      console.log(`Successfully sent ${response.successCount} messages, failed ${response.failureCount}`);
     } catch (error) {
       console.error('Error sending push notification:', error);
       throw error;

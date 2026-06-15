@@ -8,7 +8,7 @@ export class DatabaseHealthService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.dataSource.query('SELECT 1');
-      console.log('🟢 Database connected successfully (Supabase)');
+      console.log('✅ Database connected successfully');
     } catch (err) {
       console.error('❌ Database connection failed:', err);
     }

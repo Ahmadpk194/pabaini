@@ -23,4 +23,8 @@ export class UpdateAnnouncementDto {
     @IsOptional()
     @IsBoolean()
     is_pinned?: boolean;
+
+    @IsOptional()
+    @IsString()
+    location?: string;
 }

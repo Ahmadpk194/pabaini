@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pabaini Backend API Reference Guide</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #F4F6F5;
+      --surface-color: #FFFFFF;
+      --primary-color: #004D26;
+      --primary-dark: #00361A;
+      --primary-light: #1F4A2E;
+      --accent-color: #EAF3DE;
+      --accent-text: #27500A;
+      --text-main: #1f2937;
+      --text-secondary: #4b5563;
+      --border-color: #E2E5E2;
+      --tag-get: #10b981;
+      --tag-post: #3b82f6;
+      --tag-patch: #f59e0b;
+      --tag-delete: #ef4444;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.06);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+
+    .logo-badge {
+      display: inline-block;
+      background-color: var(--accent-color);
+      color: var(--accent-text);
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: -0.025em;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      margin-top: 6px;
+    }
+
+    /* Stats Dashboard */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary-color);
+    }
+
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Base Config Block */
+    .base-config {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+      color: white;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .base-config h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .base-config p {
+      font-family: monospace;
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin: 4px 0;
+    }
+
+    /* Filter Tools Row (Tabs + Search) */
+    .filter-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .tabs-container {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary-color);
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+    }
+
+    .tab-badge {
+      font-size: 0.75rem;
+      background-color: var(--border-color);
+      color: var(--text-main);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+    }
+
+    .tab-btn.active .tab-badge {
+      background-color: var(--accent-color);
+      color: var(--primary-color);
+    }
+
+    .search-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      font-size: 0.95rem;
+      background: var(--surface-color);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--accent-color);
+    }
+
+    /* Swimlanes Workflows CSS Visualizer */
+    .workflows-section {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .workflows-header {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 8px;
+    }
+
+    .flow-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .flow-btn {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .flow-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .flow-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .flow-panel.active {
+      display: block;
+    }
+
+    .swimlanes {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    .swimlane {
+      display: flex;
+      align-items: center;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      min-width: 700px;
+    }
+
+    .swimlane-label {
+      width: 120px;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      border-right: 2px solid var(--accent-color);
+      padding-right: 12px;
+      margin-right: 20px;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+
+    .swimlane-steps {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+    }
+
+    .step-node {
+      background: var(--surface-color);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      max-width: 160px;
+      flex: 1;
+    }
+
+    .step-node.active-node {
+      background: var(--accent-color);
+      border-color: var(--primary-color);
+      color: var(--accent-text);
+      font-weight: 600;
+    }
+
+    .step-arrow {
+      font-size: 1.2rem;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .vertical-connect {
+      text-align: center;
+      font-size: 1.3rem;
+      color: var(--primary-color);
+      line-height: 1;
+      margin: -10px 0;
+      font-weight: bold;
+    }
+
+    /* Endpoint Card Details */
+    .endpoint-card {
+      background-color: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .endpoint-card.hidden {
+      display: none !important;
+    }
+
+    .endpoint-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .method-tag {
+      font-weight: 800;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 6px;
+      color: white;
+      letter-spacing: 0.05em;
+    }
+
+    .GET { background-color: var(--tag-get); }
+    .POST { background-color: var(--tag-post); }
+    .PATCH { background-color: var(--tag-patch); }
+    .DELETE { background-color: var(--tag-delete); }
+    
+    .path-text {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #111827;
+    }
+
+    .btn-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      align-items: center;
+    }
+
+    .btn-action {
+      background: none;
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-action:hover {
+      background-color: var(--accent-color);
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .auth-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    .auth-protected {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .auth-public {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .auth-admin {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--primary-light);
+      margin-top: 22px;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    ul.headers-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+      font-family: monospace;
+      font-size: 0.85rem;
+      background-color: var(--bg-color);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Param Tables */
+    .parameter-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+    }
+
+    .parameter-table th, .parameter-table td {
+      border: 1px solid var(--border-color);
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    .parameter-table th {
+      background-color: var(--bg-color);
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* Tabbed Code Panels */
+    .snippet-tabs {
+      display: flex;
+      gap: 4px;
+      background: transparent;
+      padding: 0 4px;
+      margin-top: 14px;
+      margin-bottom: 0;
+    }
+
+    .snippet-tab-btn {
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .snippet-tab-btn:hover {
+      color: var(--primary-color);
+    }
+
+    .snippet-tab-btn.active {
+      background: #1f2937;
+      color: #ffffff;
+    }
+
+    .code-container {
+      border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+      overflow: hidden;
+    }
+
+    pre {
+      background-color: #1f2937;
+      color: #f9fafb;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0;
+      display: none;
+    }
+
+    pre.active {
+      display: block;
+    }
+
+    details.request-details, details.response-details, details.snippet-details {
+      margin-top: 18px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--surface-color);
+      overflow: hidden;
+    }
+
+    details.request-details[open], details.response-details[open], details.snippet-details[open] {
+      box-shadow: var(--shadow-sm);
+    }
+
+    summary.request-summary, summary.response-summary, summary.snippet-summary {
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      cursor: pointer;
+      background-color: var(--bg-color);
+      user-select: none;
+      outline: none;
+      transition: background-color 0.2s;
+    }
+
+    summary.request-summary:hover, summary.response-summary:hover, summary.snippet-summary:hover {
+      background-color: var(--border-color);
+    }
+
+    details.request-details .code-container, details.response-details .code-container, details.snippet-details .code-container {
+      border: none;
+      border-radius: 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <header>
+    <div class="logo-badge">NestJS API Reference docs</div>
+    <h1>Pabaini Backend API Guide</h1>
+    <p class="subtitle">Complete visual map and interactive references for core database sync operations</p>
+  </header>
+
+  <!-- Stats Dashboard -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="value">16</div>
+      <div class="label">Total Endpoints</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">1</div>
+      <div class="label">Auth Module</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">6</div>
+      <div class="label">Users Module</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">9</div>
+      <div class="label">Announcements</div>
+    </div>
+  </div>
+
+  <div class="base-config">
+    <h3>Connection Abstractions</h3>
+    <p><strong>Base API URL (Local):</strong> http://localhost:3000/api/v1</p>
+    <p><strong>Base API URL (Android Loopback):</strong> http://10.0.2.2:3000/api/v1</p>
+  </div>
+
+  <!-- Interactive Swimlanes Workflows -->
+  <section class="workflows-section">
+    <h3 class="workflows-header">Core Full-Stack Workflows</h3>
+    
+    <div class="flow-selector">
+      <button class="flow-btn active" onclick="selectFlow('flow-auth', this)">1. Firebase Authentication Sync</button>
+      <button class="flow-btn" onclick="selectFlow('flow-upload', this)">2. Notice Image Attachment Flow</button>
+      <button class="flow-btn" onclick="selectFlow('flow-delete', this)">3. Access Controlled soft-delete</button>
+    </div>
+
+    <!-- Auth Flow -->
+    <div class="flow-panel active" id="flow-auth">
+      <div class="swimlanes">
+        <div class="swimlane">
+          <div class="swimlane-label">Client App</div>
+          <div class="swimlane-steps">
+            <div class="step-node active-node">SMS OTP Verification</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">Retrieve Firebase ID Token</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">POST /auth/login with token</div>
+          </div>
+        </div>
+        <div class="vertical-connect">↓ (Validates token authenticity)</div>
+        <div class="swimlane">
+          <div class="swimlane-label">NestJS Server</div>
+          <div class="swimlane-steps">
+            <div class="step-node">Resolve UID via Firebase SDK</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">Database search/create User</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">Return Envelope & Session</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Flow -->
+    <div class="flow-panel" id="flow-upload">
+      <div class="swimlanes">
+        <div class="swimlane">
+          <div class="swimlane-label">Client App</div>
+          <div class="swimlane-steps">
+            <div class="step-node active-node">POST /announcements (create text)</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">Receive record ID</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">POST /announcements/:id/image</div>
+          </div>
+        </div>
+        <div class="vertical-connect">↓ (Processes multipart form)</div>
+        <div class="swimlane">
+          <div class="swimlane-label">NestJS Server</div>
+          <div class="swimlane-steps">
+            <div class="step-node">Validate role ownership</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">Write asset to Supabase Storage</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">Update DB location & image URL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Flow -->
+    <div class="flow-panel" id="flow-delete">
+      <div class="swimlanes">
+        <div class="swimlane">
+          <div class="swimlane-label">Client Card</div>
+          <div class="swimlane-steps">
+            <div class="step-node">User presses Ellipsis trigger</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">Is User Author or Admin?</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">PATCH /announcements/:id/soft-delete</div>
+          </div>
+        </div>
+        <div class="vertical-connect">↓ (Validates role logic)</div>
+        <div class="swimlane">
+          <div class="swimlane-label">NestJS Server</div>
+          <div class="swimlane-steps">
+            <div class="step-node">Guard blocks moderator roles</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node active-node">Set is_deleted = true in DB</div>
+            <span class="step-arrow">➔</span>
+            <div class="step-node">Return 200 OK (Preserve asset files)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter Tools -->
+  <div class="filter-tools">
+    <div class="tabs-container">
+      <button class="tab-btn active" id="tab-all" onclick="filterCategory('all')">
+        All Endpoints <span class="tab-badge">16</span>
+      </button>
+      <button class="tab-btn" id="tab-auth" onclick="filterCategory('auth')">
+        Auth Module <span class="tab-badge">1</span>
+      </button>
+      <button class="tab-btn" id="tab-users" onclick="filterCategory('users')">
+        Users Module <span class="tab-badge">6</span>
+      </button>
+      <button class="tab-btn" id="tab-announcements" onclick="filterCategory('announcements')">
+        Announcements Module <span class="tab-badge">9</span>
+      </button>
+    </div>
+
+    <div class="search-container">
+      <input type="text" id="search-input" class="search-input" placeholder="Search by route pattern, method, description..." oninput="applyFilters()">
+    </div>
+  </div>
+
+  <!-- Endpoints List -->
+  <div id="endpoints-list">
+    
+    <!-- Endpoint 1 (Auth) -->
+    <div class="endpoint-card" data-category="auth" data-path="/auth/login" data-desc="firebase sign-in user registration login authentication">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/auth/login</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/auth/login')">Copy Route</button>
+        </div>
+      </div>
+      <p>Validates Firebase ID token signature. Automatically registers the user profile in PostgreSQL database if logging in for the first time.</p>
+      
+      <div class="section-title">Headers</div>
+      <ul class="headers-list">
+        <li>Content-Type: application/json</li>
+      </ul>
+
+      <div class="section-title">Request Inputs</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>id_token</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>FCM auth token payload passed from client verification.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "id_token": "YOUR_FIREBASE_ID_TOKEN"
+}</code></pre>
+        </div>
+      </details>
+
+      <!-- Snippets -->
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"id_token": "YOUR_FIREBASE_ID_TOKEN"}'</code></pre>
+        <pre class="axios"><code>axios.post('http://localhost:3000/api/v1/auth/login', {
+  id_token: 'YOUR_FIREBASE_ID_TOKEN'
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (201 Created)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 201,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": 1,
+      "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
+      "phone": "+923001234567",
+      "email": "resident@gmail.com",
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/1.jpg",
+      "village": "Pabaini",
+      "is_diaspora": false,
+      "role": "resident",
+      "created_at": "2026-06-12T01:10:00.000Z",
+      "updated_at": "2026-06-12T01:10:00.000Z"
+    }
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 2 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/me" data-desc="fetch user profile details token">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/users/me</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/me')">Copy Route</button>
+        </div>
+      </div>
+      <p>Fetches settings, role classification, and credentials associated with the authenticated user token.</p>
+      
+      <div class="section-title">Headers</div>
+      <ul class="headers-list">
+        <li>Authorization: Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</li>
+      </ul>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X GET http://localhost:3000/api/v1/users/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</code></pre>
+        <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/users/me', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
+    "phone": "+923001234567",
+    "email": "resident@gmail.com",
+    "name": "Ahmad Pabaini",
+    "avatar_url": "https://supabase-bucket/avatars/1.jpg",
+    "village": "Pabaini",
+    "is_diaspora": false,
+    "role": "resident",
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-12T01:10:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 3 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/me" data-desc="patch update user profile details">
+      <div class="endpoint-header">
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/users/me</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/me')">Copy Route</button>
+        </div>
+      </div>
+      <p>Updates customizable profile values for the authenticated user session.</p>
+
+      <div class="section-title">Request Inputs (Body JSON)</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>name</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Profile name (3-50 characters).</td>
+          </tr>
+          <tr>
+            <td>is_diaspora</td>
+            <td>boolean</td>
+            <td>No</td>
+            <td>Toggle showing if user resides abroad.</td>
+          </tr>
+          <tr>
+            <td>village</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Target village details.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "name": "New Name",
+  "is_diaspora": true,
+  "village": "Pabaini"
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X PATCH http://localhost:3000/api/v1/users/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "New Name", "is_diaspora": true}'</code></pre>
+        <pre class="axios"><code>axios.patch('http://localhost:3000/api/v1/users/me', {
+  name: 'New Name',
+  is_diaspora: true
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Profile updated successfully",
+  "data": {
+    "id": 1,
+    "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
+    "phone": "+923001234567",
+    "email": "resident@gmail.com",
+    "name": "New Name",
+    "avatar_url": "https://supabase-bucket/avatars/1.jpg",
+    "village": "Pabaini",
+    "is_diaspora": true,
+    "role": "resident",
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-15T15:00:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 4 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/me/avatar" data-desc="post avatar upload image profile">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/users/me/avatar</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/me/avatar')">Copy Route</button>
+        </div>
+      </div>
+      <p>Accepts a single image file via multipart form-data, uploads to Supabase storage, and binds the public URL to user metadata.</p>
+
+      <div class="section-title">Form Data Fields</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>avatar</strong></td>
+            <td>File</td>
+            <td>Yes</td>
+            <td>Raw image asset file (JPEG/PNG).</td>
+          </tr>
+        </tbody>
+      </table>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/users/me/avatar \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -F "avatar=@/path/to/image.jpg"</code></pre>
+        <pre class="axios"><code>const formData = new FormData();
+formData.append('avatar', fileObject);
+axios.post('http://localhost:3000/api/v1/users/me/avatar', formData, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (201 Created)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 201,
+  "data": {
+    "id": 1,
+    "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
+    "phone": "+923001234567",
+    "email": "resident@gmail.com",
+    "name": "New Name",
+    "avatar_url": "https://supabase-bucket/avatars/firebase-uid-timestamp.png",
+    "village": "Pabaini",
+    "is_diaspora": true,
+    "role": "resident",
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-15T15:10:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 5 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/:id/role" data-desc="patch role assignment admin elevation">
+      <div class="endpoint-header">
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/users/:id/role</span>
+        <span class="auth-badge auth-admin">Admin Only</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/:id/role')">Copy Route</button>
+        </div>
+      </div>
+      <p>Elevates users' permission roles. Restricted strictly to admin accounts.</p>
+
+      <div class="section-title">Request Inputs</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>role</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Target role assignment (`resident`, `moderator`, `admin`).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "role": "moderator"
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X PATCH http://localhost:3000/api/v1/users/5/role \
+  -H "Authorization: Bearer ADMIN_FIREBASE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "moderator"}'</code></pre>
+        <pre class="axios"><code>axios.patch('http://localhost:3000/api/v1/users/5/role', {
+  role: 'moderator'
+}, {
+  headers: { Authorization: 'Bearer ADMIN_FIREBASE_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 5,
+    "firebase_uid": "USER_FIREBASE_UID_HERE",
+    "phone": "+923009876543",
+    "email": "moderator@gmail.com",
+    "name": "User Name",
+    "avatar_url": null,
+    "village": "Pabaini",
+    "is_diaspora": false,
+    "role": "moderator",
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-15T15:20:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 6 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/device-token" data-desc="post fcm token register notification push">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/users/device-token</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/device-token')">Copy Route</button>
+        </div>
+      </div>
+      <p>Binds/saves an FCM token to the user record to support target push message deliveries.</p>
+
+      <div class="section-title">Request Body</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>token</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Target FCM token value.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "token": "FCM_REGISTRATION_TOKEN"
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/users/device-token \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "FCM_REGISTRATION_TOKEN"}'</code></pre>
+        <pre class="axios"><code>axios.post('http://localhost:3000/api/v1/users/device-token', {
+  token: 'FCM_REGISTRATION_TOKEN'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (201 Created)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 201,
+  "data": {
+    "success": true
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 7 (Users) -->
+    <div class="endpoint-card" data-category="users" data-path="/users/device-token" data-desc="delete fcm token remove notification clean">
+      <div class="endpoint-header">
+        <span class="method-tag DELETE">DELETE</span>
+        <span class="path-text">/api/v1/users/device-token</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/users/device-token')">Copy Route</button>
+        </div>
+      </div>
+      <p>Removes device tokens from database user profiles on logouts to prevent duplicate notification states.</p>
+
+      <div class="section-title">Request Body</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>token</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>The FCM registration token to remove.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "token": "FCM_REGISTRATION_TOKEN"
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X DELETE http://localhost:3000/api/v1/users/device-token \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "FCM_REGISTRATION_TOKEN"}'</code></pre>
+        <pre class="axios"><code>axios.delete('http://localhost:3000/api/v1/users/device-token', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' },
+  data: { token: 'FCM_REGISTRATION_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "data": {
+    "success": true
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 8 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements" data-desc="get announcements feed list categories category page limit location">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/announcements</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements')">Copy Route</button>
+        </div>
+      </div>
+      <p>Retrieves all notices. Orders pinned posts first and supports page pagination filters.</p>
+
+      <div class="section-title">Query Parameters</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Param</th>
+            <th>Type</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>page</td>
+            <td>integer</td>
+            <td>1</td>
+            <td>Target page offset.</td>
+          </tr>
+          <tr>
+            <td>limit</td>
+            <td>integer</td>
+            <td>10</td>
+            <td>Total items queried per page.</td>
+          </tr>
+          <tr>
+            <td>category</td>
+            <td>string</td>
+            <td>-</td>
+            <td>Filters: `general`, `urgent`, `event`, `jirga_decision`.</td>
+          </tr>
+        </tbody>
+      </table>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent"</code></pre>
+        <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/announcements', {
+  params: {
+    page: 1,
+    limit: 10,
+    category: 'urgent'
+  }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcements retrieved successfully",
+  "data": [
+    {
+      "id": 12,
+      "title": "Jirga Announcement",
+      "content": "Decisions on local water supply rules.",
+      "category": "jirga_decision",
+      "image_url": "https://supabase-bucket/announcements/notice.jpg",
+      "likes_count": 8,
+      "liked_by_me": false,
+      "is_pinned": true,
+      "location": "Pabaini Hujra",
+      "author_id": 1,
+      "author": {
+        "id": 1,
+        "name": "Admin Leader",
+        "avatar_url": "https://supabase-bucket/avatars/1.jpg"
+      },
+      "created_at": "2026-06-12T01:10:00.000Z",
+      "updated_at": "2026-06-12T01:10:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 2
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+    </div>
+
+    <!-- Endpoint 9 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/author/:authorId" data-desc="get announcements by author user">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/announcements/author/:authorId</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/author/:authorId')">Copy Route</button>
+        </div>
+      </div>
+      <p>Queries feed entries restricted strictly to a specific author ID.</p>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X GET http://localhost:3000/api/v1/announcements/author/1</code></pre>
+        <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/announcements/author/1');</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcements retrieved successfully",
+  "data": [
+    {
+      "id": 12,
+      "title": "Jirga Announcement",
+      "content": "Decisions on local water supply rules.",
+      "category": "jirga_decision",
+      "image_url": "https://supabase-bucket/announcements/notice.jpg",
+      "likes_count": 8,
+      "liked_by_me": false,
+      "is_pinned": true,
+      "location": "Pabaini Hujra",
+      "author_id": 1,
+      "author": {
+        "id": 1,
+        "name": "Admin Leader",
+        "avatar_url": "https://supabase-bucket/avatars/1.jpg"
+      },
+      "created_at": "2026-06-12T01:10:00.000Z",
+      "updated_at": "2026-06-12T01:10:00.000Z"
+    }
+  ]
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 10 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id" data-desc="get single announcement details">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/announcements/:id</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id')">Copy Route</button>
+        </div>
+      </div>
+      <p>Fetch complete details of a single notice by ID.</p>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X GET http://localhost:3000/api/v1/announcements/12</code></pre>
+        <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/announcements/12');</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcement retrieved successfully",
+  "data": {
+    "id": 12,
+    "title": "Jirga Announcement",
+    "content": "Decisions on local water supply rules.",
+    "category": "jirga_decision",
+    "image_url": "https://supabase-bucket/announcements/notice.jpg",
+    "likes_count": 8,
+    "liked_by_me": false,
+    "is_pinned": true,
+    "location": "Pabaini Hujra",
+    "author_id": 1,
+    "author": {
+      "id": 1,
+      "name": "Admin Leader",
+      "avatar_url": "https://supabase-bucket/avatars/1.jpg"
+    },
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-12T01:10:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 11 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements" data-desc="post create announcement notice body location">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/announcements</span>
+        <span class="auth-badge auth-protected">Admins & Mods</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements')">Copy Route</button>
+        </div>
+      </div>
+      <p>Creates text details for notices. Requires Admin or Moderator roles.</p>
+
+      <div class="section-title">Request Body inputs</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>title</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Title (3-100 characters).</td>
+          </tr>
+          <tr>
+            <td><strong>content</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Message description (10-500 characters).</td>
+          </tr>
+          <tr>
+            <td><strong>category</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>One of the 4 valid categories.</td>
+          </tr>
+          <tr>
+            <td>location</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Optional landmark descriptive location text.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "title": "Jirga",
+  "content": "Assembly at Hujra.",
+  "category": "jirga_decision",
+  "location": "Pabaini Hujra"
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/announcements \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Jirga", "content": "Assembly at Hujra.", "category": "jirga_decision", "location": "Pabaini Hujra"}'</code></pre>
+        <pre class="axios"><code>axios.post('http://localhost:3000/api/v1/announcements', {
+  title: 'Jirga',
+  content: 'Assembly at Hujra.',
+  category: 'jirga_decision',
+  location: 'Pabaini Hujra'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (201 Created)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 201,
+  "message": "Announcement created successfully",
+  "data": {
+    "id": 13,
+    "title": "Jirga",
+    "content": "Assembly at Hujra.",
+    "category": "jirga_decision",
+    "image_url": null,
+    "likes_count": 0,
+    "is_pinned": false,
+    "location": "Pabaini Hujra",
+    "author_id": 1,
+    "created_at": "2026-06-15T15:00:00.000Z",
+    "updated_at": "2026-06-15T15:00:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 12 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id" data-desc="patch update edit announcement location">
+      <div class="endpoint-header">
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/announcements/:id</span>
+        <span class="auth-badge auth-protected">Author/Admins/Mods</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id')">Copy Route</button>
+        </div>
+      </div>
+      <p>Updates specific values in an existing announcement. Gatekept to post author, admin, or moderators.</p>
+
+      <div class="section-title">Request Inputs (Body JSON)</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>title</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Notice title (3-100 characters).</td>
+          </tr>
+          <tr>
+            <td>content</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Message description (10-500 characters).</td>
+          </tr>
+          <tr>
+            <td>category</td>
+            <td>string</td>
+            <td>No</td>
+            <td>One of the 4 valid categories.</td>
+          </tr>
+          <tr>
+            <td>location</td>
+            <td>string</td>
+            <td>No</td>
+            <td>Landmark descriptive location text.</td>
+          </tr>
+          <tr>
+            <td>is_pinned</td>
+            <td>boolean</td>
+            <td>No</td>
+            <td>Sets if announcement is pinned.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "title": "Updated Title",
+  "is_pinned": true
+}</code></pre>
+        </div>
+      </details>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X PATCH http://localhost:3000/api/v1/announcements/13 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Updated Title", "is_pinned": true}'</code></pre>
+        <pre class="axios"><code>axios.patch('http://localhost:3000/api/v1/announcements/13', {
+  title: 'Updated Title',
+  is_pinned: true
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcement updated successfully",
+  "data": {
+    "id": 13,
+    "title": "Updated Title",
+    "content": "Assembly at Hujra.",
+    "category": "jirga_decision",
+    "image_url": null,
+    "likes_count": 0,
+    "is_pinned": true,
+    "location": "Pabaini Hujra",
+    "author_id": 1,
+    "created_at": "2026-06-15T15:00:00.000Z",
+    "updated_at": "2026-06-15T15:05:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 13 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id/soft-delete" data-desc="patch soft delete remove notices author admin">
+      <div class="endpoint-header">
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/announcements/:id/soft-delete</span>
+        <span class="auth-badge auth-protected" style="background-color: #fef3c7; color: #92400e;">Author & Admins Only</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id/soft-delete')">Copy Route</button>
+        </div>
+      </div>
+      <p>Soft deletes a notice by setting `is_deleted = true`. Image uploads are retained in Supabase storage to support administrative audit recovery. Moderators are restricted from soft-deleting other people's posts.</p>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X PATCH http://localhost:3000/api/v1/announcements/12/soft-delete \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</code></pre>
+        <pre class="axios"><code>axios.patch('http://localhost:3000/api/v1/announcements/12/soft-delete', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcement deleted successfully",
+  "data": null
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 14 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id" data-desc="delete hard permanent announcement admin">
+      <div class="endpoint-header">
+        <span class="method-tag DELETE">DELETE</span>
+        <span class="path-text">/api/v1/announcements/:id</span>
+        <span class="auth-badge auth-admin">Admin Only</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id')">Copy Route</button>
+        </div>
+      </div>
+      <p>Permanently purges the announcement database record and deletes the media asset from Supabase Storage. Restricted exclusively to Admins.</p>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X DELETE http://localhost:3000/api/v1/announcements/13 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</code></pre>
+        <pre class="axios"><code>axios.delete('http://localhost:3000/api/v1/announcements/13', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcement permanently deleted",
+  "data": null
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 15 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id/like" data-desc="post like toggle unlike announcements">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/announcements/:id/like</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id/like')">Copy Route</button>
+        </div>
+      </div>
+      <p>Likes or unlikes notices dynamically using secure transaction queries to prevent race states.</p>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/announcements/12/like \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</code></pre>
+        <pre class="axios"><code>axios.post('http://localhost:3000/api/v1/announcements/12/like', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Like toggled successfully",
+  "data": {
+    "id": 12,
+    "title": "Jirga Announcement",
+    "content": "Decisions on local water supply rules.",
+    "category": "jirga_decision",
+    "image_url": "https://supabase-bucket/announcements/notice.jpg",
+    "likes_count": 9,
+    "liked_by_me": true,
+    "is_pinned": true,
+    "location": "Pabaini Hujra",
+    "author_id": 1,
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-12T01:10:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 16 (Announcements) -->
+    <div class="endpoint-card" data-category="announcements" data-path="/announcements/:id/image" data-desc="post upload image multipart files notice author">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/announcements/:id/image</span>
+        <span class="auth-badge auth-protected">Author/Admins/Mods</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/announcements/:id/image')">Copy Route</button>
+        </div>
+      </div>
+      <p>Uploads a media picture, storage bounds it inside the Supabase buckets, and attaches the URL to the announcement record. Restricted to the author, admins, or moderators.</p>
+
+      <div class="section-title">Form Data Fields</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>image</strong></td>
+            <td>File</td>
+            <td>Yes</td>
+            <td>The image file to upload.</td>
+          </tr>
+        </tbody>
+      </table>
+
+            <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+  <div class="snippet-tabs">
+        <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+        <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+      </div>
+      <div class="code-container">
+        <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/announcements/12/image \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -F "image=@/path/to/photo.jpg"</code></pre>
+        <pre class="axios"><code>const formData = new FormData();
+formData.append('image', fileObject);
+axios.post('http://localhost:3000/api/v1/announcements/12/image', formData, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+      </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Announcement image uploaded successfully",
+  "data": {
+    "id": 12,
+    "title": "Jirga Announcement",
+    "content": "Decisions on local water supply rules.",
+    "category": "jirga_decision",
+    "image_url": "https://supabase-bucket/announcements/notice-uploaded.jpg",
+    "likes_count": 9,
+    "liked_by_me": true,
+    "is_pinned": true,
+    "location": "Pabaini Hujra",
+    "author_id": 1,
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-12T01:25:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>© 2026 Pabaini Village Portal project. Designed with premium visual parameters.</p>
+  </div>
+</div>
+
+<script>
+  let currentCategory = 'all';
+
+  function filterCategory(category) {
+    currentCategory = category;
+    
+    // Update active tab styling
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.getElementById('tab-' + category).classList.add('active');
+
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.endpoint-card');
+
+    cards.forEach(card => {
+      const cardCategory = card.getAttribute('data-category');
+      const cardPath = card.getAttribute('data-path').toLowerCase();
+      const cardDesc = card.getAttribute('data-desc').toLowerCase();
+      const cardMethod = card.querySelector('.method-tag').textContent.toLowerCase();
+
+      const matchesCategory = (currentCategory === 'all' || cardCategory === currentCategory);
+      const matchesSearch = (!searchVal || cardPath.includes(searchVal) || cardDesc.includes(searchVal) || cardMethod.includes(searchVal));
+
+      if (matchesCategory && matchesSearch) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+  }
+
+  function copyPath(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Route path copied to clipboard: ' + text);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  }
+
+  function switchSnippet(btn, type) {
+    const tabs = btn.parentElement;
+    const container = tabs.nextElementSibling;
+    
+    // Remove active styles from tabs
+    tabs.querySelectorAll('.snippet-tab-btn').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Show selected code pre block
+    container.querySelectorAll('pre').forEach(p => p.classList.remove('active'));
+    container.querySelector('.' + type).classList.add('active');
+  }
+
+  function selectFlow(flowId, btn) {
+    // Set active flow button
+    document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Show active flow panel
+    document.querySelectorAll('.flow-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(flowId).classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -29,6 +29,28 @@ export class UsersService {
 
         if (user) return user;
 
+        if (firebaseUser.email) {
+            const existingEmailUser = await this.usersRepository.findOne({
+                where: { email: firebaseUser.email },
+            });
+            if (existingEmailUser) {
+                throw new BadRequestException(
+                    'This email address is already associated with an existing account. Please log in using that account\'s primary method.',
+                );
+            }
+        }
+
+        if (firebaseUser.phone) {
+            const existingPhoneUser = await this.usersRepository.findOne({
+                where: { phone: firebaseUser.phone },
+            });
+            if (existingPhoneUser) {
+                throw new BadRequestException(
+                    'This phone number is already associated with an existing account. Please log in using that account\'s primary method.',
+                );
+            }
+        }
+
         const newUser = this.usersRepository.create({
             firebase_uid: firebaseUser.firebase_uid,
             phone: firebaseUser.phone ?? undefined,
@@ -67,13 +89,40 @@ export class UsersService {
     }
 
     async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+        if (updateUserDto.email) {
+            const existing = await this.usersRepository.findOne({ where: { email: updateUserDto.email } });
+            if (existing && existing.id !== id) {
+                throw new BadRequestException('Email address is already in use by another account');
+            }
+        }
+        if (updateUserDto.phone) {
+            const existing = await this.usersRepository.findOne({ where: { phone: updateUserDto.phone } });
+            if (existing && existing.id !== id) {
+                throw new BadRequestException('Phone number is already in use by another account');
+            }
+        }
+
         await this.usersRepository.update(id, updateUserDto);
 
         return this.findById(id);
     }
 
     async updateUserByFirebaseUid(firebase_uid: string, updateUserDto: UpdateUserDto): Promise<User> {
-        await this.usersRepository.update({ firebase_uid }, updateUserDto);
+        const user = await this.findByFirebaseUid(firebase_uid);
+        if (updateUserDto.email) {
+            const existing = await this.usersRepository.findOne({ where: { email: updateUserDto.email } });
+            if (existing && existing.id !== user.id) {
+                throw new BadRequestException('Email address is already in use by another account');
+            }
+        }
+        if (updateUserDto.phone) {
+            const existing = await this.usersRepository.findOne({ where: { phone: updateUserDto.phone } });
+            if (existing && existing.id !== user.id) {
+                throw new BadRequestException('Phone number is already in use by another account');
+            }
+        }
+
+        await this.usersRepository.update(user.id, updateUserDto);
 
         return this.findByFirebaseUid(firebase_uid);
     }

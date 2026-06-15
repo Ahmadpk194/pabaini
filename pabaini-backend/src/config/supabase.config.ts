@@ -11,6 +11,7 @@ export const getSupabaseClient = () => {
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     );
+    console.log('✅ Supabase client initialized successfully');
   }
   return supabaseClient;
 };

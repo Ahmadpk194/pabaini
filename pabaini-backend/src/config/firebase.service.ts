@@ -30,8 +30,7 @@ export class FirebaseAdminService implements OnModuleInit {
         privateKey,
       }),
     });
-
-    console.log('🔥 Firebase initialized');
+    console.log('✅ Firebase Admin SDK initialized successfully');
   }
 
   /**

@@ -17,4 +17,8 @@ export class CreateAnnouncementDto {
     @IsOptional()
     @IsUrl()
     image_url?: string;
+
+    @IsOptional()
+    @IsString()
+    location?: string;
 }
