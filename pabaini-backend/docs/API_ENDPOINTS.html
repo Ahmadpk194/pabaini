@@ -599,10 +599,9 @@
     <p class="subtitle">Complete visual map and interactive references for core database sync operations</p>
   </header>
 
-  <!-- Stats Dashboard -->
   <div class="stats-bar">
     <div class="stat-card">
-      <div class="value">16</div>
+      <div class="value">21</div>
       <div class="label">Total Endpoints</div>
     </div>
     <div class="stat-card">
@@ -616,6 +615,10 @@
     <div class="stat-card">
       <div class="value">9</div>
       <div class="label">Announcements</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">5</div>
+      <div class="label">Sports Module</div>
     </div>
   </div>
 
@@ -721,7 +724,7 @@
   <div class="filter-tools">
     <div class="tabs-container">
       <button class="tab-btn active" id="tab-all" onclick="filterCategory('all')">
-        All Endpoints <span class="tab-badge">16</span>
+        All Endpoints <span class="tab-badge">21</span>
       </button>
       <button class="tab-btn" id="tab-auth" onclick="filterCategory('auth')">
         Auth Module <span class="tab-badge">1</span>
@@ -731,6 +734,9 @@
       </button>
       <button class="tab-btn" id="tab-announcements" onclick="filterCategory('announcements')">
         Announcements Module <span class="tab-badge">9</span>
+      </button>
+      <button class="tab-btn" id="tab-sports" onclick="filterCategory('sports')">
+        Sports Module <span class="tab-badge">5</span>
       </button>
     </div>
 
@@ -1930,6 +1936,452 @@ axios.post('http://localhost:3000/api/v1/announcements/12/image', formData, {
     "author_id": 1,
     "created_at": "2026-06-12T01:10:00.000Z",
     "updated_at": "2026-06-12T01:25:00.000Z"
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 17 (Sports) -->
+    <div class="endpoint-card" data-category="sports" data-path="/sports/cricket/players/me" data-desc="post create cricket player profile role batting bowling arm type">
+      <div class="endpoint-header">
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/sports/cricket/players/me</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/sports/cricket/players/me')">Copy Route</button>
+        </div>
+      </div>
+      <p>Initializes a cricket player profile for the authenticated user. Each user is restricted to a single profile. Returns a conflict error (409) if a profile is already created.</p>
+      
+      <div class="section-title">Headers</div>
+      <ul class="headers-list">
+        <li>Content-Type: application/json</li>
+        <li>Authorization: Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</li>
+      </ul>
+
+      <div class="section-title">Request Inputs</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>role</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Role: <code>batsman</code>, <code>bowler</code>, <code>allrounder</code>, <code>keeper</code></td>
+          </tr>
+          <tr>
+            <td><strong>batting_hand</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Batting preference: <code>right</code>, <code>left</code></td>
+          </tr>
+          <tr>
+            <td><strong>bowling_arm</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Bowling arm: <code>right</code>, <code>left</code>, <code>none</code></td>
+          </tr>
+          <tr>
+            <td><strong>bowling_type</strong></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Bowling type: <code>fast</code>, <code>medium</code>, <code>spin</code>, <code>none</code>. <strong>Must be "none" if arm is "none"</strong>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "role": "allrounder",
+  "batting_hand": "right",
+  "bowling_arm": "right",
+  "bowling_type": "medium"
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+        <div class="snippet-tabs">
+          <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+          <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+        </div>
+        <div class="code-container">
+          <pre class="curl active"><code>curl -X POST http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "allrounder", "batting_hand": "right", "bowling_arm": "right", "bowling_type": "medium"}'</code></pre>
+          <pre class="axios"><code>axios.post('http://localhost:3000/api/v1/sports/cricket/players/me', {
+  role: 'allrounder',
+  batting_hand: 'right',
+  bowling_arm: 'right',
+  bowling_type: 'medium'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+        </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (201 Created)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 201,
+  "message": "Cricket player profile created successfully",
+  "data": {
+    "id": 1,
+    "role": "allrounder",
+    "batting_hand": "right",
+    "bowling_arm": "right",
+    "bowling_type": "medium",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:30:00.000Z",
+    "user": {
+      "id": 1,
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+    }
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 18 (Sports) -->
+    <div class="endpoint-card" data-category="sports" data-path="/sports/cricket/players/me" data-desc="get fetch my cricket player profile token">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/sports/cricket/players/me</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/sports/cricket/players/me')">Copy Route</button>
+        </div>
+      </div>
+      <p>Fetches the cricket profile details for the authenticated user, along with partial user relation details (id, name, avatar_url).</p>
+      
+      <div class="section-title">Headers</div>
+      <ul class="headers-list">
+        <li>Authorization: Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</li>
+      </ul>
+
+      <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+        <div class="snippet-tabs">
+          <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+          <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+        </div>
+        <div class="code-container">
+          <pre class="curl active"><code>curl -X GET http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</code></pre>
+          <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/sports/cricket/players/me', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+        </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Cricket player profile retrieved successfully",
+  "data": {
+    "id": 1,
+    "role": "allrounder",
+    "batting_hand": "right",
+    "bowling_arm": "right",
+    "bowling_type": "medium",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:30:00.000Z",
+    "user": {
+      "id": 1,
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+    }
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 19 (Sports) -->
+    <div class="endpoint-card" data-category="sports" data-path="/sports/cricket/players/me" data-desc="patch update my cricket player profile token">
+      <div class="endpoint-header">
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/players/me</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/sports/cricket/players/me')">Copy Route</button>
+        </div>
+      </div>
+      <p>Updates specific fields on the authenticated user's cricket player profile. Re-validates consistency between arm and type after merging the inputs.</p>
+      
+      <div class="section-title">Headers</div>
+      <ul class="headers-list">
+        <li>Content-Type: application/json</li>
+        <li>Authorization: Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</li>
+      </ul>
+
+      <div class="section-title">Request Inputs (All fields optional)</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>role</strong></td>
+            <td>string</td>
+            <td>Role: <code>batsman</code>, <code>bowler</code>, <code>allrounder</code>, <code>keeper</code></td>
+          </tr>
+          <tr>
+            <td><strong>batting_hand</strong></td>
+            <td>string</td>
+            <td>Batting preference: <code>right</code>, <code>left</code></td>
+          </tr>
+          <tr>
+            <td><strong>bowling_arm</strong></td>
+            <td>string</td>
+            <td>Bowling arm: <code>right</code>, <code>left</code>, <code>none</code></td>
+          </tr>
+          <tr>
+            <td><strong>bowling_type</strong></td>
+            <td>string</td>
+            <td>Bowling type: <code>fast</code>, <code>medium</code>, <code>spin</code>, <code>none</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="request-details">
+        <summary class="request-summary">Request Body Example (JSON)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "role": "batsman",
+  "bowling_arm": "none",
+  "bowling_type": "none"
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+        <div class="snippet-tabs">
+          <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+          <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+        </div>
+        <div class="code-container">
+          <pre class="curl active"><code>curl -X PATCH http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "batsman", "bowling_arm": "none", "bowling_type": "none"}'</code></pre>
+          <pre class="axios"><code>axios.patch('http://localhost:3000/api/v1/sports/cricket/players/me', {
+  role: 'batsman',
+  bowling_arm: 'none',
+  bowling_type: 'none'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</code></pre>
+        </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Cricket player profile updated successfully",
+  "data": {
+    "id": 1,
+    "role": "batsman",
+    "batting_hand": "right",
+    "bowling_arm": "none",
+    "bowling_type": "none",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:35:00.000Z",
+    "user": {
+      "id": 1,
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+    }
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 20 (Sports) -->
+    <div class="endpoint-card" data-category="sports" data-path="/sports/cricket/players/:id" data-desc="get fetch public single player profile details id">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/sports/cricket/players/:id</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/sports/cricket/players/:id')">Copy Route</button>
+        </div>
+      </div>
+      <p>Fetches any player's public cricket profile by profile ID. Returns 404 if not found. Projects user id, name, and avatar_url.</p>
+      
+      <div class="section-title">Query Path Parameters</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>id</strong></td>
+            <td>number</td>
+            <td>Yes</td>
+            <td>The cricket player profile ID (not user_id).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+        <div class="snippet-tabs">
+          <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+          <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+        </div>
+        <div class="code-container">
+          <pre class="curl active"><code>curl -X GET http://localhost:3000/api/v1/sports/cricket/players/1</code></pre>
+          <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/sports/cricket/players/1');</code></pre>
+        </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Cricket player profile retrieved successfully",
+  "data": {
+    "id": 1,
+    "role": "batsman",
+    "batting_hand": "right",
+    "bowling_arm": "none",
+    "bowling_type": "none",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:35:00.000Z",
+    "user": {
+      "id": 1,
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+    }
+  }
+}</code></pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- Endpoint 21 (Sports) -->
+    <div class="endpoint-card" data-category="sports" data-path="/sports/cricket/players" data-desc="get list all active cricket players registered profiles page limit">
+      <div class="endpoint-header">
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/sports/cricket/players</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="btn-actions">
+          <button class="btn-action" onclick="copyPath('/api/v1/sports/cricket/players')">Copy Route</button>
+        </div>
+      </div>
+      <p>Lists all active (is_active = true) cricket player profiles ordered by registration date descending, projecting user details (id, name, avatar_url) and supporting pagination query parameters.</p>
+      
+      <div class="section-title">Query Parameters</div>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>page</strong></td>
+            <td>number</td>
+            <td>1</td>
+            <td>Pagination offset page.</td>
+          </tr>
+          <tr>
+            <td><strong>limit</strong></td>
+            <td>number</td>
+            <td>10</td>
+            <td>Total records per query page (Max: 50).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <details class="snippet-details">
+        <summary class="snippet-summary">Request Client Snippet (cURL / Axios)</summary>
+        <div class="snippet-tabs">
+          <button class="snippet-tab-btn active" onclick="switchSnippet(this, 'curl')">cURL</button>
+          <button class="snippet-tab-btn" onclick="switchSnippet(this, 'axios')">Axios</button>
+        </div>
+        <div class="code-container">
+          <pre class="curl active"><code>curl -X GET "http://localhost:3000/api/v1/sports/cricket/players?page=1&limit=10"</code></pre>
+          <pre class="axios"><code>axios.get('http://localhost:3000/api/v1/sports/cricket/players', {
+  params: { page: 1, limit: 10 }
+});</code></pre>
+        </div>
+      </details>
+
+      <details class="response-details">
+        <summary class="response-summary">Response Example (200 OK)</summary>
+        <div class="code-container">
+          <pre class="active"><code>{
+  "success": true,
+  "status": 200,
+  "message": "Cricket players list retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "role": "batsman",
+        "batting_hand": "right",
+        "bowling_arm": "none",
+        "bowling_type": "none",
+        "is_active": true,
+        "created_at": "2026-06-16T00:30:00.000Z",
+        "updated_at": "2026-06-16T00:35:00.000Z",
+        "user": {
+          "id": 1,
+          "name": "Ahmad Pabaini",
+          "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+        }
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
+    }
   }
 }</code></pre>
         </div>

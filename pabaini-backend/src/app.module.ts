@@ -10,6 +10,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { SportsModule } from './modules/sports/sports.module';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     FirebaseModule,
     AuthModule,
     UsersModule,
-    AnnouncementsModule
+    AnnouncementsModule,
+    SportsModule
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

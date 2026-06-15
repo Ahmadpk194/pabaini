@@ -27,6 +27,12 @@ This document serves as a complete developer guide to the backend NestJS endpoin
    - [DELETE /announcements/:id](#14-hard-delete-announcement-admin-only)
    - [POST /announcements/:id/like](#15-toggle-like-on-announcement)
    - [POST /announcements/:id/image](#16-upload-announcement-image-authoradminmods)
+5. [Sports Module](#4-sports-module)
+   - [POST /sports/cricket/players/me](#17-create-my-cricket-player-profile)
+   - [GET /sports/cricket/players/me](#18-get-my-cricket-player-profile)
+   - [PATCH /sports/cricket/players/me](#19-update-my-cricket-player-profile)
+   - [GET /sports/cricket/players/:id](#20-get-any-players-public-cricket-profile)
+   - [GET /sports/cricket/players](#21-list-all-registered-cricket-players)
 
 ---
 
@@ -503,3 +509,257 @@ Uploads an image file to Supabase storage and maps the returned URL to the targe
     -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
     -F "image=@/path/to/notice.jpg"
   ```
+
+---
+
+## 4. Sports Module
+
+This module organizes all village sports player profiles, match schedules, and statistics. Phase 1 implements **Cricket Player Profiles**.
+
+### 17. Create My Cricket Player Profile
+Allows an authenticated user to initialize their cricket player profile. Each user can have at most one profile.
+
+* **Method**: `POST`
+* **Path**: `/api/v1/sports/cricket/players/me`
+* **Access Control**: **Protected** (Requires Firebase ID Token)
+* **Headers**:
+  | Key | Value |
+  |---|---|
+  | `Content-Type` | `application/json` |
+  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+
+* **Request Body**:
+  | Field | Type | Required | Description |
+  |---|---|---|---|
+  | `role` | `string` | **Yes** | Player's primary role: `batsman`, `bowler`, `allrounder`, `keeper` |
+  | `batting_hand` | `string` | **Yes** | Batting preference: `right`, `left` |
+  | `bowling_arm` | `string` | **Yes** | Bowling arm: `right`, `left`, `none` |
+  | `bowling_type` | `string` | **Yes** | Bowling style: `fast`, `medium`, `spin`, `none` |
+
+> [!IMPORTANT]
+> **Validation Rule**: If `bowling_arm` is set to `none`, `bowling_type` must also be set to `none`. Providing any other bowling type when the arm is none will return a `400 Bad Request`.
+
+* **cURL Example**:
+  ```bash
+  curl -X POST http://localhost:3000/api/v1/sports/cricket/players/me \
+    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"role": "allrounder", "batting_hand": "right", "bowling_arm": "right", "bowling_type": "medium"}'
+  ```
+
+* **Response (201 Created)**:
+  ```json
+  {
+    "success": true,
+    "status": 201,
+    "message": "Cricket player profile created successfully",
+    "data": {
+      "id": 1,
+      "role": "allrounder",
+      "batting_hand": "right",
+      "bowling_arm": "right",
+      "bowling_type": "medium",
+      "is_active": true,
+      "created_at": "2026-06-16T00:30:00.000Z",
+      "updated_at": "2026-06-16T00:30:00.000Z",
+      "user": {
+        "id": 1,
+        "name": "Ahmad Pabaini",
+        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+      }
+    }
+  }
+  ```
+
+---
+
+### 18. Get My Cricket Player Profile
+Fetches the profile details for the currently authenticated user's cricket profile.
+
+* **Method**: `GET`
+* **Path**: `/api/v1/sports/cricket/players/me`
+* **Access Control**: **Protected** (Requires Firebase ID Token)
+* **Headers**:
+  | Key | Value |
+  |---|---|
+  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+
+* **cURL Example**:
+  ```bash
+  curl -X GET http://localhost:3000/api/v1/sports/cricket/players/me \
+    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+  ```
+
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "Cricket player profile retrieved successfully",
+    "data": {
+      "id": 1,
+      "role": "allrounder",
+      "batting_hand": "right",
+      "bowling_arm": "right",
+      "bowling_type": "medium",
+      "is_active": true,
+      "created_at": "2026-06-16T00:30:00.000Z",
+      "updated_at": "2026-06-16T00:30:00.000Z",
+      "user": {
+        "id": 1,
+        "name": "Ahmad Pabaini",
+        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+      }
+    }
+  }
+  ```
+
+---
+
+### 19. Update My Cricket Player Profile
+Updates specific fields on the authenticated user's cricket profile.
+
+* **Method**: `PATCH`
+* **Path**: `/api/v1/sports/cricket/players/me`
+* **Access Control**: **Protected** (Requires Firebase ID Token)
+* **Headers**:
+  | Key | Value |
+  |---|---|
+  | `Content-Type` | `application/json` |
+  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+
+* **Request Body (All fields optional)**:
+  | Field | Type | Description |
+  |---|---|---|
+  | `role` | `string` | Player's primary role: `batsman`, `bowler`, `allrounder`, `keeper` |
+  | `batting_hand` | `string` | Batting preference: `right`, `left` |
+  | `bowling_arm` | `string` | Bowling arm: `right`, `left`, `none` |
+  | `bowling_type` | `string` | Bowling style: `fast`, `medium`, `spin`, `none` |
+
+> [!IMPORTANT]
+> **Validation Rule**: Bowling arm and type consistency is re-validated after merging existing values with the incoming updates. If the resulting profile has a bowling arm of `none` but a bowling type other than `none`, the update will fail with `400 Bad Request`.
+
+* **cURL Example**:
+  ```bash
+  curl -X PATCH http://localhost:3000/api/v1/sports/cricket/players/me \
+    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"role": "batsman", "bowling_arm": "none", "bowling_type": "none"}'
+  ```
+
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "Cricket player profile updated successfully",
+    "data": {
+      "id": 1,
+      "role": "batsman",
+      "batting_hand": "right",
+      "bowling_arm": "none",
+      "bowling_type": "none",
+      "is_active": true,
+      "created_at": "2026-06-16T00:30:00.000Z",
+      "updated_at": "2026-06-16T00:35:00.000Z",
+      "user": {
+        "id": 1,
+        "name": "Ahmad Pabaini",
+        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+      }
+    }
+  }
+  ```
+
+---
+
+### 20. Get Any Player's Public Cricket Profile
+Fetches a single player's cricket profile details by the cricket profile ID.
+
+* **Method**: `GET`
+* **Path**: `/api/v1/sports/cricket/players/:id`
+* **Access Control**: **Public** (No Auth Token needed)
+
+* **cURL Example**:
+  ```bash
+  curl -X GET http://localhost:3000/api/v1/sports/cricket/players/1
+  ```
+
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "Cricket player profile retrieved successfully",
+    "data": {
+      "id": 1,
+      "role": "batsman",
+      "batting_hand": "right",
+      "bowling_arm": "none",
+      "bowling_type": "none",
+      "is_active": true,
+      "created_at": "2026-06-16T00:30:00.000Z",
+      "updated_at": "2026-06-16T00:35:00.000Z",
+      "user": {
+        "id": 1,
+        "name": "Ahmad Pabaini",
+        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+      }
+    }
+  }
+  ```
+
+---
+
+### 21. List All Registered Cricket Players
+Retrieves a list of all active cricket players ordered by registration date (newest first). Supports pagination.
+
+* **Method**: `GET`
+* **Path**: `/api/v1/sports/cricket/players`
+* **Access Control**: **Public** (No Auth Token needed)
+* **Query Parameters**:
+  | Field | Type | Default | Description |
+  |---|---|---|---|
+  | `page` | `number` | `1` | Pagination offset page |
+  | `limit` | `number` | `10` | Total records per query page (Max: 50) |
+
+* **cURL Example**:
+  ```bash
+  curl -X GET "http://localhost:3000/api/v1/sports/cricket/players?page=1&limit=10"
+  ```
+
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "Cricket players list retrieved successfully",
+    "data": {
+      "data": [
+        {
+          "id": 1,
+          "role": "batsman",
+          "batting_hand": "right",
+          "bowling_arm": "none",
+          "bowling_type": "none",
+          "is_active": true,
+          "created_at": "2026-06-16T00:30:00.000Z",
+          "updated_at": "2026-06-16T00:35:00.000Z",
+          "user": {
+            "id": 1,
+            "name": "Ahmad Pabaini",
+            "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
+          }
+        }
+      ],
+      "meta": {
+        "page": 1,
+        "limit": 10,
+        "total": 1,
+        "totalPages": 1
+      }
+    }
+  }
+  ```
+  ```
+
