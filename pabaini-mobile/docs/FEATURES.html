@@ -643,6 +643,8 @@
     <nav class="sidebar-nav">
       <a href="#donors"><span class="nav-icon">💝</span> Donors</a>
       <a href="#notifications"><span class="nav-icon">🔔</span> Push Notifications</a>
+      <a href="#inapp-notifications"><span class="nav-icon">💬</span> In-App Notices</a>
+      <a href="#inapp-flows"><span class="nav-icon">🔀</span> Notification Flows</a>
       <a href="#verification"><span class="nav-icon">🛠️</span> Verification</a>
     </nav>
   </aside>
@@ -656,8 +658,8 @@
       <h1>Pabaini Mobile<br>Feature Documentation</h1>
       <p>Comprehensive overview of all implemented features, user flows, and architecture decisions for the Pabaini village community app.</p>
       <div class="stats-row">
-        <div class="stat-pill"><span class="stat-num">10</span><span class="stat-label">Features</span></div>
-        <div class="stat-pill"><span class="stat-num">34</span><span class="stat-label">API Endpoints</span></div>
+        <div class="stat-pill"><span class="stat-num">11</span><span class="stat-label">Features</span></div>
+        <div class="stat-pill"><span class="stat-num">38</span><span class="stat-label">API Endpoints</span></div>
         <div class="stat-pill"><span class="stat-num">5</span><span class="stat-label">Screens (Phase 2)</span></div>
         <div class="stat-pill"><span class="stat-num">14</span><span class="stat-label">Team APIs</span></div>
       </div>
@@ -1473,6 +1475,134 @@ interface MyTeamResponse {  // returned by GET /my
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
         <div><strong>Engineering Guideline:</strong> Only send push notifications for <code>urgent</code> and <code>jirga_decision</code> categories. General and event notices should not trigger pushes to prevent spamming residents. Automatically clean stale tokens when FCM responds with <code>messaging/registration-token-not-registered</code>.</div>
+      </div>
+    </section>
+
+    <!-- ─── 11. In-App Notifications ──────────────────────────────────────── -->
+    <section class="section" id="inapp-notifications">
+      <div class="section-header">
+        <div class="section-number">11</div>
+        <h2>In-App Notifications</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>Objective:</strong> Serve real-time in-app alerts and deep-link updates for critical team/member actions (e.g., join requests, invitations), decoupling user interaction from push notifications.</div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">💬</span> Chronological Inbox (<code>app/notifications.tsx</code>)</h3>
+        <ul>
+          <li>Fetches paginated user notifications (20 per page) via <code>GET /api/v1/notifications</code>.</li>
+          <li>Groups alerts dynamically by date sections (<strong>Today</strong>, <strong>Yesterday</strong>, and <strong>Earlier</strong>).</li>
+          <li>Features a top-bar action to mark all notifications as read in the background using <code>PATCH /api/v1/notifications/read-all</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔔</span> Notification Bell &amp; Counter (<code>NotificationBell.tsx</code>)</h3>
+        <ul>
+          <li>Tappable navigation icon displaying active unread count badges.</li>
+          <li>Displays values up to <code>"9+"</code> and hides itself completely when the unread count is zero.</li>
+          <li>Wired inside the main sports tab header (<code>app/(tabs)/sports.tsx</code>) with automatic, blur-safe 35-second background polling via <code>GET /api/v1/notifications/unread-count</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔀</span> Relative Rows &amp; Deep-Linking (<code>NotificationRow.tsx</code>)</h3>
+        <ul>
+          <li>Maps custom category emojis (🏏 for invites, 📢 for announcements, 👤 for members) and custom titles.</li>
+          <li>Applies an optimistic 3% opacity primary tint on unread items. Tapping a row immediately updates read status on the client and fires a background <code>PATCH /api/v1/notifications/:id/read</code>.</li>
+          <li>Deep-links users programmatically to appropriate target destinations (e.g., redirecting captains to <code>/sports/cricket/teams/:id/manage</code> or players to <code>/sports/cricket/teams/:id</code>).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── In-App Notification Flows ────────────────────────────────────── -->
+    <section class="section" id="inapp-flows">
+      <div class="section-header">
+        <div class="section-number">🔀</div>
+        <h2>In-App Notification Flows</h2>
+        <span class="section-tag tag-done">Flowcharts</span>
+      </div>
+
+      <!-- Flow A: Polling Flow -->
+      <div class="flow-wrap">
+        <div class="flow-title">Flow A — Real-Time Unread Count Polling</div>
+        <svg class="flowchart-svg" viewBox="0 0 820 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="160" height="36" rx="18" class="fc-start"/>
+          <text x="100" y="38" class="fc-text-light">Sports Feed Focus</text>
+          
+          <line x1="180" y1="38" x2="220" y2="38" class="fc-arrow"/>
+          <rect x="220" y="20" width="160" height="36" rx="8" class="fc-proc"/>
+          <text x="300" y="38" class="fc-text-dark">Start 35s Poll Interval</text>
+          
+          <line x1="380" y1="38" x2="420" y2="38" class="fc-arrow"/>
+          <rect x="420" y="20" width="170" height="36" rx="8" class="fc-action"/>
+          <text x="505" y="38" class="fc-text-dark">GET /unread-count</text>
+          
+          <line x1="590" y1="38" x2="630" y2="38" class="fc-arrow"/>
+          <rect x="630" y="20" width="170" height="36" rx="8" class="fc-proc"/>
+          <text x="715" y="38" class="fc-text-dark">Zustand: unreadCount</text>
+
+          <line x1="715" y1="56" x2="715" y2="88" class="fc-arrow"/>
+          <rect x="630" y="88" width="170" height="36" rx="18" class="fc-end"/>
+          <text x="715" y="106" class="fc-text-dark">Render Red Badge on Bell</text>
+          
+          <rect x="220" y="88" width="160" height="36" rx="8" class="fc-proc"/>
+          <text x="300" y="106" class="fc-text-dark">Screen Blur → Clear Poll</text>
+          <line x1="100" y1="56" x2="100" y2="88" class="fc-arrow-no" stroke-dasharray="4,3"/>
+          <line x1="100" y1="88" x2="100" y2="106" class="fc-arrow-no" stroke-dasharray="4,3"/>
+          <line x1="100" y1="106" x2="220" y2="106" class="fc-arrow" stroke-dasharray="4,3"/>
+        </svg>
+      </div>
+
+      <!-- Flow B: Inbox Screen Flow -->
+      <div class="flow-wrap">
+        <div class="flow-title">Flow B — Inbox &amp; Interaction Flow</div>
+        <svg class="flowchart-svg" viewBox="0 0 820 220" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="160" height="36" rx="18" class="fc-start"/>
+          <text x="100" y="38" class="fc-text-light">Tap NotificationBell</text>
+          
+          <line x1="180" y1="38" x2="220" y2="38" class="fc-arrow"/>
+          <rect x="220" y="20" width="160" height="36" rx="8" class="fc-action"/>
+          <text x="300" y="38" class="fc-text-dark">GET /notifications</text>
+          <text x="300" y="50" class="fc-text-small">{ page=1, limit=20 }</text>
+
+          <line x1="380" y1="38" x2="420" y2="38" class="fc-arrow"/>
+          <rect x="420" y="20" width="180" height="36" rx="8" class="fc-proc"/>
+          <text x="510" y="38" class="fc-text-dark">Relative Date Grouping</text>
+          <text x="510" y="50" class="fc-text-small">Today / Yesterday / Earlier</text>
+
+          <line x1="600" y1="38" x2="640" y2="38" class="fc-arrow"/>
+          <rect x="640" y="20" width="160" height="36" rx="8" class="fc-proc"/>
+          <text x="720" y="38" class="fc-text-dark">Render SectionList</text>
+
+          <line x1="720" y1="56" x2="720" y2="90" class="fc-arrow"/>
+          <rect x="630" y="90" width="180" height="36" rx="18" class="fc-start"/>
+          <text x="720" y="108" class="fc-text-light">Tap Notification Row</text>
+
+          <line x1="630" y1="108" x2="590" y2="108" class="fc-arrow"/>
+          <rect x="440" y="90" width="150" height="36" rx="8" class="fc-decide"/>
+          <text x="515" y="108" class="fc-text-dark">Is notification unread?</text>
+
+          <line x1="515" y1="126" x2="515" y2="150" class="fc-arrow-yes"/>
+          <text x="525" y="138" class="fc-label">Yes</text>
+          <rect x="400" y="150" width="230" height="48" rx="8" class="fc-proc"/>
+          <text x="515" y="165" class="fc-text-dark">Optimistic update (is_read=true)</text>
+          <text x="515" y="180" class="fc-text-small">Decrement store unreadCount &amp; PATCH /:id/read</text>
+
+          <line x1="440" y1="108" x2="200" y2="108" class="fc-arrow-no"/>
+          <text x="320" y="98" class="fc-label">No</text>
+          <line x1="400" y1="174" x2="200" y2="174" class="fc-arrow"/>
+
+          <rect x="20" y="90" width="180" height="98" rx="8" class="fc-end"/>
+          <text x="110" y="105" class="fc-text-dark">Route to Deep Link</text>
+          <text x="110" y="125" class="fc-text-small">Invites → /teams/:id</text>
+          <text x="110" y="145" class="fc-text-small">Requests → /teams/:id/manage</text>
+          <text x="110" y="165" class="fc-text-small">Announce → /announcement/:id</text>
+        </svg>
       </div>
     </section>
 

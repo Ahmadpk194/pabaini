@@ -188,6 +188,57 @@ graph TD
 
 ---
 
+## 💬 11. In-App Notifications Feed & Integration
+**Objective**: Serve real-time notices and deep-link updates for critical team/member actions (e.g. join requests, invitations).
+
+*   **Zustand State Store (`src/store/notificationsStore.ts`)**:
+    *   Tracks the user's unread notification count (`unreadCount`).
+    *   Exposes actions to clear or decrement counts.
+*   **API Services (`src/services/notificationsApi.ts`)**:
+    *   `getNotifications`: Fetches paginated records (20 per page) with scroll loading support.
+    *   `markAsRead` / `markAllAsRead`: Marks read status optimistically on the client while calling backend endpoints in the background.
+*   **Reusable Components (`src/components/notifications/`)**:
+    *   **NotificationBell**: Displays a persistent bell icon in headers. Shows a red counter badge (with `"9+"` cap) if unread count > 0.
+    *   **NotificationRow**: Renders notification titles, relative timelines, and descriptive emojis mapped to each type (e.g., 🏏 for invites, 📢 for announcements). Highlights unread entries with a 3% primary background color tint.
+    *   **NotificationEmptyState**: Renders a premium, centralized placeholder when no notifications are found.
+*   **Inbox Screen (`app/notifications.tsx`)**:
+    *   Pulls and groups notifications chronologically into **Today**, **Yesterday**, and **Earlier** sections.
+    *   Supports pull-to-refresh feeds and infinite scrolling (loading pages sequentially).
+    *   Features a "Mark all read" top-bar action.
+*   **Real-Time Polling Hook (`app/(tabs)/sports.tsx`)**:
+    *   Integrates a safe background polling loop running every 35 seconds to query the unread notification count.
+    *   Uses Expo's `useFocusEffect` to spin up the polling hook when the user views the screen, and automatically cleans it up (terminating the interval) when the screen blurs to prevent memory leaks and unnecessary network calls.
+
+### 🔀 Notifications User Flows (Flowcharts)
+
+```mermaid
+graph TD
+    %% Flow A: Polling
+    subgraph Flow A: Unread Count Polling
+        Focus[Sports Tab Focused] --> Poll[Start 35s Poll Interval]
+        Poll --> API_Count[GET /api/v1/notifications/unread-count]
+        API_Count --> Store[Update Zustand Store: unreadCount]
+        Store --> Badge[Render Red Badge on NotificationBell]
+        Focus -- Screen Blur --> Blur[Clear Poll Interval]
+    end
+
+    %% Flow B: Inbox & Click Actions
+    subgraph Flow B: Inbox & Click Actions
+        Bell[Tap NotificationBell] --> API_List[GET /api/v1/notifications?page=1]
+        API_List --> Group[Group: Today, Yesterday, Earlier]
+        Group --> Render[Render SectionList]
+        Render --> TapRow[Tap Notification Row]
+        TapRow --> IsUnread{Is unread?}
+        IsUnread -- Yes --> OptRead[Optimistic: Mark read & decrement count]
+        OptRead --> API_Read[PATCH /api/v1/notifications/:id/read]
+        IsUnread -- No --> Route[Route via deep_link]
+        API_Read --> Route
+        Route --> Dest[Redirect e.g. /teams/:id/manage or /teams/:id]
+    end
+```
+
+---
+
 ## 🛠️ Verification & Building
 All features compile cleanly under TypeScript. To check type safety at any time, run:
 ```bash
