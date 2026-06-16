@@ -22,14 +22,14 @@ export class TeamMember {
   @Column({ name: 'team_id' })
   team_id!: number;
 
-  @ManyToOne(() => Team, (team) => team.members)
+  @ManyToOne(() => Team, (team) => team.members, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'team_id' })
   team!: Team;
 
   @Column({ name: 'player_id' })
   player_id!: number;
 
-  @ManyToOne(() => CricketPlayerProfile)
+  @ManyToOne(() => CricketPlayerProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'player_id' })
   player!: CricketPlayerProfile;
 
@@ -49,7 +49,7 @@ export class TeamMember {
   @Column({ name: 'invited_by', nullable: true })
   invited_by_id?: number;
 
-  @ManyToOne(() => CricketPlayerProfile, { nullable: true })
+  @ManyToOne(() => CricketPlayerProfile, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'invited_by' })
   invited_by?: CricketPlayerProfile;
 

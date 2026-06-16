@@ -17,6 +17,8 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 import { InvitePlayerDto } from './dto/invite-player.dto';
 import { TransferCaptainDto } from './dto/transfer-captain.dto';
 import { getSupabaseClient } from 'src/config/supabase.config';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationType } from 'src/modules/notifications/enums/notification-type.enum';
 
 @Injectable()
 export class TeamsService {
@@ -27,7 +29,8 @@ export class TeamsService {
     private readonly teamMemberRepo: Repository<TeamMember>,
     @InjectRepository(CricketPlayerProfile)
     private readonly playerProfileRepo: Repository<CricketPlayerProfile>,
-  ) {}
+    private readonly notificationsService: NotificationsService,
+  ) { }
 
   async getCurrentPlayerProfile(userId: number): Promise<CricketPlayerProfile> {
     const profile = await this.playerProfileRepo.findOne({
@@ -241,8 +244,16 @@ export class TeamsService {
     const playerProfile = await this.getCurrentPlayerProfile(userId);
     await this.getCaptainMembership(teamId, playerProfile.id);
 
+    const team = await this.teamRepo.findOne({
+      where: { id: teamId, is_active: true },
+    });
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+
     const targetPlayer = await this.playerProfileRepo.findOne({
       where: { id: invitePlayerDto.player_id, is_active: true },
+      relations: { user: true },
     });
     if (!targetPlayer) {
       throw new NotFoundException('Target player not found or inactive');
@@ -281,6 +292,20 @@ export class TeamsService {
     newMember.joined_at = undefined;
 
     await this.teamMemberRepo.save(newMember);
+
+    // Trigger Notification
+    try {
+      await this.notificationsService.create({
+        user_id: targetPlayer.user.id,
+        type: NotificationType.TEAM_INVITE,
+        title: `You were invited to join ${team.name}`,
+        deep_link: `/sports/cricket/teams/${team.id}`,
+        metadata: { team_id: team.id },
+      });
+    } catch (err) {
+      console.warn(`Failed to create team invite notification for user ID ${targetPlayer.user.id}:`, err);
+    }
+
     return { message: 'Invitation sent successfully' };
   }
 
@@ -289,10 +314,16 @@ export class TeamsService {
 
     const team = await this.teamRepo.findOne({
       where: { id: teamId, is_active: true },
+      relations: { captain: { user: true } },
     });
     if (!team) {
       throw new NotFoundException('Team not found');
     }
+
+    const currentPlayer = await this.playerProfileRepo.findOne({
+      where: { id: playerProfile.id },
+      relations: { user: true },
+    });
 
     const existingMembership = await this.teamMemberRepo.findOne({
       where: {
@@ -327,6 +358,22 @@ export class TeamsService {
     requestMember.joined_at = undefined;
 
     await this.teamMemberRepo.save(requestMember);
+
+    // Trigger Notification
+    try {
+      if (team.captain?.user && currentPlayer?.user) {
+        await this.notificationsService.create({
+          user_id: team.captain.user.id,
+          type: NotificationType.TEAM_JOIN_REQUEST,
+          title: `${currentPlayer.user.name} requested to join ${team.name}`,
+          deep_link: `/sports/cricket/teams/${team.id}/manage`,
+          metadata: { team_id: team.id, player_id: currentPlayer.id },
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to create team join request notification for team captain:`, err);
+    }
+
     return { message: 'Join request sent successfully' };
   }
 
@@ -355,7 +402,7 @@ export class TeamsService {
 
     const member = await this.teamMemberRepo.findOne({
       where: { id: memberId, team_id: teamId },
-      relations: { team: true },
+      relations: { team: { captain: { user: true } }, player: { user: true } },
     });
     if (!member) {
       throw new NotFoundException('Team member record not found');
@@ -381,9 +428,36 @@ export class TeamsService {
       }
     }
 
+    const originalStatus = member.status;
     member.status = TeamMemberStatus.ACTIVE;
     member.joined_at = new Date();
-    return this.teamMemberRepo.save(member);
+
+    const savedMember = await this.teamMemberRepo.save(member);
+
+    // Trigger Notification
+    try {
+      if (originalStatus === TeamMemberStatus.PENDING_REQUEST) {
+        await this.notificationsService.create({
+          user_id: savedMember.player.user.id,
+          type: NotificationType.TEAM_REQUEST_ACCEPTED,
+          title: `Your request to join ${savedMember.team.name} was accepted`,
+          deep_link: `/sports/cricket/teams/${savedMember.team.id}`,
+          metadata: { team_id: savedMember.team.id },
+        });
+      } else if (originalStatus === TeamMemberStatus.PENDING_INVITE) {
+        await this.notificationsService.create({
+          user_id: savedMember.team.captain.user.id,
+          type: NotificationType.TEAM_INVITE_ACCEPTED,
+          title: `${savedMember.player.user.name} accepted your invite to ${savedMember.team.name}`,
+          deep_link: `/sports/cricket/teams/${savedMember.team.id}/manage`,
+          metadata: { team_id: savedMember.team.id, player_id: savedMember.player.id },
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to create team membership acceptance notification:`, err);
+    }
+
+    return savedMember;
   }
 
   async rejectMember(teamId: number, memberId: number, userId: number) {
@@ -391,7 +465,7 @@ export class TeamsService {
 
     const member = await this.teamMemberRepo.findOne({
       where: { id: memberId, team_id: teamId },
-      relations: { team: true },
+      relations: { team: { captain: { user: true } }, player: { user: true } },
     });
     if (!member) {
       throw new NotFoundException('Team member record not found');
@@ -417,8 +491,33 @@ export class TeamsService {
       }
     }
 
+    const originalStatus = member.status;
     member.status = TeamMemberStatus.REJECTED;
     await this.teamMemberRepo.save(member);
+
+    // Trigger Notification
+    try {
+      if (originalStatus === TeamMemberStatus.PENDING_REQUEST) {
+        await this.notificationsService.create({
+          user_id: member.player.user.id,
+          type: NotificationType.TEAM_REQUEST_REJECTED,
+          title: `Your request to join ${member.team.name} was declined`,
+          deep_link: `/sports/cricket/teams`,
+          metadata: { team_id: member.team.id },
+        });
+      } else if (originalStatus === TeamMemberStatus.PENDING_INVITE) {
+        await this.notificationsService.create({
+          user_id: member.team.captain.user.id,
+          type: NotificationType.TEAM_INVITE_DECLINED,
+          title: `${member.player.user.name} declined your invite to ${member.team.name}`,
+          deep_link: `/sports/cricket/teams/${member.team.id}/manage`,
+          metadata: { team_id: member.team.id, player_id: member.player.id },
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to create team membership rejection notification:`, err);
+    }
+
     return { message: 'Rejected successfully' };
   }
 
@@ -427,7 +526,7 @@ export class TeamsService {
 
     const member = await this.teamMemberRepo.findOne({
       where: { id: memberId, team_id: teamId },
-      relations: { team: true },
+      relations: { team: true, player: { user: true } },
     });
     if (!member) {
       throw new NotFoundException('Team member record not found');
@@ -439,6 +538,7 @@ export class TeamsService {
 
     const isCaptain = member.team.captain_id === playerProfile.id;
     const isSelf = member.player_id === playerProfile.id;
+    const wasRemovedByCaptain = isCaptain && !isSelf;
 
     if (isSelf) {
       if (member.role === TeamMemberRole.CAPTAIN) {
@@ -455,6 +555,22 @@ export class TeamsService {
 
     member.status = TeamMemberStatus.LEFT;
     await this.teamMemberRepo.save(member);
+
+    // Trigger Notification
+    try {
+      if (wasRemovedByCaptain && member.player?.user) {
+        await this.notificationsService.create({
+          user_id: member.player.user.id,
+          type: NotificationType.TEAM_MEMBER_REMOVED,
+          title: `You were removed from ${member.team.name}`,
+          deep_link: `/sports/cricket/teams`,
+          metadata: { team_id: member.team.id },
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to create team member removal notification for user ID ${member.player?.user?.id}:`, err);
+    }
+
     return { message: 'Left team successfully' };
   }
 
@@ -472,6 +588,7 @@ export class TeamsService {
         player_id: transferCaptainDto.player_id,
         status: TeamMemberStatus.ACTIVE,
       },
+      relations: { player: { user: true } },
     });
     if (!newCaptainMember) {
       throw new BadRequestException('New captain must be an active member of the team');
@@ -513,12 +630,28 @@ export class TeamsService {
     if (!updatedTeam) {
       throw new NotFoundException('Team not found after update');
     }
+
+    // Trigger Notification
+    try {
+      if (newCaptainMember?.player?.user) {
+        await this.notificationsService.create({
+          user_id: newCaptainMember.player.user.id,
+          type: NotificationType.TEAM_CAPTAINCY_TRANSFERRED,
+          title: `You are now the captain of ${updatedTeam.name}`,
+          deep_link: `/sports/cricket/teams/${updatedTeam.id}/manage`,
+          metadata: { team_id: updatedTeam.id },
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to create team captaincy transfer notification:`, err);
+    }
+
     return updatedTeam;
   }
 
   async deleteTeam(teamId: number, userId: number) {
     const playerProfile = await this.getCurrentPlayerProfile(userId);
-    
+
     const team = await this.teamRepo.findOne({
       where: { id: teamId, is_active: true },
     });

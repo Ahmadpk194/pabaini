@@ -1145,14 +1145,22 @@
       <button class="nav-link" onclick="jumpToCard('card-35')"><span class="nav-method m-DELETE">DEL</span>/cricket/teams/:id<span class="nav-number">#35</span></button>
     </div>
 
+    <div class="nav-group" id="nav-notifications">
+      <div class="nav-group-label">Notifications ✅</div>
+      <button class="nav-link" onclick="jumpToCard('card-36')"><span class="nav-method m-GET">GET</span>/notifications<span class="nav-number">#36</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-37')"><span class="nav-method m-GET">GET</span>/notifications/unread-count<span class="nav-number">#37</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-38')"><span class="nav-method m-PATCH">PATCH</span>/notifications/read-all<span class="nav-number">#38</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-39')"><span class="nav-method m-PATCH">PATCH</span>/notifications/:id/read<span class="nav-number">#39</span></button>
+    </div>
+
     <div class="nav-group">
       <div class="nav-group-label">Sports — Phase 3 🗓</div>
-      <button class="nav-link" onclick="jumpToCard('card-36')" style="opacity:0.6"><span class="nav-method m-POST">POST</span>/cricket/matches<span class="nav-number">#36</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-37')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/matches<span class="nav-number">#37</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-38')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/matches/:id<span class="nav-number">#38</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-39')" style="opacity:0.6"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/scores<span class="nav-number">#39</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-40')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/leaderboard<span class="nav-number">#40</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-41')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/stats/mvp<span class="nav-number">#41</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-40')" style="opacity:0.6"><span class="nav-method m-POST">POST</span>/cricket/matches<span class="nav-number">#40</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-41')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/matches<span class="nav-number">#41</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-42')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/matches/:id<span class="nav-number">#42</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-43')" style="opacity:0.6"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/scores<span class="nav-number">#43</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-44')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/leaderboard<span class="nav-number">#44</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-45')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/stats/mvp<span class="nav-number">#45</span></button>
     </div>
   </div>
 </nav>
@@ -1163,11 +1171,12 @@
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-tabs">
-      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">41</span></button>
+      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">45</span></button>
       <button class="tab-pill" id="tab-auth" onclick="filterTab('auth', this)">Auth <span class="tab-count">1</span></button>
       <button class="tab-pill" id="tab-users" onclick="filterTab('users', this)">Users <span class="tab-count">6</span></button>
       <button class="tab-pill" id="tab-announcements" onclick="filterTab('announcements', this)">Announcements <span class="tab-count">9</span></button>
       <button class="tab-pill" id="tab-sports" onclick="filterTab('sports', this)">Sports <span class="tab-count">25</span></button>
+      <button class="tab-pill" id="tab-notifications" onclick="filterTab('notifications', this)">Notifications <span class="tab-count">4</span></button>
     </div>
   </div>
 
@@ -2093,7 +2102,7 @@ axios.post('/api/v1/announcements/12/image', formData, {
       <p style="margin-bottom: 0;">A registered cricket player can create a team, invite other registered players, and manage the squad. Players can also discover teams and request to join. The captain has full control over who's in the squad.</p>
     </div>
 
-    <div class="phase-divider">
+    <div class="phase-divider" data-category="sports">
       <span class="phase-badge phase-live">✅ Phase 1 — Implemented</span>
       <div>
         <div class="phase-divider-title">Cricket Player Profiles & Onboarding</div>
@@ -2387,7 +2396,7 @@ axios.post('/api/v1/announcements/12/image', formData, {
     </div>
 
     <!-- Phase 2 divider -->
-    <div class="phase-divider">
+    <div class="phase-divider" data-category="sports">
       <span class="phase-badge phase-live">✅ Phase 2 — Implemented</span>
       <div>
         <div class="phase-divider-title">Cricket Teams & Squads Management</div>
@@ -3045,19 +3054,284 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-<!-- Phase 3 divider -->
-    <div class="phase-divider roadmap">
-      <span class="phase-badge phase-roadmap">🗓 Phase 3 — Planned</span>
+    <!-- ─── NOTIFICATIONS MODULE ─── -->
+    <div class="module-header" data-cat="notifications">
+      <div class="module-icon">🔔</div>
       <div>
-        <div class="phase-divider-title">Matches, Live Scoring & MVP Indexes</div>
-        <div class="phase-divider-desc">Endpoints #36–41: Schedule match events, update scoreboards, and list statistics standouts</div>
+        <div class="module-name">Notifications Module</div>
+        <div class="module-count">4 endpoints · ✅ Live</div>
       </div>
     </div>
 
-    <!-- #35 -->
-    <div class="endpoint-card roadmap-card" id="card-36" data-category="sports" data-path="/sports/cricket/matches" data-desc="post schedule match tournament teams organizer phase 3 roadmap planned">
+    <!-- Description -->
+    <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 18px 24px; border-radius: var(--radius-lg); margin-bottom: 24px; font-size: 0.88rem; color: var(--text-2);">
+      <p style="font-weight: 700; color: var(--text); margin-bottom: 4px;">Centralized Notification Feed</p>
+      <p style="margin-bottom: 0;">Provides an asynchronous event-driven system to deliver, track, and manage notifications across all features (starting with Cricket Teams). Users can query notifications with pagination, see unread counts, and perform bulk read status updates.</p>
+    </div>
+
+    <div class="phase-divider" data-category="notifications">
+      <span class="phase-badge phase-live">✅ Live</span>
+      <div>
+        <div class="phase-divider-title">Global Notification Feed & Management</div>
+        <div class="phase-divider-desc">Endpoints #36–39: Centralized user notification feed, unread counts, and read status controls</div>
+      </div>
+    </div>
+
+    <!-- Collapsible Architecture & Details section -->
+    <details class="arch-details" style="margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-2); overflow: hidden;">
+      <summary style="padding: 16px 20px; font-weight: 600; font-size: 0.9rem; color: var(--text); cursor: pointer; background: var(--surface); list-style: none; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); user-select: none;">
+        <span>💡 System Architecture, Flows & Techniques (Click to Expand)</span>
+        <span class="summary-toggle-icon" style="font-size: 0.8rem; transition: transform 0.2s;">▾</span>
+      </summary>
+      <div class="arch-content" style="padding: 20px; font-size: 0.85rem; color: var(--text-2); line-height: 1.6;">
+        <h4 style="margin-top: 0; margin-bottom: 12px; color: var(--text); font-size: 0.95rem;">Asynchronous Event-Driven Flow</h4>
+        <p style="margin-bottom: 16px;">Notifications are decoupled from the core business logic of other modules using NestJS <code>EventEmitter2</code> event-driven architecture.</p>
+        
+        <pre class="ascii-flowchart" style="background: var(--bg-3); color: var(--text-code); padding: 16px; border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; overflow-x: auto; line-height: 1.4; border: 1px solid var(--border); margin-bottom: 20px;">
+┌──────────────┐      (1) Call Action API      ┌──────────────┐      (2) Save Squad Member      ┌──────────┐
+│ Player /     │ ────────────────────────────> │ TeamsService │ ──────────────────────────────> │ Database │
+│ Captain      │ <──────────────────────────── │              │ <────────────────────────────── │          │
+└──────────────┘     (6) Return Core Success   └──────────────┘     (3) Transaction Success     └──────────┘
+                                                      │
+                                                      │ (4) notificationsService.create()
+                                                      │     [wrapped in try/catch block]
+                                                      ▼
+                                               ┌──────────────┐      (5) Save Notification      ┌──────────┐
+                                               │Notification- │ ──────────────────────────────> │ Database │
+                                               │   Service    │ <────────────────────────────── │          │
+                                               └──────────────┘             Record Saved        └──────────┘
+                                                      │
+                                                      │ (5a) Emit 'notification.created'
+                                                      ▼
+                                               ┌──────────────┐
+                                               │EventEmitter2 │
+                                               └──────────────┘
+
+┌──────────────┐      (a) GET /notifications   ┌──────────────┐      (b) Query Notifications    ┌──────────┐
+│ Frontend App │ ────────────────────────────> │Notification- │ ──────────────────────────────> │ Database │
+│ (Zustand/UI) │ <──────────────────────────── │  Controller  │ <────────────────────────────── │ (Indexed)│
+└──────────────┘        (d) JSON Response      └──────────────┘     (c) Return Feed & Count     └──────────┘</pre>
+        
+        <h4 style="margin-bottom: 12px; color: var(--text); font-size: 0.95rem;">Engineering & Database Optimization Techniques</h4>
+        <ul style="padding-left: 20px; margin-bottom: 0; line-height: 1.6; list-style-type: decimal;">
+          <li style="margin-bottom: 8px;"><strong>Composite Performance Index:</strong> A composite index is defined on <code>(user_id, is_read, created_at)</code> columns in the PostgreSQL database. This ensures that unread count polling and chronological paginated list queries scale efficiently even with millions of notifications.</li>
+          <li style="margin-bottom: 8px;"><strong>Bulk Read Operations:</strong> The <code>/notifications/read-all</code> endpoint executes a bulk SQL <code>UPDATE</code> instead of retrieving and saving individual models, saving database connections, transactions, and server memory.</li>
+          <li style="margin-bottom: 0;"><strong>Transaction Safety:</strong> All triggers inside <code>TeamsService</code> are wrapped in robust <code>try/catch</code> handlers. Any notification creation or database failure is logged as a warning but will <strong>never</strong> fail, block, or roll back the core team operation (e.g. accepting a membership request).</li>
+        </ul>
+      </div>
+    </details>
+
+    <!-- #36 -->
+    <div class="endpoint-card" id="card-36" data-category="notifications" data-path="/notifications" data-desc="get notifications unread offset page limit list feed read">
       <div class="endpoint-header" onclick="toggleCard(this)">
         <span class="endpoint-number">#36</span>
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/notifications</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/notifications')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Retrieves a paginated list of notifications for the authenticated user, ordered by newest first.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Query Parameters</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">unread_only</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Set to <code>'true'</code> to fetch only unread notifications</td></tr>
+              <tr><td><span class="param-name">page</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Page index (defaults to <code>'1'</code>)</td></tr>
+              <tr><td><span class="param-name">limit</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Items per page (defaults to <code>'20'</code>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/notifications?unread_only=true&amp;page=1&amp;limit=20" \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/notifications', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' },
+  params: { unread_only: 'true', page: '1', limit: '20' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "data": {
+    "notifications": [
+      {
+        "id": 1,
+        "user_id": 13,
+        "type": "team_invite",
+        "title": "You were invited to join Pabaini Kings",
+        "body": null,
+        "deep_link": "/sports/cricket/teams/2",
+        "metadata": {
+          "team_id": 2
+        },
+        "is_read": false,
+        "created_at": "2026-06-16T10:12:30.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #37 -->
+    <div class="endpoint-card" id="card-37" data-category="notifications" data-path="/notifications/unread-count" data-desc="get notifications unread count number badge">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#37</span>
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/notifications/unread-count</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/notifications/unread-count')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Retrieves the lightweight count of unread notifications for the authenticated user.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X GET http://localhost:3000/api/v1/notifications/unread-count \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/notifications/unread-count', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "data": 1
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #38 -->
+    <div class="endpoint-card" id="card-38" data-category="notifications" data-path="/notifications/read-all" data-desc="patch notifications read all bulk update marker">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#38</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/notifications/read-all</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/notifications/read-all')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Marks all unread notifications of the authenticated user as read.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/notifications/read-all \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/notifications/read-all', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "data": {
+    "updated": 1
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #39 -->
+    <div class="endpoint-card" id="card-39" data-category="notifications" data-path="/notifications/:id/read" data-desc="patch notifications mark single read ownership validation id path">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#39</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/notifications/:id/read</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/notifications/:id/read')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Marks a single notification as read, validating user ownership.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Path Parameters</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-yes">Yes</span></td><td>ID of the notification to mark as read</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/notifications/1/read \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/notifications/1/read', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "user_id": 13,
+    "type": "team_invite",
+    "title": "You were invited to join Pabaini Kings",
+    "body": null,
+    "deep_link": "/sports/cricket/teams/2",
+    "metadata": {
+      "team_id": 2
+    },
+    "is_read": true,
+    "created_at": "2026-06-16T10:12:30.000Z"
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 divider -->
+    <div class="phase-divider roadmap" data-category="sports">
+      <span class="phase-badge phase-roadmap">🗓 Phase 3 — Planned</span>
+      <div>
+        <div class="phase-divider-title">Matches, Live Scoring & MVP Indexes</div>
+        <div class="phase-divider-desc">Endpoints #40–45: Schedule match events, update scoreboards, and list statistics standouts</div>
+      </div>
+    </div>
+
+    <!-- #40 -->
+    <div class="endpoint-card roadmap-card" id="card-40" data-category="sports" data-path="/sports/cricket/matches" data-desc="post schedule match tournament teams organizer phase 3 roadmap planned">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#40</span>
         <span class="method-tag POST muted">POST</span>
         <span class="path-text">/api/v1/sports/cricket/matches</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3081,10 +3355,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #36 -->
-    <div class="endpoint-card roadmap-card" id="card-37" data-category="sports" data-path="/sports/cricket/matches" data-desc="get list all matches filter status phase 3 roadmap planned">
+    <!-- #41 -->
+    <div class="endpoint-card roadmap-card" id="card-41" data-category="sports" data-path="/sports/cricket/matches" data-desc="get list all matches filter status phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#37</span>
+        <span class="endpoint-number">#41</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/matches</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3095,10 +3369,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #37 -->
-    <div class="endpoint-card roadmap-card" id="card-38" data-category="sports" data-path="/sports/cricket/matches/:id" data-desc="get detailed match info scorecard phase 3 roadmap planned">
+    <!-- #42 -->
+    <div class="endpoint-card roadmap-card" id="card-42" data-category="sports" data-path="/sports/cricket/matches/:id" data-desc="get detailed match info scorecard phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#38</span>
+        <span class="endpoint-number">#42</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/matches/:id</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3109,10 +3383,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #38 -->
-    <div class="endpoint-card roadmap-card" id="card-39" data-category="sports" data-path="/sports/cricket/matches/:id/scores" data-desc="patch live scores runs wickets match scorer admin phase 3 roadmap planned">
+    <!-- #43 -->
+    <div class="endpoint-card roadmap-card" id="card-43" data-category="sports" data-path="/sports/cricket/matches/:id/scores" data-desc="patch live scores runs wickets match scorer admin phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#39</span>
+        <span class="endpoint-number">#43</span>
         <span class="method-tag PATCH muted">PATCH</span>
         <span class="path-text">/api/v1/sports/cricket/matches/:id/scores</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3140,10 +3414,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #39 -->
-    <div class="endpoint-card roadmap-card" id="card-40" data-category="sports" data-path="/sports/cricket/leaderboard" data-desc="get leaderboard standings mvp runs wickets public phase 3 roadmap planned">
+    <!-- #44 -->
+    <div class="endpoint-card roadmap-card" id="card-44" data-category="sports" data-path="/sports/cricket/leaderboard" data-desc="get leaderboard standings mvp runs wickets public phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#40</span>
+        <span class="endpoint-number">#44</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/leaderboard</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3154,10 +3428,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #40 -->
-    <div class="endpoint-card roadmap-card" id="card-41" data-category="sports" data-path="/sports/cricket/stats/mvp" data-desc="get mvp rankings leaderboard standings public phase 3 roadmap planned">
+    <!-- #45 -->
+    <div class="endpoint-card roadmap-card" id="card-45" data-category="sports" data-path="/sports/cricket/stats/mvp" data-desc="get mvp rankings leaderboard standings public phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#41</span>
+        <span class="endpoint-number">#45</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/stats/mvp</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -3231,7 +3505,9 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
 
     // Show/hide phase dividers
     document.querySelectorAll('.phase-divider').forEach(d => {
-      d.style.display = (currentTab === 'all' || currentTab === 'sports') ? '' : 'none';
+      const cat = d.getAttribute('data-category') || 'sports';
+      const matchCat = currentTab === 'all' || cat === currentTab;
+      d.style.display = matchCat ? '' : 'none';
     });
   }
 

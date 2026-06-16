@@ -13,8 +13,9 @@
 | Announcements | 9 | ✅ Live |
 | Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
 | Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
+| Notifications Module | 4 | ✅ Live |
 | Sports — Phase 3 (Matches & Standings) | 6 | 🗓 Roadmap |
-| **Total** | **41** | |
+| **Total** | **45** | |
 
 ---
 
@@ -86,13 +87,19 @@ interface ApiResponse<T> {
 - [#34 — PATCH `/sports/cricket/teams/:id/captain`](#34-patch-sportscricketteamsidcaptain) — Transfer captaincy
 - [#35 — DELETE `/sports/cricket/teams/:id`](#35-delete-sportscricketteamsid) — Soft-delete team
 
-### 6. Sports Module — Phase 3 🗓 Roadmap
-- [#36 — POST `/sports/cricket/matches`](#36-post-sportscricketmatches) — Schedule match
-- [#37 — GET `/sports/cricket/matches`](#37-get-sportscricketmatches) — List matches
-- [#38 — GET `/sports/cricket/matches/:id`](#38-get-sportscricketmatchesid) — Get match details
-- [#39 — PATCH `/sports/cricket/matches/:id/scores`](#39-patch-sportscricketmatchesidscores) — Record scores
-- [#40 — GET `/sports/cricket/leaderboard`](#40-get-sportscricketleaderboard) — Leaderboard standings
-- [#41 — GET `/sports/cricket/stats/mvp`](#41-get-sportscricketstatsmvp) — MVP rankings
+### 6. Notifications Module ✅ Implemented
+- [#36 — GET `/notifications`](#36-get-notifications) — Get notifications
+- [#37 — GET `/notifications/unread-count`](#37-get-notificationsunread-count) — Get unread count
+- [#38 — PATCH `/notifications/read-all`](#38-patch-notificationsread-all) — Mark all read
+- [#39 — PATCH `/notifications/:id/read`](#39-patch-notificationsidread) — Mark specific read
+
+### 7. Sports Module — Phase 3 🗓 Roadmap
+- [#40 — POST `/sports/cricket/matches`](#40-post-sportscricketmatches) — Schedule match
+- [#41 — GET `/sports/cricket/matches`](#41-get-sportscricketmatches) — List matches
+- [#42 — GET `/sports/cricket/matches/:id`](#42-get-sportscricketmatchesid) — Get match details
+- [#43 — PATCH `/sports/cricket/matches/:id/scores`](#43-patch-sportscricketmatchesidscores) — Record scores
+- [#44 — GET `/sports/cricket/leaderboard`](#44-get-sportscricketleaderboard) — Leaderboard standings
+- [#45 — GET `/sports/cricket/stats/mvp`](#45-get-sportscricketstatsmvp) — MVP rankings
 
 ---
 
@@ -1504,13 +1511,228 @@ curl -X DELETE http://localhost:3000/api/v1/sports/cricket/teams/1 \
 
 ---
 
+## 6. Notifications Module
+
+The Notifications Module provides a centralized feed, unread notification counts, and bulk read markers for all features across the Pabaini ecosystem.
+
+<details>
+<summary>💡 System Architecture, Flows & Techniques (Click to Expand)</summary>
+
+### Asynchronous Event-Driven Flow
+Notifications are decoupled from the core business logic of other modules using NestJS `EventEmitter2` event-driven architecture. 
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player as Player / Captain
+    participant TS as TeamsService
+    participant NS as NotificationsService
+    participant DB as PostgreSQL Database
+    participant EE2 as EventEmitter2 (Events)
+    participant NC as NotificationsController
+    participant UI as Frontend App
+
+    Note over Player, TS: Trigger Action (e.g. Join Request, Invite)
+    Player->>TS: Call team action API
+    TS->>DB: Process team action (save squad membership)
+    DB-->>TS: Transaction Success
+    
+    Note over TS, NS: Dispatch Notification Asynchronously (try/catch)
+    TS->>NS: notificationsService.create(payload)
+    NS->>DB: Save Notification (user_id, type, title, deep_link, metadata)
+    DB-->>NS: Saved Record
+    NS->>EE2: Emit event 'notification.created'
+    NS-->>TS: Notification Success / Failure ignored
+    TS-->>Player: Return core action response (Success)
+
+    Note over UI, NC: Fetching Notifications
+    UI->>NC: GET /api/v1/notifications (with query filters)
+    NC->>NS: findForUser(userId, query)
+    NS->>DB: Query notifications (indexed on user_id, is_read, created_at)
+    DB-->>NS: Return records & total count
+    NS-->>NC: Return paginated object
+    NC-->>UI: Return response envelope { success, status, data }
+```
+
+### Engineering & Database Optimization Techniques:
+1. **Composite Performance Index**: A composite index is defined on `(user_id, is_read, created_at)` columns. This ensures that unread count polling and chronological paginated list queries scale efficiently to millions of notifications.
+2. **Bulk Read Operations**: The `/notifications/read-all` endpoint executes a bulk SQL `UPDATE` instead of retrieving and saving individual models, saving database connections and memory.
+3. **Transaction Safety**: All triggers inside `TeamsService` are wrapped in `try/catch` handlers. Any notification failure is logged as a warning but will **never** fail or roll back the core team operation.
+
+</details>
+
+---
+
+### #36 · GET `/notifications`
+
+Retrieves a paginated list of notifications for the authenticated user, ordered by newest first.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/notifications` |
+| **Access** | 🔐 Protected *(Resident / Moderator / Admin)* |
+| **Status** | ✅ Live |
+
+**Request Headers**
+
+| Header | Value | Description |
+|---|---|---|
+| `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` | Required Firebase session token |
+
+**Query Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `unread_only` | `string` | No | Set to `'true'` to fetch only unread notifications |
+| `page` | `string` | No | Page index (defaults to `'1'`) |
+| `limit` | `string` | No | Items per page (defaults to `'20'`) |
+
+**Example Response (200 OK)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "notifications": [
+      {
+        "id": 1,
+        "user_id": 13,
+        "type": "team_invite",
+        "title": "You were invited to join Pabaini Kings",
+        "body": null,
+        "deep_link": "/sports/cricket/teams/2",
+        "metadata": {
+          "team_id": 2
+        },
+        "is_read": false,
+        "created_at": "2026-06-16T10:12:30.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### #37 · GET `/notifications/unread-count`
+
+Retrieves the lightweight count of unread notifications for the authenticated user.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/notifications/unread-count` |
+| **Access** | 🔐 Protected *(Resident / Moderator / Admin)* |
+| **Status** | ✅ Live |
+
+**Request Headers**
+
+| Header | Value | Description |
+|---|---|---|
+| `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` | Required Firebase session token |
+
+**Example Response (200 OK)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": 1
+}
+```
+
+---
+
+### #38 · PATCH `/notifications/read-all`
+
+Marks all unread notifications of the authenticated user as read.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/notifications/read-all` |
+| **Access** | 🔐 Protected *(Resident / Moderator / Admin)* |
+| **Status** | ✅ Live |
+
+**Request Headers**
+
+| Header | Value | Description |
+|---|---|---|
+| `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` | Required Firebase session token |
+
+**Example Response (200 OK)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "updated": 1
+  }
+}
+```
+
+---
+
+### #39 · PATCH `/notifications/:id/read`
+
+Marks a single notification as read, validating ownership.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/notifications/:id/read` |
+| **Access** | 🔐 Protected *(Resident / Moderator / Admin)* |
+| **Status** | ✅ Live |
+
+**Request Headers**
+
+| Header | Value | Description |
+|---|---|---|
+| `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` | Required Firebase session token |
+
+**Path Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | `number` | Yes | ID of the notification to mark as read |
+
+**Example Response (200 OK)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "user_id": 13,
+    "type": "team_invite",
+    "title": "You were invited to join Pabaini Kings",
+    "body": null,
+    "deep_link": "/sports/cricket/teams/2",
+    "metadata": {
+      "team_id": 2
+    },
+    "is_read": true,
+    "created_at": "2026-06-16T10:12:30.000Z"
+  }
+}
+```
+
+---
+
 ### Sports — Phase 3 🗓 Roadmap
 
 > These endpoints are **planned** for Phase 3 development. They are not yet implemented.
 
 ---
 
-### #36 · POST `/sports/cricket/matches`
+### #40 · POST `/sports/cricket/matches`
 
 Schedules a tournament match between two registered teams.
 
@@ -1533,7 +1755,7 @@ Schedules a tournament match between two registered teams.
 
 ---
 
-### #37 · GET `/sports/cricket/matches`
+### #41 · GET `/sports/cricket/matches`
 
 Lists all matches with optional filters for status (completed/live/upcoming).
 
@@ -1546,7 +1768,7 @@ Lists all matches with optional filters for status (completed/live/upcoming).
 
 ---
 
-### #38 · GET `/sports/cricket/matches/:id`
+### #42 · GET `/sports/cricket/matches/:id`
 
 Retrieves detailed match details, scorecards, and MVP metrics.
 
@@ -1559,7 +1781,7 @@ Retrieves detailed match details, scorecards, and MVP metrics.
 
 ---
 
-### #39 · PATCH `/sports/cricket/matches/:id/scores`
+### #43 · PATCH `/sports/cricket/matches/:id/scores`
 
 Records or updates live scores, overs played, and match result for a scheduled match.
 
@@ -1586,7 +1808,7 @@ Records or updates live scores, overs played, and match result for a scheduled m
 
 ---
 
-### #40 · GET `/sports/cricket/leaderboard`
+### #44 · GET `/sports/cricket/leaderboard`
 
 Returns real-time tournament standings, top run-scorers, wicket leaders, and MVP index.
 
@@ -1599,7 +1821,7 @@ Returns real-time tournament standings, top run-scorers, wicket leaders, and MVP
 
 ---
 
-### #41 · GET `/sports/cricket/stats/mvp`
+### #45 · GET `/sports/cricket/stats/mvp`
 
 Returns top players sorted by dynamically calculated MVP rating indexes.
 

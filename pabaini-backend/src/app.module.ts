@@ -11,6 +11,8 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { SportsModule } from './modules/sports/sports.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -22,11 +24,13 @@ import { SportsModule } from './modules/sports/sports.module';
       inject: [ConfigService],
       useFactory: typeOrmConfig,
     }),
+    EventEmitterModule.forRoot(),
     FirebaseModule,
     AuthModule,
     UsersModule,
     AnnouncementsModule,
-    SportsModule
+    SportsModule,
+    NotificationsModule
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],
