@@ -11,13 +11,15 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSportsStore } from '../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../src/store/sports/teamsStore';
+import { useNotificationsStore } from '../../src/store/notificationsStore';
 import { getAllTeams } from '../../src/services/sports/cricketTeamsApi';
 import { TeamCard, getTeamColor } from '../../src/components/sports/teams/TeamCard';
+import { NotificationBell } from '../../src/components/notifications';
 import { SportsOptIn } from '../../src/components/sports/common/SportsOptIn';
 import { SetupBanner } from '../../src/components/sports/common/SetupBanner';
 import { ComingSoonState } from '../../src/components/sports/common/ComingSoonState';
@@ -71,6 +73,20 @@ export default function SportsScreen() {
   const [allTeams, setAllTeams] = useState<TeamSummary[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [refreshingTeams, setRefreshingTeams] = useState(false);
+
+  // Notifications unread count polling
+  const fetchUnreadCount = useNotificationsStore((state) => state.fetchUnreadCount);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+      const interval = setInterval(() => {
+        fetchUnreadCount();
+      }, 35000); // light poll every ~35s, only while Sports tab is focused
+
+      return () => clearInterval(interval);
+    }, [fetchUnreadCount])
+  );
 
   const fetchTeamsData = useCallback(async (showLoader = true) => {
     if (showLoader) setLoadingTeams(true);
@@ -319,21 +335,24 @@ export default function SportsScreen() {
         ]}
       >
         <Text style={[styles.appBarTitle, { color: theme.colors.textPrimary }]}>Pabaini Sports</Text>
-        {activeTab === 'teams' && isRegistered && (
-          <TouchableOpacity
-            onPress={() => router.push('/sports/cricket/teams/create')}
-            style={{
-              backgroundColor: theme.colors.primary,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-            }}
-          >
-            <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
-              + Create Team
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {activeTab === 'teams' && isRegistered && (
+            <TouchableOpacity
+              onPress={() => router.push('/sports/cricket/teams/create')}
+              style={{
+                backgroundColor: theme.colors.primary,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 16,
+              }}
+            >
+              <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                + Create Team
+              </Text>
+            </TouchableOpacity>
+          )}
+          <NotificationBell onPress={() => router.push('/notifications')} />
+        </View>
       </View>
 
       {/* Tabs Selector */}

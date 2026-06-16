@@ -68,10 +68,7 @@ export default function CaptainManageScreen() {
   const loadManageData = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
-      const [teamData, pendingData] = await Promise.all([
-        getTeamById(teamId),
-        getPendingMembers(teamId),
-      ]);
+      const teamData = await getTeamById(teamId);
 
       // Guard: Make sure current user is the captain
       if (!myProfile || teamData.captain.id !== myProfile.id) {
@@ -79,6 +76,8 @@ export default function CaptainManageScreen() {
         router.back();
         return;
       }
+
+      const pendingData = await getPendingMembers(teamId);
 
       setTeam(teamData);
       setPending(pendingData);
@@ -91,6 +90,7 @@ export default function CaptainManageScreen() {
     } catch (error) {
       console.error('Failed to load manage dashboard:', error);
       Alert.alert('Error', 'Failed to retrieve management details');
+      router.back();
     } finally {
       setLoading(false);
     }
