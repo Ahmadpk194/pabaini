@@ -101,6 +101,7 @@ export interface MyTeamResponse {
     user: { id: number; name: string; avatar_url: string | null };
   };
   role: TeamMemberRole;
+  status: TeamMemberStatus;
   joined_at: string;
 }
 

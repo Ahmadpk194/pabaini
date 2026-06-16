@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../context/ThemeContext';
 import { CricketPlayerProfile } from '../../../types/sports.types';
@@ -7,6 +7,7 @@ import { Avatar } from '../../ui/Avatar';
 
 interface CricketPlayerCardProps {
   profile: CricketPlayerProfile;
+  onPress?: () => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,7 +17,7 @@ const ROLE_LABELS: Record<string, string> = {
   keeper: 'Wicket-keeper',
 };
 
-export function CricketPlayerCard({ profile }: CricketPlayerCardProps) {
+export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) {
   const { theme } = useTheme();
   const { role, batting_hand, bowling_arm, bowling_type, user } = profile;
 
@@ -74,7 +75,7 @@ export function CricketPlayerCard({ profile }: CricketPlayerCardProps) {
       ];
   }
 
-  return (
+  const cardContent = (
     <LinearGradient
       colors={['#004D26', '#002613']}
       start={{ x: 0, y: 0 }}
@@ -127,6 +128,16 @@ export function CricketPlayerCard({ profile }: CricketPlayerCardProps) {
       </View>
     </LinearGradient>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        {cardContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return cardContent;
 }
 
 const styles = StyleSheet.create({

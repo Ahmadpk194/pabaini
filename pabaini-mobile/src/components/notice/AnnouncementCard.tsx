@@ -95,29 +95,38 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
       <View style={[styles.container, { borderColor: theme.colors.border }]}>
         {/* Header Row */}
         <View style={styles.header}>
-          {/* Avatar Circle */}
-          {announcement.author.avatar_url ? (
-            <Image
-              source={{ uri: announcement.author.avatar_url }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: '#EAF3DE' }]}>
-              <Text style={[styles.avatarText, { color: '#27500A' }]}>
-                {getInitials(announcement.author.name)}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push(`/profile/${announcement.author.id}`);
+            }}
+            style={styles.authorClickable}
+          >
+            {/* Avatar Circle */}
+            {announcement.author.avatar_url ? (
+              <Image
+                source={{ uri: announcement.author.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: '#EAF3DE' }]}>
+                <Text style={[styles.avatarText, { color: '#27500A' }]}>
+                  {getInitials(announcement.author.name)}
+                </Text>
+              </View>
+            )}
+            
+            {/* Author Info */}
+            <View style={styles.headerInfo}>
+              <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
+                {announcement.author.name}
+              </Text>
+              <Text style={[styles.timestamp, { color: theme.colors.textSecondary }]}>
+                {timeAgo}
               </Text>
             </View>
-          )}
-          
-          {/* Author Info */}
-          <View style={styles.headerInfo}>
-            <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
-              {announcement.author.name}
-            </Text>
-            <Text style={[styles.timestamp, { color: theme.colors.textSecondary }]}>
-              {timeAgo}
-            </Text>
-          </View>
+          </TouchableOpacity>
           
           {/* Right Action/Badge Area */}
           <View style={styles.headerRight}>
@@ -342,5 +351,11 @@ const styles = StyleSheet.create({
   likedText: {
     color: '#1F4A2E',
     fontWeight: 'bold',
+  },
+  authorClickable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
   },
 });

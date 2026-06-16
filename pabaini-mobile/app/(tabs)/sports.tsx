@@ -238,7 +238,11 @@ export default function SportsScreen() {
     }
 
     return (
-      <View style={[styles.playerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push(`/profile/${item.user.id}`)}
+        style={[styles.playerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+      >
         <Avatar uri={item.user.avatar_url} size={48} name={item.user.name} />
         <View style={styles.playerInfo}>
           <View style={styles.playerMetaHeader}>
@@ -253,7 +257,7 @@ export default function SportsScreen() {
             {battingText} • {bowlingText}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -271,7 +275,10 @@ export default function SportsScreen() {
               <Award color={theme.colors.primary} size={20} />
               <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Player Profile</Text>
             </View>
-            <CricketPlayerCard profile={myProfile} />
+            <CricketPlayerCard 
+              profile={myProfile} 
+              onPress={() => router.push(`/profile/${myProfile.user.id}`)}
+            />
           </View>
         )}
 
@@ -469,14 +476,78 @@ export default function SportsScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                myTeams.map((t) => (
-                  <TeamCard
-                    key={t.id}
-                    team={t}
-                    showCaptainBadge={t.role === 'captain'}
-                    onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
-                  />
-                ))
+                <>
+                  {/* Active teams */}
+                  {myTeams.filter((t) => t.status === 'active').map((t) => (
+                    <TeamCard
+                      key={t.id}
+                      team={t}
+                      showCaptainBadge={t.role === 'captain'}
+                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                    />
+                  ))}
+
+                  {/* Pending join requests sent by the player */}
+                  {myTeams.filter((t) => t.status === 'pending_request').map((t) => (
+                    <TouchableOpacity
+                      key={`req-${t.id}`}
+                      activeOpacity={0.7}
+                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                      style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: '#D4A700' }]}
+                    >
+                      <View style={styles.pendingCardLeft}>
+                        <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                          {t.name}
+                        </Text>
+                        <Text style={styles.pendingCardSub}>
+                          {t.home_ground || 'Tap to view team'}
+                        </Text>
+                      </View>
+                      <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>Request Pending</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                  {/* Pending invites received by the player */}
+                  {myTeams.filter((t) => t.status === 'pending_invite').map((t) => (
+                    <TouchableOpacity
+                      key={`inv-${t.id}`}
+                      activeOpacity={0.7}
+                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                      style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
+                    >
+                      <View style={styles.pendingCardLeft}>
+                        <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                          {t.name}
+                        </Text>
+                        <Text style={styles.pendingCardSub}>Invited to join — tap to accept</Text>
+                      </View>
+                      <View style={[styles.pendingBadge, { backgroundColor: `${theme.colors.primary}15`, borderColor: `${theme.colors.primary}50` }]}>
+                        <Text style={[styles.pendingBadgeText, { color: theme.colors.primary }]}>Invited ›</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                  {/* Suggest creating own team if only pending items exist */}
+                  {myTeams.every((t) => t.status !== 'active') && myTeams.length > 0 && (
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: theme.colors.primary,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: theme.radius.sm,
+                        marginTop: 8,
+                        alignSelf: 'flex-start',
+                      }}
+                      onPress={() => router.push('/sports/cricket/teams/create')}
+                    >
+                      <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                        + Create Your Own Team
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           )}
@@ -696,5 +767,39 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 10,
+  },
+  pendingCardLeft: {
+    flex: 1,
+  },
+  pendingCardName: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  pendingCardSub: {
+    fontSize: 12,
+    color: '#888',
+  },
+  pendingBadge: {
+    backgroundColor: '#FFF8DC',
+    borderWidth: 1,
+    borderColor: '#D4A700',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 10,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A07800',
   },
 });

@@ -25,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="announcement/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="announcement/create" options={{ headerShown: false }} />
+            <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
       </ThemeProvider>

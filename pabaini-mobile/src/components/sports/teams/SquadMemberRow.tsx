@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../../context/ThemeContext';
 import { TeamMember } from '../../../types/sports.types';
 import { Avatar } from '../../ui/Avatar';
@@ -32,6 +33,8 @@ export function SquadMemberRow({ member, rightContent }: SquadMemberRowProps) {
 
   const stylesText = `${ROLE_LABELS[player.role]} • ${battingText}${bowlingText}`;
 
+  const router = useRouter();
+
   return (
     <View
       style={[
@@ -43,32 +46,38 @@ export function SquadMemberRow({ member, rightContent }: SquadMemberRowProps) {
         },
       ]}
     >
-      {/* Left: Avatar */}
-      <Avatar uri={player.user.avatar_url} size={44} name={player.user.name} />
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push(`/profile/${player.user.id}`)}
+        style={styles.clickableArea}
+      >
+        {/* Left: Avatar */}
+        <Avatar uri={player.user.avatar_url} size={44} name={player.user.name} />
 
-      {/* Center: Info */}
-      <View style={styles.infoContainer}>
-        <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-            {player.user.name}
+        {/* Center: Info */}
+        <View style={styles.infoContainer}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+              {player.user.name}
+            </Text>
+            {isCaptain && (
+              <View style={[styles.badge, { backgroundColor: '#FDF2E2' }]}>
+                <Star size={11} color="#EAA81A" fill="#EAA81A" />
+                <Text style={[styles.badgeText, { color: '#B27600' }]}>CAPT</Text>
+              </View>
+            )}
+            {isViceCaptain && (
+              <View style={[styles.badge, { backgroundColor: '#E1F5EE' }]}>
+                <Award size={11} color="#04342C" />
+                <Text style={[styles.badgeText, { color: '#04342C' }]}>VC</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.stylesText, { color: theme.colors.textSecondary }]}>
+            {stylesText}
           </Text>
-          {isCaptain && (
-            <View style={[styles.badge, { backgroundColor: '#FDF2E2' }]}>
-              <Star size={11} color="#EAA81A" fill="#EAA81A" />
-              <Text style={[styles.badgeText, { color: '#B27600' }]}>CAPT</Text>
-            </View>
-          )}
-          {isViceCaptain && (
-            <View style={[styles.badge, { backgroundColor: '#E1F5EE' }]}>
-              <Award size={11} color="#04342C" />
-              <Text style={[styles.badgeText, { color: '#04342C' }]}>VC</Text>
-            </View>
-          )}
         </View>
-        <Text style={[styles.stylesText, { color: theme.colors.textSecondary }]}>
-          {stylesText}
-        </Text>
-      </View>
+      </TouchableOpacity>
 
       {/* Right: Custom Action Slot */}
       {rightContent && <View style={styles.rightContent}>{rightContent}</View>}
@@ -122,5 +131,10 @@ const styles = StyleSheet.create({
   },
   rightContent: {
     marginLeft: 8,
+  },
+  clickableArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
 });
