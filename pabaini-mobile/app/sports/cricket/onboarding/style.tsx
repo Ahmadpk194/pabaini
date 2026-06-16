@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, StyleSheet, LayoutAnimation, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OnboardingStep } from '../../../../src/components/sports/common/OnboardingStep';
 import { CricketStyleChip } from '../../../../src/components/sports/cricket/CricketStyleChip';
 import { useCricketOnboardingStore } from '../../../../src/store/sports/cricketOnboardingStore';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { BattingHand, BowlingArm, BowlingType } from '../../../../src/types/sports.types';
-
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export default function StyleStepScreen() {
   const router = useRouter();

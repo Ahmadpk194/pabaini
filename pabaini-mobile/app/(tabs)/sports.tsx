@@ -8,18 +8,24 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSportsStore } from '../../src/store/sports/sportsStore';
+import { useTeamsStore } from '../../src/store/sports/teamsStore';
+import { getAllTeams } from '../../src/services/sports/cricketTeamsApi';
+import { TeamCard, getTeamColor } from '../../src/components/sports/teams/TeamCard';
 import { SportsOptIn } from '../../src/components/sports/common/SportsOptIn';
 import { SetupBanner } from '../../src/components/sports/common/SetupBanner';
 import { ComingSoonState } from '../../src/components/sports/common/ComingSoonState';
 import { CricketPlayerCard } from '../../src/components/sports/cricket/CricketPlayerCard';
+import { PlayerCardSkeleton, TeamCardSkeleton, DiscoverTeamCardSkeleton } from '../../src/components/skeletons';
 import { Avatar } from '../../src/components/ui/Avatar';
 import client from '../../src/api/client';
-import { CricketPlayerProfile } from '../../src/types/sports.types';
+import { CricketPlayerProfile, TeamSummary } from '../../src/types/sports.types';
 import { Shield, Trophy, Calendar, Users, Award } from 'lucide-react-native';
 
 const TABS = [
@@ -59,6 +65,40 @@ export default function SportsScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Teams local state & store bindings
+  const myTeams = useTeamsStore((state) => state.myTeams);
+  const [allTeams, setAllTeams] = useState<TeamSummary[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [refreshingTeams, setRefreshingTeams] = useState(false);
+
+  const fetchTeamsData = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoadingTeams(true);
+    try {
+      const data = await getAllTeams();
+      setAllTeams(data || []);
+      
+      if (isRegistered) {
+        await useTeamsStore.getState().fetchMyTeams();
+      }
+    } catch (error) {
+      console.error('Error fetching teams data:', error);
+    } finally {
+      setLoadingTeams(false);
+    }
+  }, [isRegistered]);
+
+  useEffect(() => {
+    if (activeTab === 'teams') {
+      fetchTeamsData(true);
+    }
+  }, [activeTab, fetchTeamsData]);
+
+  const handleRefreshTeams = async () => {
+    setRefreshingTeams(true);
+    await fetchTeamsData(false);
+    setRefreshingTeams(false);
+  };
 
   // Sync user profile with backend
   const syncProfile = useCallback(async () => {
@@ -244,7 +284,17 @@ export default function SportsScreen() {
 
   // Empty state when no players are registered
   const renderListEmpty = () => {
-    if (loading) return null;
+    if (loading) {
+      return (
+        <View style={{ gap: 10, marginTop: 10 }}>
+          <PlayerCardSkeleton />
+          <PlayerCardSkeleton />
+          <PlayerCardSkeleton />
+          <PlayerCardSkeleton />
+          <PlayerCardSkeleton />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
@@ -257,8 +307,33 @@ export default function SportsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Premium Header */}
-      <View style={[styles.appBar, { borderBottomColor: theme.colors.border }]}>
+      <View
+        style={[
+          styles.appBar,
+          {
+            borderBottomColor: theme.colors.border,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          },
+        ]}
+      >
         <Text style={[styles.appBarTitle, { color: theme.colors.textPrimary }]}>Pabaini Sports</Text>
+        {activeTab === 'teams' && isRegistered && (
+          <TouchableOpacity
+            onPress={() => router.push('/sports/cricket/teams/create')}
+            style={{
+              backgroundColor: theme.colors.primary,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+            }}
+          >
+            <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+              + Create Team
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tabs Selector */}
@@ -321,11 +396,155 @@ export default function SportsScreen() {
       )}
 
       {activeTab === 'teams' && (
-        <ComingSoonState
-          title="Team Squads"
-          description="Village teams, squads roster, and captain updates will be available soon."
-          icon={<Shield color={theme.colors.primary} size={36} />}
-        />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshingTeams}
+              onRefresh={handleRefreshTeams}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+        >
+          {/* Banner/Setup prompting player registration */}
+          {!isRegistered && (
+            <View style={{ marginTop: 8 }}>
+              <SetupBanner onPress={handleRegisterPress} />
+            </View>
+          )}
+
+          {/* My Teams Section (only if registered) */}
+          {isRegistered && (
+            <View style={styles.myTeamsSection}>
+              <View style={styles.sectionHeader}>
+                <Users color={theme.colors.primary} size={20} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Teams</Text>
+              </View>
+              
+              {loadingTeams && myTeams.length === 0 ? (
+                <View style={{ gap: 10 }}>
+                  <TeamCardSkeleton />
+                  <TeamCardSkeleton />
+                </View>
+              ) : myTeams.length === 0 ? (
+                <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
+                  <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
+                    You haven't joined or created any teams yet.
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: theme.colors.primary,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: theme.radius.sm,
+                      marginTop: 12,
+                    }}
+                    onPress={() => router.push('/sports/cricket/teams/create')}
+                  >
+                    <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                      Create a Team
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                myTeams.map((t) => (
+                  <TeamCard
+                    key={t.id}
+                    team={t}
+                    showCaptainBadge={t.role === 'captain'}
+                    onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                  />
+                ))
+              )}
+            </View>
+          )}
+
+          {/* Discover Teams Section (carousel) */}
+          <View style={{ marginTop: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Shield color={theme.colors.primary} size={20} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/sports/cricket/teams')}>
+                <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingTeams && allTeams.length === 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
+              >
+                <DiscoverTeamCardSkeleton />
+                <DiscoverTeamCardSkeleton />
+                <DiscoverTeamCardSkeleton />
+              </ScrollView>
+            ) : allTeams.length === 0 ? (
+              <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
+                <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
+                  No teams available at the moment.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
+              >
+                {allTeams.map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                    style={{
+                      width: 220,
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      borderWidth: 1,
+                      borderRadius: theme.radius.md,
+                      padding: 14,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden' }}>
+                        {t.logo_url ? (
+                          <Image source={{ uri: t.logo_url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                        ) : (
+                          <View style={{ width: '100%', height: '100%', backgroundColor: getTeamColor(t.name), justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                              {t.name ? t.name.charAt(0).toUpperCase() : '?'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
+                          {t.name}
+                        </Text>
+                        <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                          {t.home_ground || 'No Home Ground'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                        {t.member_count} members
+                      </Text>
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '600' }}>
+                        View Profile
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </ScrollView>
       )}
 
       {activeTab === 'matches' && (
@@ -389,6 +608,9 @@ const styles = StyleSheet.create({
   myProfileSection: {
     marginBottom: 16,
   },
+  myTeamsSection: {
+    marginBottom: 16,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -442,6 +664,11 @@ const styles = StyleSheet.create({
   },
   footerLoader: {
     paddingVertical: 16,
+    alignItems: 'center',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   emptyContainer: {

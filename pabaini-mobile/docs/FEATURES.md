@@ -90,6 +90,18 @@ This document provides a comprehensive overview of all features implemented in t
 ## 🏏 8. Sports Hub: Cricket Player Onboarding & Feed (Phase 1)
 **Objective**: Build a premium sports community starting with Cricket Player Profiles, featuring a multi-step onboarding registration wizard, personal player cards, and a paginated list of all community players.
 
+### 🌟 Phase 1: Cricket Player Profiles & Onboarding (Implemented)
+
+#### 📝 Phase 1 in a Nutshell (High-Level Overview)
+*   **Frontend**:
+    *   **Sports tab with first-time opt-in screen**: Introduces the sports features with options to register or browse.
+    *   **3-step cricket player onboarding (role → playing style → preview card)**: Seamless profile registration setup wizard.
+    *   **Sports feed (player view + browser view)**: Displays player stats, matching registered players and browse mode layouts.
+    *   **Setup banner for users who skipped**: A gentle persistent reminder cards for unregistered users to register any time.
+
+> [!NOTE]
+> **In simple words:** A user can optionally register as a cricket player by setting up their profile (role, batting hand, bowling style). This creates their permanent player identity in the app that everything else — teams, matches, stats — depends on.
+
 *   **Initialization & State Verification**:
     *   On screen mount, the app performs a silent check against the backend: `GET /sports/cricket/players/me`.
     *   If a player profile is returned (`200 OK`), the Zustand store `registrations` is updated to cache the profile locally, ensuring instant loading next time.
@@ -111,6 +123,20 @@ This document provides a comprehensive overview of all features implemented in t
 *   **Paginated Player Feed**:
     *   Fetches community players via infinite-scroll pagination (`GET /sports/cricket/players?page=N&limit=10`), appending items as the user scrolls.
     *   Implements `RefreshControl` (pull-to-refresh) to sync the latest players and recheck the user's registration status.
+
+### 🚀 Phase 2: Teams, Matches & Leaderboards (Planned / Roadmap)
+*   **Teams Module**:
+    *   [ ] Support custom team/squad registration.
+    *   [ ] Allow team captains to send roster/squad invitations to registered players.
+    *   [ ] Add a player notification dashboard to accept/reject team invite requests.
+    *   [ ] Roster standings tab listing all approved squads.
+*   **Matches & Fixtures**:
+    *   [ ] Render upcoming tournament match listings, location directions, and timings.
+    *   [ ] Live scoreboard widget to record ball-by-ball actions or final match score summaries.
+    *   [ ] Match details dashboard showing runs, wickets, and man of the match outcomes.
+*   **MVP Leaderboards**:
+    *   [ ] Dynamically compile runs, batting averages, strike rates, wickets, economy rates, and MVP rankings.
+    *   [ ] Update the Leaderboard tab feed in real-time.
 
 ### 📊 Step-by-Step Flowchart
 
@@ -135,11 +161,6 @@ graph TD
     Success --> ShowFeed
 ```
 
-### ⏭️ What's Next (Phase 2 Roadmap)
-- [ ] **Teams Module**: Support team registration, captain designations, player invitations, and squad acceptance requests.
-- [ ] **Matches & Schedules**: Render upcoming tournament fixture cards, calendar dates, ground locations, and live match score tracking interfaces.
-- [ ] **Leaderboards**: Compute runs, wickets, averages, and MVP standings dynamically, updating the Leaderboards directory in real-time.
-
 ---
 
 ## 💝 9. Donors Directory (`app/(tabs)/donors.tsx`)
@@ -149,7 +170,7 @@ graph TD
 
 ---
 
-## 🔔 9. Push Notifications (FCM Device Token Sync)
+## 🔔 10. Push Notifications (FCM Device Token Sync)
 **Objective**: Associate active FCM device tokens with authenticated profiles to prepare for push message support.
 
 *   **Status: PARTIALLY IMPLEMENTED (Token Registration Active)**

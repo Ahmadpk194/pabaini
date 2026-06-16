@@ -3,7 +3,10 @@ export { default as NoticeFeedSkeleton } from './notice/NoticeFeedSkeleton';
 export { default as AnnouncementDetailSkeleton } from './notice/AnnouncementDetailSkeleton';
 export { default as ProfileSkeleton } from './profile/ProfileSkeleton';
 export { default as TournamentCardSkeleton } from './sports/TournamentCardSkeleton';
+export { default as PlayerCardSkeleton } from './sports/PlayerCardSkeleton';
+export { default as TeamCardSkeleton, DiscoverTeamCardSkeleton } from './sports/TeamCardSkeleton';
 export { default as DonorListSkeleton } from './donors/DonorListSkeleton';
 export { default as Shimmer } from './Shimmer';
 export { default as SkeletonBox } from './SkeletonBox';
 export { default as SkeletonCircle } from './SkeletonCircle';
+
