@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 import { CricketModule } from './cricket/cricket.module';
+import { TeamsModule } from './cricket/teams/teams.module';
 
 @Module({
   imports: [
     CricketModule,
+    TeamsModule,
     RouterModule.register([
       {
         path: 'sports',
@@ -12,6 +14,12 @@ import { CricketModule } from './cricket/cricket.module';
           {
             path: 'cricket',
             module: CricketModule,
+            children: [
+              {
+                path: '',
+                module: TeamsModule,
+              },
+            ],
           },
         ],
       },

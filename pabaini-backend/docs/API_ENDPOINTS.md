@@ -1,134 +1,142 @@
-# Pabaini Backend API Reference Documentation
+# Pabaini Backend — API Reference
 
-**Pabaini** is a community mobile application designed specifically for **Pabaini village** (Swabi District, Khyber Pakhtunkhwa, Pakistan). This portal replaces unstructured WhatsApp channels and Facebook posts with a dedicated platform for residents and diaspora members.
-
-This document serves as a complete developer guide to the backend NestJS endpoints, database constraint schemas, and response envelopes.
+> **Pabaini** is a community mobile app for Pabaini village (Swabi District, KPK, Pakistan). This document is the complete developer reference for all NestJS backend REST API endpoints, organized by module and phase.
 
 ---
 
-## 🛠️ Table of Contents
-1. [Base Configuration](#base-configuration)
-2. [Authentication Module](#1-authentication-module)
-   - [POST /auth/login](#1-user-authentication-login)
-3. [Users Module](#2-users-module)
-   - [GET /users/me](#2-get-my-profile)
-   - [PATCH /users/me](#3-update-my-profile-details)
-   - [POST /users/me/avatar](#4-upload-profile-picture-avatar)
-   - [PATCH /users/:id/role](#5-update-user-role-admin-only)
-   - [POST /users/device-token](#6-register-device-token)
-   - [DELETE /users/device-token](#7-remove-device-token)
-4. [Announcements Module](#3-announcements-module)
-   - [GET /announcements](#8-get-all-announcements)
-   - [GET /announcements/author/:authorId](#9-get-announcements-by-author)
-   - [GET /announcements/:id](#10-get-single-announcement)
-   - [POST /announcements](#11-create-announcement-adminmods)
-   - [PATCH /announcements/:id](#12-update-announcement-authoradminmods)
-   - [PATCH /announcements/:id/soft-delete](#13-soft-delete-announcement-authoradmin)
-   - [DELETE /announcements/:id](#14-hard-delete-announcement-admin-only)
-   - [POST /announcements/:id/like](#15-toggle-like-on-announcement)
-   - [POST /announcements/:id/image](#16-upload-announcement-image-authoradminmods)
-5. [Sports Module](#4-sports-module)
-   - [POST /sports/cricket/players/me](#17-create-my-cricket-player-profile)
-   - [GET /sports/cricket/players/me](#18-get-my-cricket-player-profile)
-   - [PATCH /sports/cricket/players/me](#19-update-my-cricket-player-profile)
-   - [GET /sports/cricket/players/:id](#20-get-any-players-public-cricket-profile)
-   - [GET /sports/cricket/players](#21-list-all-registered-cricket-players)
+## Quick Reference
+
+| Module | Endpoints | Status |
+|---|---|---|
+| Authentication | 1 | ✅ Live |
+| Users | 6 | ✅ Live |
+| Announcements | 9 | ✅ Live |
+| Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
+| Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
+| Sports — Phase 3 (Matches & Standings) | 6 | 🗓 Roadmap |
+| **Total** | **41** | |
 
 ---
 
 ## Base Configuration
 
-* **Base URL (Local)**: `http://localhost:3000`
-* **Base URL (Android Emulator)**: `http://10.0.2.2:3000`
-* **Global API Prefix**: `/api/v1`
-* **Response Wrapper Envelope**: All responses return in a standard envelope shape:
-  ```typescript
-  interface ApiResponse<T> {
-    success: boolean;
-    status: number;
-    message?: string;
-    data: T;
-  }
-  ```
+| Setting | Value |
+|---|---|
+| Base URL (Local) | `http://localhost:3000` |
+| Base URL (Android Emulator) | `http://10.0.2.2:3000` |
+| Global API Prefix | `/api/v1` |
+
+**Standard Response Envelope** — every response follows this shape:
+
+```typescript
+interface ApiResponse<T> {
+  success: boolean;   // true on success
+  status: number;     // mirrors HTTP status code
+  message?: string;   // human-readable outcome
+  data: T;            // payload
+}
+```
+
+---
+
+## Table of Contents
+
+### 1. Authentication Module
+- [#1 — POST `/auth/login`](#1-post-authlogin) — Firebase sign-in / register
+
+### 2. Users Module
+- [#2 — GET `/users/me`](#2-get-usersme) — Get my profile
+- [#3 — PATCH `/users/me`](#3-patch-usersme) — Update my profile
+- [#4 — POST `/users/me/avatar`](#4-post-usersmeavatar) — Upload avatar
+- [#5 — PATCH `/users/:id/role`](#5-patch-usersidrole) — Update user role *(Admin only)*
+- [#6 — POST `/users/device-token`](#6-post-usersdevice-token) — Register FCM token
+- [#7 — DELETE `/users/device-token`](#7-delete-usersdevice-token) — Remove FCM token
+
+### 3. Announcements Module
+- [#8 — GET `/announcements`](#8-get-announcements) — Get all announcements
+- [#9 — GET `/announcements/author/:authorId`](#9-get-announcementsauthorauthorid) — By author
+- [#10 — GET `/announcements/:id`](#10-get-announcementsid) — Single announcement
+- [#11 — POST `/announcements`](#11-post-announcements) — Create *(Admin/Mod)*
+- [#12 — PATCH `/announcements/:id`](#12-patch-announcementsid) — Update *(Author/Admin/Mod)*
+- [#13 — PATCH `/announcements/:id/soft-delete`](#13-patch-announcementsidsoft-delete) — Soft-delete *(Author/Admin)*
+- [#14 — DELETE `/announcements/:id`](#14-delete-announcementsid) — Hard-delete *(Admin only)*
+- [#15 — POST `/announcements/:id/like`](#15-post-announcementsidlike) — Toggle like
+- [#16 — POST `/announcements/:id/image`](#16-post-announcementsidimage) — Upload image
+
+### 4. Sports Module — Phase 1 ✅ Implemented
+- [#17 — POST `/sports/cricket/players/me`](#17-post-sportscricketplayersme) — Create profile
+- [#18 — GET `/sports/cricket/players/me`](#18-get-sportscricketplayersme) — Get my profile
+- [#19 — PATCH `/sports/cricket/players/me`](#19-patch-sportscricketplayersme) — Update profile
+- [#20 — GET `/sports/cricket/players/:id`](#20-get-sportscricketplayersid) — Public player profile
+- [#21 — GET `/sports/cricket/players`](#21-get-sportscricketplayers) — List all players
+
+### 5. Sports Module — Phase 2 ✅ Implemented
+- [#22 — POST `/sports/cricket/teams`](#22-post-sportscricketteams) — Create team
+- [#23 — GET `/sports/cricket/teams`](#23-get-sportscricketteams) — List all teams
+- [#24 — GET `/sports/cricket/teams/my`](#24-get-sportscricketteamsmy) — My teams
+- [#25 — GET `/sports/cricket/teams/:id`](#25-get-sportscricketteamsid) — Get team with full squad
+- [#26 — PATCH `/sports/cricket/teams/:id`](#26-patch-sportscricketteamsid) — Update team details
+- [#27 — POST `/sports/cricket/teams/:id/logo`](#27-post-sportscricketteamsidlogo) — Upload team logo
+- [#28 — POST `/sports/cricket/teams/:id/invite`](#28-post-sportscricketteamsidinvite) — Invite a player
+- [#29 — POST `/sports/cricket/teams/:id/request`](#29-post-sportscricketteamsidrequest) — Request to join
+- [#30 — GET `/sports/cricket/teams/:id/members/pending`](#30-get-sportscricketteamsidmemberspending) — View pending invites/requests
+- [#31 — PATCH `/sports/cricket/teams/:id/members/:memberId/accept`](#31-patch-sportscricketteamsidmembersmemberidaccept) — Accept invite or request
+- [#32 — PATCH `/sports/cricket/teams/:id/members/:memberId/reject`](#32-patch-sportscricketteamsidmembersmemberidreject) — Reject invite or request
+- [#33 — DELETE `/sports/cricket/teams/:id/members/:memberId`](#33-delete-sportscricketteamsidmembersmemberid) — Remove player or leave team
+- [#34 — PATCH `/sports/cricket/teams/:id/captain`](#34-patch-sportscricketteamsidcaptain) — Transfer captaincy
+- [#35 — DELETE `/sports/cricket/teams/:id`](#35-delete-sportscricketteamsid) — Soft-delete team
+
+### 6. Sports Module — Phase 3 🗓 Roadmap
+- [#36 — POST `/sports/cricket/matches`](#36-post-sportscricketmatches) — Schedule match
+- [#37 — GET `/sports/cricket/matches`](#37-get-sportscricketmatches) — List matches
+- [#38 — GET `/sports/cricket/matches/:id`](#38-get-sportscricketmatchesid) — Get match details
+- [#39 — PATCH `/sports/cricket/matches/:id/scores`](#39-patch-sportscricketmatchesidscores) — Record scores
+- [#40 — GET `/sports/cricket/leaderboard`](#40-get-sportscricketleaderboard) — Leaderboard standings
+- [#41 — GET `/sports/cricket/stats/mvp`](#41-get-sportscricketstatsmvp) — MVP rankings
 
 ---
 
 ## 1. Authentication Module
 
-### 1. User Authentication / Login
-Used to register or sign in users using their Firebase ID Token. On first sign-in, it automatically initializes a PostgreSQL database record.
+### #1 · POST `/auth/login`
 
-* **Method**: `POST`
-* **Path**: `/api/v1/auth/login`
-* **Access Control**: **Public** (No Auth Token needed)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
+Validates a Firebase ID token and signs the user in. On first sign-in, automatically creates a PostgreSQL user record.
 
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `id_token` | `string` | **Yes** | Valid Firebase ID token returned from client sign-in |
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/auth/login` |
+| **Access** | 🟢 Public |
 
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/auth/login \
-    -H "Content-Type: application/json" \
-    -d '{"id_token": "YOUR_FIREBASE_ID_TOKEN"}'
-  ```
+**Headers**
 
-* **Response (201 Created)**:
-  ```json
-  {
-    "success": true,
-    "status": 201,
-    "message": "Login successful",
-    "data": {
-      "user": {
-        "id": 1,
-        "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
-        "phone": "+923001234567",
-        "email": "resident@gmail.com",
-        "name": "Ahmad Pabaini",
-        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg",
-        "village": "Pabaini",
-        "is_diaspora": false,
-        "role": "resident",
-        "created_at": "2026-06-12T01:10:00.000Z",
-        "updated_at": "2026-06-12T01:10:00.000Z"
-      }
-    }
-  }
-  ```
+```
+Content-Type: application/json
+```
 
----
+**Request Body**
 
-## 2. Users Module
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id_token` | `string` | ✅ Yes | Firebase ID token from client-side sign-in |
 
-### 2. Get My Profile
-Fetch profile settings and roles of the currently authenticated user.
+**cURL Example**
 
-* **Method**: `GET`
-* **Path**: `/api/v1/users/me`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"id_token": "YOUR_FIREBASE_ID_TOKEN"}'
+```
 
-* **cURL Example**:
-  ```bash
-  curl -X GET http://localhost:3000/api/v1/users/me \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
-  ```
+**Response `201 Created`**
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "data": {
+```json
+{
+  "success": true,
+  "status": 201,
+  "message": "Login successful",
+  "data": {
+    "user": {
       "id": 1,
       "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
       "phone": "+923001234567",
@@ -142,624 +150,1466 @@ Fetch profile settings and roles of the currently authenticated user.
       "updated_at": "2026-06-12T01:10:00.000Z"
     }
   }
-  ```
+}
+```
 
 ---
 
-### 3. Update My Profile Details
-Updates fields on the user profile record. 
+## 2. Users Module
 
-* **Method**: `PATCH`
-* **Path**: `/api/v1/users/me`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+### #2 · GET `/users/me`
 
-* **Request Body (All fields optional)**:
-  | Field | Type | Description |
-  |---|---|---|
-  | `name` | `string` | Updated profile name (3-50 chars) |
-  | `village` | `string` | Location name (defaults to "Pabaini") |
-  | `is_diaspora` | `boolean` | Set to true if the member resides abroad |
-  | `avatar_url` | `string` | Direct URL link to avatar image |
+Fetch the authenticated user's full profile including role and settings.
 
-* **cURL Example**:
-  ```bash
-  curl -X PATCH http://localhost:3000/api/v1/users/me \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"name": "Ahmad Swabi", "is_diaspora": true}'
-  ```
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/users/me` |
+| **Access** | 🔴 Protected |
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Profile updated successfully",
-    "data": {
-      "id": 1,
-      "name": "Ahmad Swabi",
-      "is_diaspora": true,
-      "village": "Pabaini",
-      "role": "resident"
-    }
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/users/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "firebase_uid": "C0Np3cHX2ugOWNzenBka4O8zokt1",
+    "phone": "+923001234567",
+    "email": "resident@gmail.com",
+    "name": "Ahmad Pabaini",
+    "avatar_url": "https://supabase-bucket/avatars/avatar.jpg",
+    "village": "Pabaini",
+    "is_diaspora": false,
+    "role": "resident",
+    "created_at": "2026-06-12T01:10:00.000Z",
+    "updated_at": "2026-06-12T01:10:00.000Z"
   }
-  ```
+}
+```
 
 ---
 
-### 4. Upload Profile Picture (Avatar)
-Uploads image files directly to Supabase storage, mapping the file URL back to the active user profile.
+### #3 · PATCH `/users/me`
 
-* **Method**: `POST`
-* **Path**: `/api/v1/users/me/avatar`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+Updates editable fields on the user's profile record.
 
-* **Request Body (multipart/form-data)**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `avatar` | `file` | **Yes** | Image attachment (JPG, PNG, JPEG) |
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/users/me` |
+| **Access** | 🔴 Protected |
 
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/users/me/avatar \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -F "avatar=@/path/to/profile.png"
-  ```
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(all fields optional)*
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Display name (3–50 characters) |
+| `village` | `string` | Location label (defaults to `"Pabaini"`) |
+| `is_diaspora` | `boolean` | `true` if member lives abroad |
+| `avatar_url` | `string` | Direct URL to avatar image |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/users/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ahmad Swabi", "is_diaspora": true}'
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Profile updated successfully",
+  "data": {
+    "id": 1,
+    "name": "Ahmad Swabi",
+    "is_diaspora": true,
+    "village": "Pabaini",
+    "role": "resident"
+  }
+}
+```
 
 ---
 
-### 5. Update User Role (Admin-Only)
-Restricted route allowing administrators to elevate standard resident profiles.
+### #4 · POST `/users/me/avatar`
+
+Uploads an image to Supabase Storage and saves the returned URL to the user's profile.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/users/me/avatar` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(multipart/form-data)*
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `avatar` | `file` | ✅ Yes | Image file — JPG, PNG, or JPEG |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/users/me/avatar \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -F "avatar=@/path/to/profile.png"
+```
+
+---
+
+### #5 · PATCH `/users/:id/role`
+
+Elevates or changes a user's platform role. Restricted exclusively to Admins.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/users/:id/role` |
+| **Access** | 🟡 Admin Only |
 
 > [!WARNING]
-> Only accounts with the `admin` role can access this endpoint. Moderators cannot update roles.
+> Only accounts with the `admin` role can call this endpoint. Moderators are blocked.
 
-* **Method**: `PATCH`
-* **Path**: `/api/v1/users/:id/role`
-* **Access Control**: **Admin-Only** (Requires Firebase ID Token + Admin Role Guard)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+**Headers**
 
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `role` | `string` | **Yes** | Target role assignment (`resident`, `moderator`, `admin`) |
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
 
-* **cURL Example**:
-  ```bash
-  curl -X PATCH http://localhost:3000/api/v1/users/2/role \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"role": "moderator"}'
-  ```
+**Request Body**
 
----
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `role` | `string` | ✅ Yes | Target role: `resident` · `moderator` · `admin` |
 
-### 6. Register Device Token
-Saves FCM device tokens to target notification delivery groups.
+**cURL Example**
 
-* **Method**: `POST`
-* **Path**: `/api/v1/users/device-token`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
-
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `token` | `string` | **Yes** | Unique FCM registration token generated by device |
-
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/users/device-token \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"token": "FCM_DEVICE_TOKEN_HERE"}'
-  ```
+```bash
+curl -X PATCH http://localhost:3000/api/v1/users/2/role \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "moderator"}'
+```
 
 ---
 
-### 7. Remove Device Token
-Deletes FCM device tokens from records on sign-out to prevent incorrect delivery.
+### #6 · POST `/users/device-token`
 
-* **Method**: `DELETE`
-* **Path**: `/api/v1/users/device-token`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+Registers an FCM push token for the authenticated device to enable targeted notifications.
 
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `token` | `string` | **Yes** | FCM registration token to remove |
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/users/device-token` |
+| **Access** | 🔴 Protected |
 
-* **cURL Example**:
-  ```bash
-  curl -X DELETE http://localhost:3000/api/v1/users/device-token \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"token": "FCM_DEVICE_TOKEN_HERE"}'
-  ```
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `token` | `string` | ✅ Yes | FCM device registration token |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/users/device-token \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "FCM_DEVICE_TOKEN_HERE"}'
+```
+
+---
+
+### #7 · DELETE `/users/device-token`
+
+Removes an FCM push token on sign-out to prevent stale push delivery.
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/v1/users/device-token` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `token` | `string` | ✅ Yes | FCM token to remove |
+
+**cURL Example**
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/users/device-token \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "FCM_DEVICE_TOKEN_HERE"}'
+```
 
 ---
 
 ## 3. Announcements Module
 
-### 8. Get All Announcements
-Fetches notices feed. Supports sorting by pinned indicators and publication dates.
+### #8 · GET `/announcements`
 
-* **Method**: `GET`
-* **Path**: `/api/v1/announcements`
-* **Access Control**: **Public** (Optional auth token binds individual `liked_by_me` state values)
-* **Query Parameters**:
-  | Field | Type | Default | Description |
-  |---|---|---|---|
-  | `page` | `number` | `1` | Pagination offset index |
-  | `limit` | `number` | `10` | Total records per query page |
-  | `category` | `string` | - | Category selection: `general`, `urgent`, `event`, `jirga_decision` |
+Returns a paginated, filtered feed of village announcements. Pinned notices appear first.
 
-* **cURL Example**:
-  ```bash
-  curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent"
-  ```
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/announcements` |
+| **Access** | 🟢 Public *(auth token optional — binds `liked_by_me`)* |
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Announcements retrieved successfully",
-    "data": [
-      {
-        "id": 12,
-        "title": "Jirga Announcement",
-        "content": "Decisions on local water supply rules.",
-        "category": "jirga_decision",
-        "image_url": "https://...",
-        "location": "Pabaini Hujra",
-        "likes_count": 8,
-        "liked_by_me": false,
-        "is_pinned": true,
-        "author_id": 1,
-        "author": {
-          "id": 1,
-          "name": "Admin Leader",
-          "avatar_url": "https://..."
-        },
-        "created_at": "2026-06-12T01:10:00.000Z",
-        "updated_at": "2026-06-12T01:10:00.000Z"
-      }
-    ],
-    "pagination": {
-      "total": 12,
-      "page": 1,
-      "limit": 10,
-      "totalPages": 2
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | `number` | `1` | Pagination offset |
+| `limit` | `number` | `10` | Results per page |
+| `category` | `string` | — | Filter: `general` · `urgent` · `event` · `jirga_decision` |
+
+**cURL Example**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Announcements retrieved successfully",
+  "data": [
+    {
+      "id": 12,
+      "title": "Jirga Announcement",
+      "content": "Decisions on local water supply rules.",
+      "category": "jirga_decision",
+      "image_url": "https://...",
+      "location": "Pabaini Hujra",
+      "likes_count": 8,
+      "liked_by_me": false,
+      "is_pinned": true,
+      "author_id": 1,
+      "author": {
+        "id": 1,
+        "name": "Admin Leader",
+        "avatar_url": "https://..."
+      },
+      "created_at": "2026-06-12T01:10:00.000Z",
+      "updated_at": "2026-06-12T01:10:00.000Z"
     }
+  ],
+  "pagination": {
+    "total": 12,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 2
   }
-  ```
+}
+```
 
 ---
 
-### 9. Get Announcements by Author
-Queries lists of notices created by a specific user.
+### #9 · GET `/announcements/author/:authorId`
 
-* **Method**: `GET`
-* **Path**: `/api/v1/announcements/author/:authorId`
-* **Access Control**: **Public** (Optional authorization)
+Returns announcements created by a specific user.
 
----
-
-### 10. Get Single Announcement
-Fetch details of a single notice by database ID.
-
-* **Method**: `GET`
-* **Path**: `/api/v1/announcements/:id`
-* **Access Control**: **Public** (Optional authorization)
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/announcements/author/:authorId` |
+| **Access** | 🟢 Public |
 
 ---
 
-### 11. Create Announcement (Admin/Mods)
-Creates new announcement data in PostgreSQL database. 
+### #10 · GET `/announcements/:id`
+
+Fetch the full details of a single announcement by its database ID.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/announcements/:id` |
+| **Access** | 🟢 Public |
+
+---
+
+### #11 · POST `/announcements`
+
+Creates a new announcement. Restricted to `admin` and `moderator` roles.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/announcements` |
+| **Access** | 🔴 Protected *(Admin / Mod)* |
 
 > [!NOTE]
-> Creating announcements requires either `admin` or `moderator` roles. Standard residents are restricted.
+> Standard residents cannot create announcements. Requires `admin` or `moderator` role.
 
-* **Method**: `POST`
-* **Path**: `/api/v1/announcements`
-* **Access Control**: **Protected** (Requires Firebase ID Token + Admin/Mod check)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+**Headers**
 
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `title` | `string` | **Yes** | Notice title (3-100 chars) |
-  | `content` | `string` | **Yes** | Announcement description (10-500 chars) |
-  | `category` | `string` | **Yes** | Selection: `general`, `urgent`, `event`, `jirga_decision` |
-  | `location` | `string` | No | Nullable landmark information text |
-  | `image_url` | `string` | No | Direct image storage url reference |
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
 
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/announcements \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"title": "Jirga Assembly", "content": "Community meeting scheduled at Hujra.", "category": "jirga_decision", "location": "Pabaini Hujra"}'
-  ```
+**Request Body**
 
----
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | `string` | ✅ Yes | Notice title (3–100 characters) |
+| `content` | `string` | ✅ Yes | Full description (10–500 characters) |
+| `category` | `string` | ✅ Yes | `general` · `urgent` · `event` · `jirga_decision` |
+| `location` | `string` | No | Optional landmark or place name |
+| `image_url` | `string` | No | Direct URL to an uploaded image |
 
-### 12. Update Announcement (Author/Admin/Mods)
-Updates notice records. Gatekept by ownership or admin/moderator roles.
+**cURL Example**
 
-* **Method**: `PATCH`
-* **Path**: `/api/v1/announcements/:id`
-* **Access Control**: **Protected** (Requires Firebase ID Token + Ownership/Role verification check)
-* **Request Body (All fields optional)**:
-  `title`, `content`, `category`, `location`, `image_url`, `is_pinned`.
+```bash
+curl -X POST http://localhost:3000/api/v1/announcements \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Jirga Assembly", "content": "Community meeting at Hujra.", "category": "jirga_decision", "location": "Pabaini Hujra"}'
+```
 
 ---
 
-### 13. Soft-Delete Announcement (Author/Admin)
-Marks announcement records as soft-deleted in the database (`is_deleted = true`). 
+### #12 · PATCH `/announcements/:id`
+
+Updates fields on an existing announcement. Ownership or elevated role required.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/announcements/:id` |
+| **Access** | 🔴 Protected *(Author / Admin / Mod)* |
+
+**Editable fields** *(all optional)*: `title`, `content`, `category`, `location`, `image_url`, `is_pinned`
+
+---
+
+### #13 · PATCH `/announcements/:id/soft-delete`
+
+Flags an announcement as deleted (`is_deleted = true`) without removing it from storage.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/announcements/:id/soft-delete` |
+| **Access** | 🔴 Protected *(Author / Admin)* |
 
 > [!IMPORTANT]
-> **Access Rules Exception**: Only the **Author** of the announcement or a user with the **Admin** role can delete notices. Moderators are restricted from soft-deleting other people's posts.
-> 
-> **Image Assets**: Attaching media is preserved in Supabase storage to support administrative audit recovery.
+> **Access rules:** Only the **Author** or a user with the **Admin** role can soft-delete. Moderators cannot delete other users' posts.
+>
+> **Image assets** are preserved in Supabase Storage to support audit recovery.
 
-* **Method**: `PATCH`
-* **Path**: `/api/v1/announcements/:id/soft-delete`
-* **Access Control**: **Protected** (Requires Firebase ID Token + Author/Admin ownership check)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+**Headers**
 
-* **cURL Example**:
-  ```bash
-  curl -X PATCH http://localhost:3000/api/v1/announcements/12/soft-delete \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
-  ```
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/announcements/12/soft-delete \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
 
 ---
 
-### 14. Hard-Delete Announcement (Admin-Only)
-Permanently deletes database record entries and cleans up attachments in the Supabase media bucket.
+### #14 · DELETE `/announcements/:id`
+
+Permanently deletes an announcement record and removes associated media from Supabase Storage.
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/v1/announcements/:id` |
+| **Access** | 🟡 Admin Only |
 
 > [!WARNING]
-> Executable strictly by users with the **Admin** role. Authors and moderators cannot call this endpoint.
+> This is **irreversible**. Only users with the `admin` role can execute hard deletes.
 
-* **Method**: `DELETE`
-* **Path**: `/api/v1/announcements/:id`
-* **Access Control**: **Admin-Only** (Requires Firebase ID Token + Admin check)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+**Headers**
 
-* **cURL Example**:
-  ```bash
-  curl -X DELETE http://localhost:3000/api/v1/announcements/12 \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
-  ```
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
 
----
+**cURL Example**
 
-### 15. Toggle Like on Announcement
-Authenticated residents can toggle announcement likes. Backed by transactional entities to avoid race conditions.
-
-* **Method**: `POST`
-* **Path**: `/api/v1/announcements/:id/like`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
-
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/announcements/12/like \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
-  ```
+```bash
+curl -X DELETE http://localhost:3000/api/v1/announcements/12 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
 
 ---
 
-### 16. Upload Announcement Image (Author/Admin/Mods)
-Uploads an image file to Supabase storage and maps the returned URL to the target announcement record.
+### #15 · POST `/announcements/:id/like`
 
-* **Method**: `POST`
-* **Path**: `/api/v1/announcements/:id/image`
-* **Access Control**: **Protected** (Requires Firebase ID Token + Ownership/Role checks)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+Toggles a like on an announcement. Calling this twice removes the like (idempotent toggle).
 
-* **Request Body (multipart/form-data)**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `image` | `file` | **Yes** | Image file (PNG, JPG, JPEG) |
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/announcements/:id/like` |
+| **Access** | 🔴 Protected |
 
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/announcements/12/image \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -F "image=@/path/to/notice.jpg"
-  ```
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/announcements/12/like \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+---
+
+### #16 · POST `/announcements/:id/image`
+
+Uploads an image to Supabase Storage and attaches its URL to the target announcement.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/announcements/:id/image` |
+| **Access** | 🔴 Protected *(Author / Admin / Mod)* |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(multipart/form-data)*
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `image` | `file` | ✅ Yes | PNG, JPG, or JPEG image file |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/announcements/12/image \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -F "image=@/path/to/notice.jpg"
+```
 
 ---
 
 ## 4. Sports Module
 
-This module organizes all village sports player profiles, match schedules, and statistics. Phase 1 implements **Cricket Player Profiles**.
+> Phase 1 — Cricket Player Profiles
+> 
+> A user can optionally register as a cricket player by setting up their profile (role, batting hand, bowling style). This creates their permanent player identity in the app that everything else — teams, matches, stats — builds on top of.
+>
+> Phase 2 — Cricket Teams
+> 
+> A registered cricket player can create a team, invite other registered players, and manage the squad. Players can also discover teams and request to join. The captain has full control over who's in the squad.
 
-### 17. Create My Cricket Player Profile
-Allows an authenticated user to initialize their cricket player profile. Each user can have at most one profile.
+---
 
-* **Method**: `POST`
-* **Path**: `/api/v1/sports/cricket/players/me`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+### Phase 1 — Cricket Player Profiles ✅ Implemented
 
-* **Request Body**:
-  | Field | Type | Required | Description |
-  |---|---|---|---|
-  | `role` | `string` | **Yes** | Player's primary role: `batsman`, `bowler`, `allrounder`, `keeper` |
-  | `batting_hand` | `string` | **Yes** | Batting preference: `right`, `left` |
-  | `bowling_arm` | `string` | **Yes** | Bowling arm: `right`, `left`, `none` |
-  | `bowling_type` | `string` | **Yes** | Bowling style: `fast`, `medium`, `spin`, `none` |
+---
+
+### #17 · POST `/sports/cricket/players/me`
+
+Creates a cricket player profile for the authenticated user. Each user may only have **one** profile.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/players/me` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `role` | `string` | ✅ Yes | `batsman` · `bowler` · `allrounder` · `keeper` |
+| `batting_hand` | `string` | ✅ Yes | `right` · `left` |
+| `bowling_arm` | `string` | ✅ Yes | `right` · `left` · `none` |
+| `bowling_type` | `string` | ✅ Yes | `fast` · `medium` · `spin` · `none` |
 
 > [!IMPORTANT]
-> **Validation Rule**: If `bowling_arm` is set to `none`, `bowling_type` must also be set to `none`. Providing any other bowling type when the arm is none will return a `400 Bad Request`.
+> If `bowling_arm` is `none`, then `bowling_type` **must** also be `none`. Mismatched values return `400 Bad Request`.
 
-* **cURL Example**:
-  ```bash
-  curl -X POST http://localhost:3000/api/v1/sports/cricket/players/me \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"role": "allrounder", "batting_hand": "right", "bowling_arm": "right", "bowling_type": "medium"}'
-  ```
+**cURL Example**
 
-* **Response (201 Created)**:
-  ```json
-  {
-    "success": true,
-    "status": 201,
-    "message": "Cricket player profile created successfully",
-    "data": {
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "allrounder", "batting_hand": "right", "bowling_arm": "right", "bowling_type": "medium"}'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "message": "Cricket player profile created successfully",
+  "data": {
+    "id": 1,
+    "role": "allrounder",
+    "batting_hand": "right",
+    "bowling_arm": "right",
+    "bowling_type": "medium",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:30:00.000Z",
+    "user": {
       "id": 1,
-      "role": "allrounder",
-      "batting_hand": "right",
-      "bowling_arm": "right",
-      "bowling_type": "medium",
-      "is_active": true,
-      "created_at": "2026-06-16T00:30:00.000Z",
-      "updated_at": "2026-06-16T00:30:00.000Z",
-      "user": {
-        "id": 1,
-        "name": "Ahmad Pabaini",
-        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
-      }
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
     }
   }
-  ```
+}
+```
 
 ---
 
-### 18. Get My Cricket Player Profile
-Fetches the profile details for the currently authenticated user's cricket profile.
+### #18 · GET `/sports/cricket/players/me`
 
-* **Method**: `GET`
-* **Path**: `/api/v1/sports/cricket/players/me`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+Fetches the cricket profile of the currently authenticated user.
 
-* **cURL Example**:
-  ```bash
-  curl -X GET http://localhost:3000/api/v1/sports/cricket/players/me \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
-  ```
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/players/me` |
+| **Access** | 🔴 Protected |
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Cricket player profile retrieved successfully",
-    "data": {
-      "id": 1,
-      "role": "allrounder",
-      "batting_hand": "right",
-      "bowling_arm": "right",
-      "bowling_type": "medium",
-      "is_active": true,
-      "created_at": "2026-06-16T00:30:00.000Z",
-      "updated_at": "2026-06-16T00:30:00.000Z",
-      "user": {
-        "id": 1,
-        "name": "Ahmad Pabaini",
-        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
-      }
-    }
-  }
-  ```
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`** — same shape as `#17` response.
 
 ---
 
-### 19. Update My Cricket Player Profile
-Updates specific fields on the authenticated user's cricket profile.
+### #19 · PATCH `/sports/cricket/players/me`
 
-* **Method**: `PATCH`
-* **Path**: `/api/v1/sports/cricket/players/me`
-* **Access Control**: **Protected** (Requires Firebase ID Token)
-* **Headers**:
-  | Key | Value |
-  |---|---|
-  | `Content-Type` | `application/json` |
-  | `Authorization` | `Bearer <YOUR_FIREBASE_ID_TOKEN>` |
+Updates fields on the authenticated user's cricket profile. Bowling arm/type consistency is re-validated after merge.
 
-* **Request Body (All fields optional)**:
-  | Field | Type | Description |
-  |---|---|---|
-  | `role` | `string` | Player's primary role: `batsman`, `bowler`, `allrounder`, `keeper` |
-  | `batting_hand` | `string` | Batting preference: `right`, `left` |
-  | `bowling_arm` | `string` | Bowling arm: `right`, `left`, `none` |
-  | `bowling_type` | `string` | Bowling style: `fast`, `medium`, `spin`, `none` |
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/players/me` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(all fields optional)*
+
+| Field | Type | Description |
+|---|---|---|
+| `role` | `string` | `batsman` · `bowler` · `allrounder` · `keeper` |
+| `batting_hand` | `string` | `right` · `left` |
+| `bowling_arm` | `string` | `right` · `left` · `none` |
+| `bowling_type` | `string` | `fast` · `medium` · `spin` · `none` |
 
 > [!IMPORTANT]
-> **Validation Rule**: Bowling arm and type consistency is re-validated after merging existing values with the incoming updates. If the resulting profile has a bowling arm of `none` but a bowling type other than `none`, the update will fail with `400 Bad Request`.
+> Validation runs against the **merged result** of existing + incoming values. A final state of `bowling_arm: none` with any bowling type other than `none` returns `400 Bad Request`.
 
-* **cURL Example**:
-  ```bash
-  curl -X PATCH http://localhost:3000/api/v1/sports/cricket/players/me \
-    -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"role": "batsman", "bowling_arm": "none", "bowling_type": "none"}'
-  ```
+**cURL Example**
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Cricket player profile updated successfully",
-    "data": {
-      "id": 1,
-      "role": "batsman",
-      "batting_hand": "right",
-      "bowling_arm": "none",
-      "bowling_type": "none",
-      "is_active": true,
-      "created_at": "2026-06-16T00:30:00.000Z",
-      "updated_at": "2026-06-16T00:35:00.000Z",
-      "user": {
-        "id": 1,
-        "name": "Ahmad Pabaini",
-        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
-      }
-    }
-  }
-  ```
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/players/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "batsman", "bowling_arm": "none", "bowling_type": "none"}'
+```
 
 ---
 
-### 20. Get Any Player's Public Cricket Profile
-Fetches a single player's cricket profile details by the cricket profile ID.
+### #20 · GET `/sports/cricket/players/:id`
 
-* **Method**: `GET`
-* **Path**: `/api/v1/sports/cricket/players/:id`
-* **Access Control**: **Public** (No Auth Token needed)
+Fetches a specific player's public cricket profile by their profile ID.
 
-* **cURL Example**:
-  ```bash
-  curl -X GET http://localhost:3000/api/v1/sports/cricket/players/1
-  ```
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/players/:id` |
+| **Access** | 🟢 Public |
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Cricket player profile retrieved successfully",
-    "data": {
+**Path Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | `number` | ✅ Yes | Cricket **profile** ID (not the user ID) |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/players/1
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Cricket player profile retrieved successfully",
+  "data": {
+    "id": 1,
+    "role": "batsman",
+    "batting_hand": "right",
+    "bowling_arm": "none",
+    "bowling_type": "none",
+    "is_active": true,
+    "created_at": "2026-06-16T00:30:00.000Z",
+    "updated_at": "2026-06-16T00:35:00.000Z",
+    "user": {
       "id": 1,
-      "role": "batsman",
-      "batting_hand": "right",
-      "bowling_arm": "none",
-      "bowling_type": "none",
-      "is_active": true,
-      "created_at": "2026-06-16T00:30:00.000Z",
-      "updated_at": "2026-06-16T00:35:00.000Z",
-      "user": {
-        "id": 1,
-        "name": "Ahmad Pabaini",
-        "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
-      }
+      "name": "Ahmad Pabaini",
+      "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
     }
   }
-  ```
+}
+```
 
 ---
 
-### 21. List All Registered Cricket Players
-Retrieves a list of all active cricket players ordered by registration date (newest first). Supports pagination.
+### #21 · GET `/sports/cricket/players`
 
-* **Method**: `GET`
-* **Path**: `/api/v1/sports/cricket/players`
-* **Access Control**: **Public** (No Auth Token needed)
-* **Query Parameters**:
-  | Field | Type | Default | Description |
-  |---|---|---|---|
-  | `page` | `number` | `1` | Pagination offset page |
-  | `limit` | `number` | `10` | Total records per query page (Max: 50) |
+Lists all active cricket players ordered by registration date (newest first) with pagination.
 
-* **cURL Example**:
-  ```bash
-  curl -X GET "http://localhost:3000/api/v1/sports/cricket/players?page=1&limit=10"
-  ```
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/players` |
+| **Access** | 🟢 Public |
 
-* **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "status": 200,
-    "message": "Cricket players list retrieved successfully",
-    "data": {
-      "data": [
-        {
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | `number` | `1` | Pagination offset |
+| `limit` | `number` | `10` | Results per page *(max 50)* |
+
+**cURL Example**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/sports/cricket/players?page=1&limit=10"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Cricket players list retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "role": "batsman",
+        "batting_hand": "right",
+        "bowling_arm": "none",
+        "bowling_type": "none",
+        "is_active": true,
+        "created_at": "2026-06-16T00:30:00.000Z",
+        "updated_at": "2026-06-16T00:35:00.000Z",
+        "user": {
           "id": 1,
-          "role": "batsman",
-          "batting_hand": "right",
-          "bowling_arm": "none",
-          "bowling_type": "none",
-          "is_active": true,
-          "created_at": "2026-06-16T00:30:00.000Z",
-          "updated_at": "2026-06-16T00:35:00.000Z",
-          "user": {
-            "id": 1,
-            "name": "Ahmad Pabaini",
-            "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
-          }
+          "name": "Ahmad Pabaini",
+          "avatar_url": "https://supabase-bucket/avatars/avatar.jpg"
         }
-      ],
-      "meta": {
-        "page": 1,
-        "limit": 10,
-        "total": 1,
-        "totalPages": 1
       }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
     }
   }
-  ```
-  ```
+}
+```
 
+---
+
+### Phase 2 — Cricket Teams ✅ Implemented
+
+---
+
+### #22 · POST `/sports/cricket/teams`
+
+Creates a cricket team. Current user must have set up their player profile first, which sets them as the Captain.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/teams` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | ✅ Yes | Team name (max 100 characters, unique) |
+| `description` | `string` | No | Team description |
+| `home_ground` | `string` | No | Home ground name (max 200 characters) |
+| `founded_year` | `number` | No | Founded year (integer >= 1900) |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/teams \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Pabaini XI", "description": "The best team in the village", "home_ground": "Pabaini Ground", "founded_year": 2024}'
+```
+
+**Response `201 Created`** — same shape as `#25` response (Full Team).
+
+---
+
+### #23 · GET `/sports/cricket/teams`
+
+Lists all active cricket teams.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/teams` |
+| **Access** | 🟢 Public |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/teams
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": [
+    {
+      "id": 1,
+      "name": "Pabaini XI",
+      "logo_url": null,
+      "home_ground": "Pabaini Ground",
+      "founded_year": 2024,
+      "captain": {
+        "id": 1,
+        "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+      },
+      "member_count": 8
+    }
+  ]
+}
+```
+
+---
+
+### #24 · GET `/sports/cricket/teams/my`
+
+Lists all teams where the authenticated user is currently an active member.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/teams/my` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/teams/my \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": [
+    {
+      "id": 1,
+      "name": "Pabaini XI",
+      "logo_url": null,
+      "home_ground": "Pabaini Ground",
+      "founded_year": 2024,
+      "captain": {
+        "id": 1,
+        "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+      },
+      "role": "captain",
+      "joined_at": "2026-06-12T01:10:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### #25 · GET `/sports/cricket/teams/:id`
+
+Retrieves full cricket team details with its active squad members.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/teams/:id` |
+| **Access** | 🟢 Public |
+
+**Path Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | `number` | ✅ Yes | Team ID |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/teams/1
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "name": "Pabaini XI",
+    "description": "The best team in the village",
+    "logo_url": null,
+    "home_ground": "Pabaini Ground",
+    "founded_year": 2024,
+    "captain": {
+      "id": 1,
+      "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+    },
+    "members": [
+      {
+        "id": 1,
+        "role": "captain",
+        "status": "active",
+        "joined_at": "2026-06-12T01:10:00.000Z",
+        "player": {
+          "id": 1,
+          "role": "allrounder",
+          "batting_hand": "right",
+          "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+### #26 · PATCH `/sports/cricket/teams/:id`
+
+Updates team details. Restricted to the Team Captain.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/teams/:id` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(all fields optional)*
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Team name (max 100 characters, unique) |
+| `description` | `string` | Team description |
+| `home_ground` | `string` | Home ground name (max 200 characters) |
+| `founded_year` | `number` | Founded year (integer >= 1900) |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/teams/1 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"home_ground": "New Pabaini Oval"}'
+```
+
+**Response `200 OK`** — same shape as `#25` response (Full Team).
+
+---
+
+### #27 · POST `/sports/cricket/teams/:id/logo`
+
+Uploads or replaces the team logo. Restricted to the Team Captain.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/logo` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body** *(multipart/form-data)*
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `logo` | `file` | ✅ Yes | Team logo image file (PNG, JPG, JPEG) |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/teams/1/logo \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -F "logo=@/path/to/logo.png"
+```
+
+**Response `201 Created`** — same shape as `#25` response (Full Team).
+
+---
+
+### #28 · POST `/sports/cricket/teams/:id/invite`
+
+Invites a registered player to join the team. Restricted to the Team Captain.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/invite` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `player_id` | `number` | ✅ Yes | Target player profile ID to invite |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/teams/1/invite \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"player_id": 2}'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "data": {
+    "message": "Invitation sent successfully"
+  }
+}
+```
+
+---
+
+### #29 · POST `/sports/cricket/teams/:id/request`
+
+Sends a request to join a team. Current user must have a player profile.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/request` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/teams/1/request \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "data": {
+    "message": "Join request sent successfully"
+  }
+}
+```
+
+---
+
+### #30 · GET `/sports/cricket/teams/:id/members/pending`
+
+Retrieves pending invites and join requests for the team. Restricted to the Team Captain.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/members/pending` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/teams/1/members/pending \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "pending_requests": [
+      {
+        "id": 5,
+        "role": "player",
+        "status": "pending_request",
+        "player": {
+          "id": 2,
+          "role": "bowler",
+          "batting_hand": "right",
+          "user": { "id": 2, "name": "Zia Khan", "avatar_url": null }
+        }
+      }
+    ],
+    "pending_invites": []
+  }
+}
+```
+
+---
+
+### #31 · PATCH `/sports/cricket/teams/:id/members/:memberId/accept`
+
+Accepts a pending team invitation (player) or a join request (captain).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/members/:memberId/accept` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/teams/1/members/5/accept \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 5,
+    "team_id": 1,
+    "player_id": 2,
+    "role": "player",
+    "status": "active",
+    "joined_at": "2026-06-16T05:35:00.000Z"
+  }
+}
+```
+
+---
+
+### #32 · PATCH `/sports/cricket/teams/:id/members/:memberId/reject`
+
+Rejects a join request (captain) or declines a team invitation (player).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/members/:memberId/reject` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/teams/1/members/5/reject \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "message": "Rejected successfully"
+  }
+}
+```
+
+---
+
+### #33 · DELETE `/sports/cricket/teams/:id/members/:memberId`
+
+Removes a player from the squad (captain) or allows a member to leave (player).
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/members/:memberId` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/sports/cricket/teams/1/members/5 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "message": "Left team successfully"
+  }
+}
+```
+
+---
+
+### #34 · PATCH `/sports/cricket/teams/:id/captain`
+
+Transfers team captaincy. Restricted to the current Team Captain.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/teams/:id/captain` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `player_id` | `number` | ✅ Yes | Target player profile ID to receive captaincy |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/teams/1/captain \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"player_id": 2}'
+```
+
+**Response `200 OK`** — same shape as `#25` response (Full Team).
+
+---
+
+### #35 · DELETE `/sports/cricket/teams/:id`
+
+Soft deletes a team. Sets the team as inactive and removes all members. Cannot be undone. Teams with match history cannot be deleted (enforced in a future update).
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/v1/sports/cricket/teams/:id` |
+| **Access** | 🔴 Protected *(Captain only)* |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Path Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | `number` | ✅ Yes | Team ID to soft delete |
+
+**cURL Example**
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/sports/cricket/teams/1 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "message": "Team deleted successfully"
+  }
+}
+```
+
+---
+
+### Sports — Phase 3 🗓 Roadmap
+
+> These endpoints are **planned** for Phase 3 development. They are not yet implemented.
+
+---
+
+### #36 · POST `/sports/cricket/matches`
+
+Schedules a tournament match between two registered teams.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/matches` |
+| **Access** | 🔴 Protected *(Admin / Organizer)* |
+| **Status** | 🗓 Planned — Phase 3 |
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `team_a_id` | `number` | ✅ Yes | ID of team A |
+| `team_b_id` | `number` | ✅ Yes | ID of team B |
+| `scheduled_at` | `string` | ✅ Yes | ISO-8601 timestamp |
+| `overs` | `number` | ✅ Yes | Total overs per innings |
+| `location` | `string` | ✅ Yes | Ground name or location |
+
+---
+
+### #37 · GET `/sports/cricket/matches`
+
+Lists all matches with optional filters for status (completed/live/upcoming).
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/matches` |
+| **Access** | 🟢 Public |
+| **Status** | 🗓 Planned — Phase 3 |
+
+---
+
+### #38 · GET `/sports/cricket/matches/:id`
+
+Retrieves detailed match details, scorecards, and MVP metrics.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/matches/:id` |
+| **Access** | 🟢 Public |
+| **Status** | 🗓 Planned — Phase 3 |
+
+---
+
+### #39 · PATCH `/sports/cricket/matches/:id/scores`
+
+Records or updates live scores, overs played, and match result for a scheduled match.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/scores` |
+| **Access** | 🔴 Protected *(Designated Scorer / Admin)* |
+| **Status** | 🗓 Planned — Phase 3 |
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `runs_team_a` | `number` | No | Runs scored by Team A |
+| `wickets_team_a` | `number` | No | Wickets lost by Team A |
+| `overs_team_a` | `number` | No | Overs played by Team A |
+| `runs_team_b` | `number` | No | Runs scored by Team B |
+| `wickets_team_b` | `number` | No | Wickets lost by Team B |
+| `overs_team_b` | `number` | No | Overs played by Team B |
+| `status` | `string` | ✅ Yes | `live` or `completed` |
+| `winner_team_id` | `number` | No | ID of the winning team |
+| `man_of_the_match_profile_id` | `number` | No | Profile ID of Man of the Match |
+
+---
+
+### #40 · GET `/sports/cricket/leaderboard`
+
+Returns real-time tournament standings, top run-scorers, wicket leaders, and MVP index.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/leaderboard` |
+| **Access** | 🟢 Public |
+| **Status** | 🗓 Planned — Phase 3 |
+
+---
+
+### #41 · GET `/sports/cricket/stats/mvp`
+
+Returns top players sorted by dynamically calculated MVP rating indexes.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/stats/mvp` |
+| **Access** | 🟢 Public |
+| **Status** | 🗓 Planned — Phase 3 |
+
+---
+
+*© 2026 Pabaini Village Portal. Built with NestJS · PostgreSQL · Supabase · Firebase.*
