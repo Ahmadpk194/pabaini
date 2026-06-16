@@ -11,21 +11,23 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UserRole } from './entities/user.entity';
 
 @Controller('users')
-@UseGuards(FirebaseAuthGuard, DbUserGuard)
 export class UserController {
     constructor(private usersService: UsersService) { }
 
     @Get('me')
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
     async getMe(@DbUser() user: any) {
         return user;
     }
 
     @Patch('me')
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
     async updateMe(@DbUser() user: any, @Body() dto: UpdateUserDto) {
         return this.usersService.updateUser(user.id, dto);
     }
 
     @Post('me/avatar')
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
     @UseInterceptors(FileInterceptor('avatar'))
     async uploadAvatar(
         @DbUser() user: any,
@@ -39,7 +41,7 @@ export class UserController {
 
     // Admin-only: assign a role to any user
     @Patch(':id/role')
-    @UseGuards(RolesGuard)
+    @UseGuards(FirebaseAuthGuard, DbUserGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
     async updateRole(
         @Param('id', ParseIntPipe) id: number,
@@ -49,6 +51,7 @@ export class UserController {
     }
 
     @Post('device-token')
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
     // Register device token for push notifications
     async registerDeviceToken(
         @DbUser() user: any,
@@ -58,11 +61,17 @@ export class UserController {
     }
 
     @Delete('device-token')
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
     // Remove device token for push notifications
     async removeDeviceToken(
         @DbUser() user: any,
         @Body('token') token: string,
     ) {
         return this.usersService.removeDeviceToken(user.id, token);
+    }
+
+    @Get(':id/profile')
+    async getPublicProfile(@Param('id', ParseIntPipe) id: number) {
+        return this.usersService.getPublicProfile(id);
     }
 }

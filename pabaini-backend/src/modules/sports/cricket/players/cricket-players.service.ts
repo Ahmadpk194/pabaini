@@ -66,6 +66,12 @@ export class CricketPlayersService {
     return profile;
   }
 
+  async findByUserIdOrNull(userId: number): Promise<CricketPlayerProfile | null> {
+    return this.cricketPlayerProfileRepository.findOne({
+      where: { user_id: userId },
+    });
+  }
+
   async updateMyProfile(userId: number, dto: UpdateCricketPlayerProfileDto): Promise<CricketPlayerProfile> {
     const profile = await this.getMyProfile(userId);
 

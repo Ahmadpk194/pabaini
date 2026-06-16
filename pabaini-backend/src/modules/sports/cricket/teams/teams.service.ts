@@ -677,4 +677,41 @@ export class TeamsService {
 
     return { message: 'Team deleted successfully' };
   }
+
+  async getActiveTeamsForPlayer(playerId: number): Promise<Array<{
+    id: number;
+    name: string;
+    logo_url: string | null;
+    role: TeamMemberRole;
+  }>> {
+    const memberships = await this.teamMemberRepo.find({
+      where: { player_id: playerId, status: TeamMemberStatus.ACTIVE },
+      relations: { team: true },
+    });
+    return memberships.map(m => ({
+      id: m.team.id,
+      name: m.team.name,
+      logo_url: m.team.logo_url ?? null,
+      role: m.role,
+    }));
+  }
+
+  async getPastTeamsForPlayer(playerId: number): Promise<Array<{
+    id: number;
+    name: string;
+    logo_url: string | null;
+    left_at: Date;
+  }>> {
+    const memberships = await this.teamMemberRepo.find({
+      where: { player_id: playerId, status: TeamMemberStatus.LEFT },
+      relations: { team: true },
+      order: { updated_at: 'DESC' },
+    });
+    return memberships.map(m => ({
+      id: m.team.id,
+      name: m.team.name,
+      logo_url: m.team.logo_url ?? null,
+      left_at: m.updated_at,
+    }));
+  }
 }

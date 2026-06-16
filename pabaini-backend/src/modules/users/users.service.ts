@@ -1,16 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { getSupabaseClient } from '../../config/supabase.config';
 import { User } from './entities/user.entity';
+import { CricketPlayersService } from '../sports/cricket/players/cricket-players.service';
+import { TeamsService } from '../sports/cricket/teams/teams.service';
+import { CricketStatsService } from '../sports/cricket/stats/cricket-stats.service';
 
 @Injectable()
 export class UsersService {
+    private readonly logger = new Logger(UsersService.name);
+
     constructor(
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        private readonly cricketPlayersService: CricketPlayersService,
+        private readonly teamsService: TeamsService,
+        private readonly cricketStatsService: CricketStatsService,
     ) { }
 
     // find user by firebase uid
@@ -187,5 +195,50 @@ export class UsersService {
         await this.usersRepository.save(user);
         
         return { success: true };
+    }
+
+    async getPublicProfile(userId: number) {
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                avatar_url: true,
+                village: true,
+                is_diaspora: true,
+                created_at: true,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        let cricket: any = null;
+
+        try {
+            const cricketProfile = await this.cricketPlayersService.findByUserIdOrNull(userId);
+
+            if (cricketProfile) {
+                const [currentTeams, pastTeams, stats] = await Promise.all([
+                    this.teamsService.getActiveTeamsForPlayer(cricketProfile.id),
+                    this.teamsService.getPastTeamsForPlayer(cricketProfile.id),
+                    this.cricketStatsService.getStatsForPlayer(cricketProfile.id),
+                ]);
+
+                cricket = {
+                    player_profile: cricketProfile,
+                    stats,
+                    current_teams: currentTeams,
+                    past_teams: pastTeams,
+                    trophies: [],
+                };
+            }
+        } catch (error: any) {
+            this.logger.warn(`Failed to load cricket profile data for user ${userId}: ${error.message}`);
+            cricket = null;
+        }
+
+        return { user, cricket };
     }
 }

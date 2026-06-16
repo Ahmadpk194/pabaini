@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
@@ -11,7 +11,7 @@ import { NotificationsModule } from 'src/modules/notifications/notifications.mod
 @Module({
   imports: [
     TypeOrmModule.forFeature([Team, TeamMember, CricketPlayerProfile]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     NotificationsModule,
   ],
   controllers: [TeamsController],
