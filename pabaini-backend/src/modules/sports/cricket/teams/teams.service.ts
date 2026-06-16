@@ -486,8 +486,8 @@ export class TeamsService {
         throw new ForbiddenException('Only the team captain can reject join requests');
       }
     } else if (member.status === TeamMemberStatus.PENDING_INVITE) {
-      if (!isTargetPlayer) {
-        throw new ForbiddenException('Only the invited player can decline invitations');
+      if (!isTargetPlayer && !isCaptain) {
+        throw new ForbiddenException('Only the invited player or the team captain can cancel or decline invitations');
       }
     }
 
@@ -505,7 +505,7 @@ export class TeamsService {
           deep_link: `/sports/cricket/teams`,
           metadata: { team_id: member.team.id },
         });
-      } else if (originalStatus === TeamMemberStatus.PENDING_INVITE) {
+      } else if (originalStatus === TeamMemberStatus.PENDING_INVITE && isTargetPlayer) {
         await this.notificationsService.create({
           user_id: member.team.captain.user.id,
           type: NotificationType.TEAM_INVITE_DECLINED,

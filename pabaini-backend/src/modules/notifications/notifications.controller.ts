@@ -25,14 +25,13 @@ export class NotificationsController {
   ) {
     const result = await this.notificationsService.findForUser(user.id, query);
     return {
-      success: true,
-      status: 200,
       data: {
         notifications: result.data,
         total: result.total,
         page: result.page,
         limit: result.limit,
       },
+      message: 'Notifications retrieved successfully',
     };
   }
 
@@ -40,9 +39,8 @@ export class NotificationsController {
   async getUnreadCount(@DbUser() user: any) {
     const count = await this.notificationsService.getUnreadCount(user.id);
     return {
-      success: true,
-      status: 200,
       data: count,
+      message: 'Unread count retrieved successfully',
     };
   }
 
@@ -50,9 +48,8 @@ export class NotificationsController {
   async markAllAsRead(@DbUser() user: any) {
     const result = await this.notificationsService.markAllAsRead(user.id);
     return {
-      success: true,
-      status: 200,
       data: result,
+      message: 'All notifications marked as read successfully',
     };
   }
 
@@ -63,9 +60,8 @@ export class NotificationsController {
   ) {
     const notification = await this.notificationsService.markAsRead(id, user.id);
     return {
-      success: true,
-      status: 200,
       data: notification,
+      message: 'Notification marked as read successfully',
     };
   }
 }
