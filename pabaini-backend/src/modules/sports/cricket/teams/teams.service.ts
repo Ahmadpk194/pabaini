@@ -124,10 +124,11 @@ export class TeamsService {
   async findMyTeams(userId: number) {
     const playerProfile = await this.getCurrentPlayerProfile(userId);
     const memberships = await this.teamMemberRepo.find({
-      where: {
-        player_id: playerProfile.id,
-        status: TeamMemberStatus.ACTIVE,
-      },
+      where: [
+        { player_id: playerProfile.id, status: TeamMemberStatus.ACTIVE },
+        { player_id: playerProfile.id, status: TeamMemberStatus.PENDING_REQUEST },
+        { player_id: playerProfile.id, status: TeamMemberStatus.PENDING_INVITE },
+      ],
       relations: {
         team: {
           captain: { user: true },
@@ -151,6 +152,7 @@ export class TeamsService {
         },
       },
       role: m.role,
+      status: m.status,
       joined_at: m.joined_at,
     }));
   }
@@ -167,7 +169,11 @@ export class TeamsService {
       throw new NotFoundException('Team not found');
     }
 
-    team.members = team.members.filter((m) => m.status === TeamMemberStatus.ACTIVE);
+    // Exclude permanently rejected/left members but keep pending so the
+    // frontend can correctly determine the viewer's membership state.
+    team.members = team.members.filter(
+      (m) => m.status !== TeamMemberStatus.REJECTED && m.status !== TeamMemberStatus.LEFT,
+    );
     return team;
   }
 

@@ -9,13 +9,13 @@
 | Module | Endpoints | Status |
 |---|---|---|
 | Authentication | 1 | ✅ Live |
-| Users | 6 | ✅ Live |
+| Users | 7 | ✅ Live |
 | Announcements | 9 | ✅ Live |
 | Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
 | Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
 | Notifications Module | 4 | ✅ Live |
 | Sports — Phase 3 (Matches & Standings) | 6 | 🗓 Roadmap |
-| **Total** | **45** | |
+| **Total** | **46** | |
 
 ---
 
@@ -52,6 +52,7 @@ interface ApiResponse<T> {
 - [#5 — PATCH `/users/:id/role`](#5-patch-usersidrole) — Update user role *(Admin only)*
 - [#6 — POST `/users/device-token`](#6-post-usersdevice-token) — Register FCM token
 - [#7 — DELETE `/users/device-token`](#7-delete-usersdevice-token) — Remove FCM token
+- [#46 — GET `/users/:id/profile`](#46-get-usersidprofile) — Public aggregated user profile
 
 ### 3. Announcements Module
 - [#8 — GET `/announcements`](#8-get-announcements) — Get all announcements
@@ -398,6 +399,127 @@ curl -X DELETE http://localhost:3000/api/v1/users/device-token \
   -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"token": "FCM_DEVICE_TOKEN_HERE"}'
+```
+
+---
+
+### #46 · GET `/users/:id/profile`
+
+Retrieves a resident's public aggregated profile, including user details, active and past cricket team rosters, and player stats. Returns `cricket: null` for non-players.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/users/:id/profile` |
+| **Access** | 🟢 Public |
+
+**Path Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | `number` | ✅ Yes | User ID to look up |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/users/13/profile
+```
+
+**Response `200 OK` (User with Cricket Player Profile)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "user": {
+      "id": 13,
+      "name": "Messi khan",
+      "avatar_url": "https://ntsscybmwyirhoidflqs.supabase.co/storage/v1/object/public/pabaini-media/avatars/QAw15jU7SSfQncmzZvkuUOTvcv22-1781522650987.jpeg",
+      "village": "Pabaini",
+      "is_diaspora": false,
+      "created_at": "2026-06-15T05:34:44.325Z"
+    },
+    "cricket": {
+      "player_profile": {
+        "id": 1,
+        "user_id": 13,
+        "role": "batsman",
+        "batting_hand": "right",
+        "bowling_arm": "right",
+        "bowling_type": "medium",
+        "is_active": true,
+        "created_at": "2026-06-15T14:53:38.199Z",
+        "updated_at": "2026-06-15T15:00:43.707Z"
+      },
+      "stats": {
+        "competitive": {
+          "matches": 0,
+          "innings": 0,
+          "runs": 0,
+          "highest_score": 0,
+          "average": 0,
+          "strike_rate": 0,
+          "fours": 0,
+          "sixes": 0,
+          "wickets": 0,
+          "best_bowling": null,
+          "economy": 0
+        },
+        "casual": {
+          "matches": 0,
+          "innings": 0,
+          "runs": 0,
+          "highest_score": 0,
+          "average": 0,
+          "strike_rate": 0,
+          "fours": 0,
+          "sixes": 0,
+          "wickets": 0,
+          "best_bowling": null,
+          "economy": 0
+        }
+      },
+      "current_teams": [
+        {
+          "id": 2,
+          "name": "Nataar eleven",
+          "logo_url": null,
+          "role": "captain"
+        }
+      ],
+      "past_teams": [
+        {
+          "id": 1,
+          "name": "Pabaini XI",
+          "logo_url": null,
+          "left_at": "2026-06-16T07:07:50.399Z"
+        }
+      ],
+      "trophies": []
+    }
+  }
+}
+```
+
+**Response `200 OK` (User without Cricket Profile)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "user": {
+      "id": 17,
+      "name": "Ahmad khan",
+      "avatar_url": null,
+      "village": null,
+      "is_diaspora": false,
+      "created_at": "2026-06-16T05:31:18.639Z"
+    },
+    "cricket": null
+  }
+}
 ```
 
 ---
@@ -1831,6 +1953,47 @@ Returns top players sorted by dynamically calculated MVP rating indexes.
 | **Path** | `/api/v1/sports/cricket/stats/mvp` |
 | **Access** | 🟢 Public |
 | **Status** | 🗓 Planned — Phase 3 |
+
+---
+
+## 8. User Profile Design Architecture
+
+The mobile frontend implements a unified, high-performance, and resilient screen layout for viewing any resident's profile (including self, which supports editing and account sign-out). Below is the component layout and data flow mapping:
+
+```mermaid
+graph TD
+    User([User App Interface]) -->|Select / Tap | ProfileRoute[profile/[id].tsx Screen]
+    ProfileRoute -->|Mounts| UserProfileView[UserProfileView Component]
+    
+    UserProfileView -->|Check isOwnProfile| CacheCheck{Is own profile?}
+    CacheCheck -->|Yes| LoadCache[Fetch Cached Auth & Sports Store Data]
+    LoadCache -->|Instant Render| RenderContent[Render ScrollView Content]
+    
+    CacheCheck -->|No| SkeletonState[Render ProfileSkeleton Shimmer]
+    
+    UserProfileView -->|API Fetch on mount| FetchAPI[GET /api/v1/users/:id/profile]
+    FetchAPI -->|Success| ReconcileData[Reconcile/Merge Fresh Profile Data]
+    FetchAPI -->|404 Error| Error404[Render Profile Not Found Screen]
+    FetchAPI -->|Network Error| ErrorNet[Render Load Failed Retry Screen]
+    
+    ReconcileData -->|Update State| RenderContent
+    
+    RenderContent -->|Delegates User Header| GenSection[GeneralInfoSection Component]
+    RenderContent -->|Delegates Sports Section| CricketSection[CricketSection Component]
+    
+    GenSection -->|Is Own Profile & Edit Mode| EditForm[Inline Editable Fields + Save/Cancel]
+    GenSection -->|Normal View| QuietHeader[Quiet Centered Avatar & Secondary Metadata]
+    
+    CricketSection -->|Pill Toggles| StatTierToggle[Competitive / Casual Toggle]
+    StatTierToggle -->|Toggle State| QuietStatsGrid[Classic Stats Grid]
+    CricketSection -->|Iterate Memberships| CurrentPastTeams[Current & Past TeamChips]
+    CurrentPastTeams -->|Tap TeamChip| TeamDetail[Route to sports/cricket/teams/[id]]
+```
+
+### Architectural Key Elements:
+1. **Zero-Flash Self Rendering**: When viewing your own profile, `UserProfileView` initializes its state from Zustand local caches (`useAuth` and `useSportsStore`) instantly on mount. This displays your profile card and data immediately without loading shimmers, fetching in the background to silently reconcile any fresh database records.
+2. **Resilience to Partial Failures**: Sibling sports sub-scopes (e.g. `cricket`) are isolated. If a player profile or statistics lookup throws an error, the backend logs a warning and returns `cricket: null`, allowing the core user profile to render successfully.
+3. **Decoupled Styling**: Unlike the bold sports onboarding cards, the profile screen adopts a clean, centered typography layout prioritizing scannability, utilizing `useTheme()` spacing, border, and secondary color tags.
 
 ---
 
