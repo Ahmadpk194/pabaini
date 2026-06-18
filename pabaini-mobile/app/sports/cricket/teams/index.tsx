@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../src/store/sports/sportsStore';
+import { useTeamsStore } from '../../../../src/store/sports/teamsStore';
 import { getAllTeams } from '../../../../src/services/sports/cricketTeamsApi';
 import { TeamSummary } from '../../../../src/types/sports.types';
 import { TeamCard } from '../../../../src/components/sports/teams/TeamCard';
@@ -25,6 +26,11 @@ export default function DiscoverTeamsScreen() {
   
   // Get registration status from Zustand
   const isRegistered = useSportsStore((state) => state.isRegistered('cricket'));
+
+  // Get my teams from Zustand store to check captain limit
+  const myTeams = useTeamsStore((state) => state.myTeams);
+  const captainedTeamsCount = myTeams.filter((t) => t.role === 'captain').length;
+  const isAtCaptainLimit = captainedTeamsCount >= 2;
 
   // Local state
   const [teams, setTeams] = useState<TeamSummary[]>([]);
@@ -71,12 +77,34 @@ export default function DiscoverTeamsScreen() {
           Be the first to create a cricket team in Pabaini.
         </Text>
         {isRegistered && (
-          <TouchableOpacity
-            style={[styles.emptyBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-            onPress={() => router.push('/sports/cricket/teams/create')}
-          >
-            <Text style={[styles.emptyBtnText, { color: theme.colors.onPrimary }]}>Create Team</Text>
-          </TouchableOpacity>
+          <View style={{ alignItems: 'center' }}>
+            <TouchableOpacity
+              disabled={isAtCaptainLimit}
+              style={[
+                styles.emptyBtn,
+                {
+                  backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                  borderRadius: theme.radius.sm,
+                },
+              ]}
+              onPress={() => router.push('/sports/cricket/teams/create')}
+            >
+              <Text style={[styles.emptyBtnText, { color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
+                Create Team
+              </Text>
+            </TouchableOpacity>
+            {isAtCaptainLimit && (
+              <Text style={{
+                color: theme.colors.textSecondary,
+                fontSize: 12,
+                marginTop: 12,
+                textAlign: 'center',
+                marginHorizontal: 32,
+              }}>
+                You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+              </Text>
+            )}
+          </View>
         )}
       </View>
     );
@@ -93,13 +121,33 @@ export default function DiscoverTeamsScreen() {
         <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
         
         {isRegistered ? (
-          <TouchableOpacity style={styles.headerAction} onPress={() => router.push('/sports/cricket/teams/create')}>
-            <Text style={[styles.createLink, { color: theme.colors.primary }]}>+ Create</Text>
+          <TouchableOpacity
+            disabled={isAtCaptainLimit}
+            style={styles.headerAction}
+            onPress={() => router.push('/sports/cricket/teams/create')}
+          >
+            <Text style={[styles.createLink, { color: isAtCaptainLimit ? theme.colors.border : theme.colors.primary }]}>
+              + Create
+            </Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 44 }} />
         )}
       </View>
+
+      {isAtCaptainLimit && isRegistered && (
+        <View style={{
+          backgroundColor: theme.colors.surface,
+          paddingHorizontal: 16,
+          paddingBottom: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 12, fontStyle: 'italic' }}>
+            You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+          </Text>
+        </View>
+      )}
 
       {/* Sticky Search bar */}
       <View style={[styles.searchSection, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>

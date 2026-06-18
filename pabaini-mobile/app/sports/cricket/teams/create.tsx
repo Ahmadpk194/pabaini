@@ -22,7 +22,11 @@ import { useTeamsStore } from '../../../../src/store/sports/teamsStore';
 export default function CreateTeamScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const myTeams = useTeamsStore((state) => state.myTeams);
   const fetchMyTeams = useTeamsStore((state) => state.fetchMyTeams);
+  
+  const captainedTeamsCount = myTeams.filter((t) => t.role === 'captain').length;
+  const isAtCaptainLimit = captainedTeamsCount >= 2;
 
   // Form states
   const [formValues, setFormValues] = useState<CreateTeamPayload>({
@@ -69,6 +73,12 @@ export default function CreateTeamScreen() {
   };
 
   const handleSubmit = async () => {
+    if (isAtCaptainLimit) {
+      const limitMsg = "You're already captaining 2 teams. Transfer or dissolve one to create a new team.";
+      Alert.alert('Error', limitMsg);
+      setSubmitError(limitMsg);
+      return;
+    }
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -92,6 +102,7 @@ export default function CreateTeamScreen() {
     } catch (error: any) {
       console.error('Failed to create team:', error);
       const backendError = error.response?.data?.message || 'Failed to create team. Please try again.';
+      Alert.alert('Error', backendError);
       setSubmitError(backendError);
     } finally {
       setIsSubmitting(false);
@@ -138,21 +149,31 @@ export default function CreateTeamScreen() {
 
         {/* Fixed Submit Footer */}
         <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          {isAtCaptainLimit && (
+            <Text style={{
+              color: theme.colors.textSecondary,
+              fontSize: 12,
+              textAlign: 'center',
+              marginBottom: 12,
+            }}>
+              You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+            </Text>
+          )}
           <TouchableOpacity
             style={[
               styles.submitBtn,
               {
-                backgroundColor: isNameEmpty || isSubmitting ? theme.colors.border : theme.colors.primary,
+                backgroundColor: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
                 borderRadius: theme.radius.sm,
               },
             ]}
             onPress={handleSubmit}
-            disabled={isNameEmpty || isSubmitting}
+            disabled={isNameEmpty || isSubmitting || isAtCaptainLimit}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.colors.onPrimary} />
             ) : (
-              <Text style={[styles.submitBtnText, { color: isNameEmpty || isSubmitting ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
+              <Text style={[styles.submitBtnText, { color: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
                 Create Team
               </Text>
             )}

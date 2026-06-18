@@ -70,6 +70,8 @@ export default function SportsScreen() {
 
   // Teams local state & store bindings
   const myTeams = useTeamsStore((state) => state.myTeams);
+  const captainedTeamsCount = myTeams.filter((t) => t.role === 'captain').length;
+  const isAtCaptainLimit = captainedTeamsCount >= 2;
   const [allTeams, setAllTeams] = useState<TeamSummary[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [refreshingTeams, setRefreshingTeams] = useState(false);
@@ -345,15 +347,16 @@ export default function SportsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           {activeTab === 'teams' && isRegistered && (
             <TouchableOpacity
+              disabled={isAtCaptainLimit}
               onPress={() => router.push('/sports/cricket/teams/create')}
               style={{
-                backgroundColor: theme.colors.primary,
+                backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 16,
               }}
             >
-              <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+              <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
                 + Create Team
               </Text>
             </TouchableOpacity>
@@ -461,8 +464,9 @@ export default function SportsScreen() {
                     You haven't joined or created any teams yet.
                   </Text>
                   <TouchableOpacity
+                    disabled={isAtCaptainLimit}
                     style={{
-                      backgroundColor: theme.colors.primary,
+                      backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
                       paddingHorizontal: 16,
                       paddingVertical: 8,
                       borderRadius: theme.radius.sm,
@@ -470,10 +474,20 @@ export default function SportsScreen() {
                     }}
                     onPress={() => router.push('/sports/cricket/teams/create')}
                   >
-                    <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
                       Create a Team
                     </Text>
                   </TouchableOpacity>
+                  {isAtCaptainLimit && (
+                    <Text style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: 12,
+                      marginTop: 8,
+                      textAlign: 'center',
+                    }}>
+                      You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                    </Text>
+                  )}
                 </View>
               ) : (
                 <>
@@ -486,6 +500,18 @@ export default function SportsScreen() {
                       onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
                     />
                   ))}
+
+                  {isAtCaptainLimit && (
+                    <Text style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: 12,
+                      marginTop: 4,
+                      marginBottom: 12,
+                      fontStyle: 'italic',
+                    }}>
+                      You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                    </Text>
+                  )}
 
                   {/* Pending join requests sent by the player */}
                   {myTeams.filter((t) => t.status === 'pending_request').map((t) => (
@@ -531,21 +557,32 @@ export default function SportsScreen() {
 
                   {/* Suggest creating own team if only pending items exist */}
                   {myTeams.every((t) => t.status !== 'active') && myTeams.length > 0 && (
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: theme.colors.primary,
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: theme.radius.sm,
-                        marginTop: 8,
-                        alignSelf: 'flex-start',
-                      }}
-                      onPress={() => router.push('/sports/cricket/teams/create')}
-                    >
-                      <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
-                        + Create Your Own Team
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={{ marginTop: 8 }}>
+                      <TouchableOpacity
+                        disabled={isAtCaptainLimit}
+                        style={{
+                          backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          borderRadius: theme.radius.sm,
+                          alignSelf: 'flex-start',
+                        }}
+                        onPress={() => router.push('/sports/cricket/teams/create')}
+                      >
+                        <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                          + Create Your Own Team
+                        </Text>
+                      </TouchableOpacity>
+                      {isAtCaptainLimit && (
+                        <Text style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: 12,
+                          marginTop: 4,
+                        }}>
+                          You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                        </Text>
+                      )}
+                    </View>
                   )}
                 </>
               )}
