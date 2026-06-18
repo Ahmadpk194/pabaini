@@ -60,6 +60,19 @@ export class TeamsService {
   async createTeam(createTeamDto: CreateTeamDto, userId: number): Promise<Team> {
     const playerProfile = await this.getCurrentPlayerProfile(userId);
 
+    const activeCaptainCount = await this.teamRepo.count({
+      where: {
+        captain_id: playerProfile.id,
+        is_active: true,
+      },
+    });
+
+    if (activeCaptainCount >= 2) {
+      throw new BadRequestException(
+        'You are already captain of 2 active teams. Transfer captaincy or dissolve a team before creating a new one.',
+      );
+    }
+
     const existingTeam = await this.teamRepo.findOne({
       where: { name: createTeamDto.name },
     });

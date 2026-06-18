@@ -2543,6 +2543,15 @@ axios.post('/api/v1/announcements/12/image', formData, {
             </tbody>
           </table>
         </div>
+        <div class="alert alert-important">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Active Captaincy Limit:</strong> A player cannot create a new team if they are already the captain of <strong>2 or more</strong> active teams (<code>is_active = true</code>).
+            Attempts to exceed this limit will reject with <code>400 Bad Request (BadRequestException)</code> and error message:
+            <br>
+            <code style="display: inline-block; margin-top: 4px; padding: 2px 6px; background: rgba(0,0,0,0.05); border-radius: 4px;">"You are already captain of 2 active teams. Transfer captaincy or dissolve a team before creating a new one."</code>
+          </div>
+        </div>
         <div class="code-panel">
           <div class="code-tabs">
             <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>

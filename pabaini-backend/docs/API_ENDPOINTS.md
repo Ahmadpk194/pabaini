@@ -1081,6 +1081,39 @@ curl -X POST http://localhost:3000/api/v1/sports/cricket/teams \
 
 **Response `201 Created`** — same shape as `#25` response (Full Team).
 
+> [!IMPORTANT]
+> **Active Captaincy Limit Rule**:
+> * A player cannot create a new team if they are already the captain of **2 or more** active teams (`is_active = true`).
+> * If the count is 2 or more, the endpoint rejects the request with `400 Bad Request` (`BadRequestException`).
+> * **Error Message**: `"You are already captain of 2 active teams. Transfer captaincy or dissolve a team before creating a new one."`
+
+<details>
+<summary>💡 Captaincy Limit Details & Flow Diagram (Click to Expand)</summary>
+
+### Business Validation Rules:
+1. **Target**: Count active teams (`is_active = true`) where `captain_id = playerProfile.id`.
+2. **Limit**: Maximum 2 active teams.
+3. **Action on Violation**: Rejects with `400 BadRequestException`.
+4. **Action on Success**: Proceed with team creation and roster registration in transaction.
+
+### Flow Diagram:
+```mermaid
+graph TD
+    User([User calls POST /sports/cricket/teams]) --> GetProfile[Fetch player profile from DB]
+    GetProfile --> CountCap[Count active teams captained by player]
+    CountCap --> LimitCheck{Is count >= 2?}
+    LimitCheck -->|Yes| ThrowBad[Throw 400 BadRequestException]
+    LimitCheck -->|No| CheckName[Verify name uniqueness]
+    CheckName --> ExistCheck{Name exists?}
+    ExistCheck -->|Yes| ThrowConflict[Throw 409 ConflictException]
+    ExistCheck -->|No| StartTx[Start Database Transaction]
+    StartTx --> CreateTeam[Save team record]
+    CreateTeam --> AddCaptain[Add player to roster as CAPTAIN and ACTIVE]
+    AddCaptain --> CommitTx[Commit Transaction]
+    CommitTx --> ReturnTeam[Return Full Team details]
+```
+</details>
+
 ---
 
 ### #23 · GET `/sports/cricket/teams`
@@ -1646,7 +1679,7 @@ Notifications are decoupled from the core business logic of other modules using 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Player as Player / Captain
+    participant Player as Player / Captain
     participant TS as TeamsService
     participant NS as NotificationsService
     participant DB as PostgreSQL Database
