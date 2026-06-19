@@ -633,6 +633,7 @@
     <nav class="sidebar-nav">
       <a href="#sports-p1"><span class="nav-icon">🏏</span> Phase 1 — Players</a>
       <a href="#sports-p2" class="phase2-link"><span class="nav-icon">🛡️</span> Phase 2 — Teams</a>
+      <a href="#sports-matches" class="phase2-link"><span class="nav-icon">📊</span> Phases 3 &amp; 4 — Matches</a>
       <a href="#p2-screens" class="phase2-link"><span class="nav-icon">📺</span> Screens Map</a>
       <a href="#p2-flows" class="phase2-link"><span class="nav-icon">🔀</span> User Flows</a>
       <a href="#p2-actions" class="phase2-link"><span class="nav-icon">⚡</span> Actions Matrix</a>
@@ -1413,13 +1414,85 @@ interface MyTeamResponse {  // returned by GET /my
         <li class="done">Transfer Captaincy with confirmation alert</li>
         <li class="done">Soft delete team with full squad dissolution</li>
         <li>Vice Captain role assignment (backend endpoint pending)</li>
-        <li>Stats tab — team match averages, top scorer, MVP contributions</li>
-        <li>Matches tab — upcoming fixtures and results history</li>
-        <li>Player notifications for invite / request accepted</li>
-        <li>Match scheduling &amp; scorecards (Phase 3)</li>
-        <li>Leaderboard rankings (Phase 3)</li>
+        <li class="done">Stats tab — team match averages, top scorer, MVP contributions</li>
+        <li class="done">Matches tab — upcoming fixtures and results history</li>
+        <li class="done">Player notifications for invite / request accepted</li>
+        <li class="done">Match scheduling &amp; scorecards (Phase 3)</li>
+        <li>Leaderboard rankings (Phase 3 / Upcoming)</li>
       </ul>
 
+    </section>
+
+    <hr>
+
+    <!-- ─── 8B. Sports Phases 3 & 4: Matches & Scoring ────────────────────── -->
+    <section class="section" id="sports-matches">
+      <div class="section-header">
+        <div class="section-number">8B</div>
+        <h2>Sports Hub — Phases 3 &amp; 4: Cricket Matches &amp; Scoring</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">🏏</span>
+        <div><strong>In simple words:</strong> Captains can schedule matches by challenging other teams, declare their Playing XI (exactly 11 players including guests), and submit final results (simple scoring) or run live scoring ball-by-ball. Spectators can follow live scoring updates in real-time.</div>
+      </div>
+
+      <!-- Match Scheduling & Roster card -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">📅</span> Match Requests &amp; List (<code>request.tsx</code>)</h3>
+        <ul>
+          <li><strong>Initiate Challenge:</strong> Captains of active teams can tap "+ Challenge" to challenge an opponent team.</li>
+          <li><strong>Form Validation:</strong> Proposes overs (1-100), optional venue, scheduled date/time, and choice of scoring mode (Live vs. Simple).</li>
+          <li><strong>Accept/Decline:</strong> Challenged captains view pending match requests on their Match Detail page to Accept or Decline.</li>
+          <li><strong>Matches Feed:</strong> Displays active pulsing "LIVE" badges, upcoming match checklist counts, and completed trophy scorecards. Renders cards via <code>MatchCard.tsx</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Lineup Declaration -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">👥</span> Declaring the Playing XI (<code>lineup.tsx</code>)</h3>
+        <ul>
+          <li><strong>11/11 Roster:</strong> Requires exactly 11 players to be selected from the active team squad before scoring can start.</li>
+          <li><strong>Guest Players:</strong> Allows captains to manually add temporary guest players by name if they are not app users.</li>
+          <li><strong>Batting Order:</strong> Captains assign batting slots (1 to 11) using reorder arrow controls.</li>
+          <li><strong>Roster Badges:</strong> Detail pages display green/yellow "Declared" badges for both teams as client-side gates.</li>
+        </ul>
+      </div>
+
+      <!-- Simple Result entry -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">📝</span> Simple Scorecard Submission (<code>result.tsx</code>)</h3>
+        <ul>
+          <li><strong>Winner &amp; Scores:</strong> Form to choose winning team, final scores (e.g. <code>120/5 (20)</code>), and Man of the Match.</li>
+          <li><strong>Player Stats:</strong> Collapsible accordion cards for each player to input individual runs, balls, boundaries, wickets, overs, and extras.</li>
+          <li><strong>24-Hour Edit Lock:</strong> Results remain editable for 24 hours post-submission, after which the form is permanently locked and a lock padlock is shown.</li>
+        </ul>
+      </div>
+
+      <!-- Live Scoring start & console -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔴</span> Live Ball-by-Ball Scoring (<code>start.tsx</code> / <code>score.tsx</code>)</h3>
+        <ul>
+          <li><strong>Toss &amp; Openers:</strong> Initialize Match wizard to record toss winner, batting first team, opening batsmen, opening bowler, and assigned scorer.</li>
+          <li><strong>Exclusive Console:</strong> Designated scorer gets exclusive write access to enter runs, wickets, and extras. Others are redirected to the public Live Viewer.</li>
+          <li><strong>Automated Logic:</strong> Legal ball counters, strike rotation on runs/overs, target updates, and auto-completion.</li>
+          <li><strong>Wickets Modal:</strong> Input box for dismissal types (caught, bowled, run-out) and choosing the next incoming batsman.</li>
+          <li><strong>Bowler Rotation:</strong> Blocks consecutive over bowls, prompting scorer for the next bowler at over boundaries.</li>
+          <li><strong>Innings Break Wizard:</strong> Sets openers and bowling details for Innings 2.</li>
+          <li><strong>One-Ball Undo:</strong> Reverts the single most recently entered delivery.</li>
+        </ul>
+      </div>
+
+      <!-- Live Viewer -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">📺</span> Real-Time Spectator Feed (<code>live.tsx</code>)</h3>
+        <ul>
+          <li><strong>Instant Polling:</strong> Spectators view live scoreboards, batsman summaries, bowler cards, and over trackers.</li>
+          <li><strong>5-Second Refresh:</strong> Polls the pre-computed match live record via TanStack Query every 5 seconds.</li>
+          <li><strong>Diaspora Access:</strong> Operates over standard HTTP endpoints, enabling members living in UAE or UK to follow in real-time.</li>
+        </ul>
+      </div>
     </section>
 
     <hr>

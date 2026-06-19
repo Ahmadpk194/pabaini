@@ -12,3 +12,19 @@ export function formatTimeAgo(dateString: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 }
+
+export function formatMatchDate(dateString?: string | null): string {
+  if (!dateString) return 'Venue/Time TBD';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  
+  return date.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+

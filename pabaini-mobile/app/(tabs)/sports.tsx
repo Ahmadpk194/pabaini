@@ -29,6 +29,8 @@ import { Avatar } from '../../src/components/ui/Avatar';
 import client from '../../src/api/client';
 import { CricketPlayerProfile, TeamSummary } from '../../src/types/sports.types';
 import { Shield, Trophy, Calendar, Users, Award } from 'lucide-react-native';
+import { useMatches } from '../../src/hooks/useMatches';
+import { MatchCard } from '../../src/components/sports/matches/MatchCard';
 
 const TABS = [
   { id: 'players', name: 'Players', icon: Users },
@@ -78,6 +80,14 @@ export default function SportsScreen() {
 
   // Notifications unread count polling
   const fetchUnreadCount = useNotificationsStore((state) => state.fetchUnreadCount);
+
+  // Matches query hook
+  const {
+    data: matchesResponse,
+    isLoading: isLoadingMatches,
+    refetch: refetchMatches,
+    isRefetching: isRefetchingMatches,
+  } = useMatches();
 
   useFocusEffect(
     useCallback(() => {
@@ -358,6 +368,21 @@ export default function SportsScreen() {
             >
               <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
                 + Create Team
+              </Text>
+            </TouchableOpacity>
+          )}
+          {activeTab === 'matches' && isRegistered && captainedTeamsCount > 0 && (
+            <TouchableOpacity
+              onPress={() => router.push('/sports/cricket/matches/request')}
+              style={{
+                backgroundColor: theme.colors.primary,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 16,
+              }}
+            >
+              <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                + Challenge
               </Text>
             </TouchableOpacity>
           )}
@@ -674,13 +699,116 @@ export default function SportsScreen() {
         </ScrollView>
       )}
 
-      {activeTab === 'matches' && (
-        <ComingSoonState
-          title="Match Schedules"
-          description="Track local tournament schedules, scores, and fixture timings here."
-          icon={<Calendar color={theme.colors.primary} size={36} />}
-        />
-      )}
+      {activeTab === 'matches' && (() => {
+        const matches = matchesResponse?.data || [];
+        const liveMatches = matches.filter(m => m.status === 'live');
+        const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
+        const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
+
+        return (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetchingMatches}
+                onRefresh={refetchMatches}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
+          >
+            {/* Banner prompting user to complete profile */}
+            {!isRegistered && (
+              <View style={{ marginTop: 8 }}>
+                <SetupBanner onPress={handleRegisterPress} />
+              </View>
+            )}
+
+            {isLoadingMatches && matches.length === 0 ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            ) : matches.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyEmoji}>🏏</Text>
+                <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>No matches scheduled</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                  No upcoming or live challenges are active at this moment.
+                </Text>
+                {isRegistered && captainedTeamsCount > 0 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.emptyBtn,
+                      {
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: theme.radius.sm,
+                        marginTop: 12,
+                      },
+                    ]}
+                    onPress={() => router.push('/sports/cricket/matches/request')}
+                  >
+                    <Text style={[styles.emptyBtnText, { color: theme.colors.onPrimary }]}>
+                      Challenge a Team
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={{ gap: 20, paddingTop: 10 }}>
+                {liveMatches.length > 0 && (
+                  <View>
+                    <View style={styles.sectionHeader}>
+                      <View style={styles.liveBadgeDot} />
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
+                    </View>
+                    {liveMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                {upcomingMatches.length > 0 && (
+                  <View>
+                    <View style={styles.sectionHeader}>
+                      <Calendar color={theme.colors.primary} size={20} />
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
+                    </View>
+                    {upcomingMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                {completedMatches.length > 0 && (
+                  <View>
+                    <View style={styles.sectionHeader}>
+                      <Trophy color={theme.colors.primary} size={20} />
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
+                    </View>
+                    {completedMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        );
+      })()}
 
       {activeTab === 'leaderboard' && (
         <ComingSoonState
@@ -838,5 +966,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#A07800',
+  },
+  liveBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D32F2F',
+    marginRight: 2,
+    alignSelf: 'center',
+  },
+  emptyEmoji: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginHorizontal: 32,
+    marginBottom: 16,
+  },
+  emptyBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

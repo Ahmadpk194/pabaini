@@ -124,19 +124,50 @@ This document provides a comprehensive overview of all features implemented in t
     *   Fetches community players via infinite-scroll pagination (`GET /sports/cricket/players?page=N&limit=10`), appending items as the user scrolls.
     *   Implements `RefreshControl` (pull-to-refresh) to sync the latest players and recheck the user's registration status.
 
-### 🚀 Phase 2: Teams, Matches & Leaderboards (Planned / Roadmap)
-*   **Teams Module**:
-    *   [ ] Support custom team/squad registration.
-    *   [ ] Allow team captains to send roster/squad invitations to registered players.
-    *   [ ] Add a player notification dashboard to accept/reject team invite requests.
-    *   [ ] Roster standings tab listing all approved squads.
-*   **Matches & Fixtures**:
-    *   [ ] Render upcoming tournament match listings, location directions, and timings.
-    *   [ ] Live scoreboard widget to record ball-by-ball actions or final match score summaries.
-    *   [ ] Match details dashboard showing runs, wickets, and man of the match outcomes.
-*   **MVP Leaderboards**:
-    *   [ ] Dynamically compile runs, batting averages, strike rates, wickets, economy rates, and MVP rankings.
-    *   [ ] Update the Leaderboard tab feed in real-time.
+### 🌟 Phase 2: Cricket Teams & Squad Management (Implemented)
+
+*   **Teams tab in Sports Tab**: Displays "Your Teams" list for registered players + horizontal "Discover Teams" carousel. Features a "+ Create Team" button in the app-bar for eligible users.
+*   **Discover Teams ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/index.tsx))**: Full paginated list of all active village teams with client-side name search filter and pull-to-refresh.
+*   **Create Team ([create.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/create.tsx))**: Form with validations (name, description, home ground, founded year). On success, routes to the team's profile.
+*   **Team Profile ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/[id]/index.tsx))**: Displays full team details, squad listings, statistics, and past/upcoming matches. Restricts admin controls dynamically based on the current user's role:
+    *   *Unregistered*: Shows CTA to register as a player first.
+    *   *Non-Member*: Shows "Request to Join" button.
+    *   *Pending Request*: Displays "Request Pending".
+    *   *Invited*: Renders "Accept" and "Decline" buttons.
+    *   *Active Member*: Shows "Leave Team" button.
+    *   *Captain*: Displays "Manage Team" button to open the dashboard.
+*   **Captain Dashboard ([manage.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/[id]/manage.tsx))**: Allows team captains to manage squad settings:
+    *   *Requests Tab*: Accept or decline user join requests.
+    *   *Invites Tab*: Send new invitations or cancel pending ones.
+    *   *Squad Tab*: Renders active roster with ActionSheet for removing members or transferring captaincy.
+    *   *Edit details & Logo upload*: Direct details update form and logo picker using `expo-image-picker` with multipart form-data.
+    *   *Soft delete team*: Dissolves squad and flags team as inactive.
+*   **Invite Player Directory ([invite.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/[id]/invite.tsx))**: Searchable player directory filtered to registered players not already in/invited by the team.
+
+### 🌟 Phases 3 & 4: Cricket Matches, Lineups & Scoring (Implemented)
+
+*   **Matches Tab & List ([sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx))**: Lists challenges in three groups:
+    *   *Live Matches*: Pulses red and displays real-time score summaries.
+    *   *Upcoming Matches*: Displays date, venue, and a lineup declaration counter.
+    *   *Completed Matches*: Displays the winning team, trophy icon, and final scores. These cards are rendered by [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
+*   **Send Match Request ([request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx))**: Form for captains to challenge opponent teams. Fields: team dropdown, opponent dropdown, overs (1-100), optional venue, optional schedule (with helpers), and scoring mode (Live/Simple).
+*   **Match Detail ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx))**: Detailed page rendering teams, scheduled time, venue, lineups declaration status badges, and dynamic action buttons:
+    *   *Challenge Pending*: Opponent captain can accept or decline.
+    *   *Scheduled*: Captains can declare lineups or cancel the match.
+    *   *Lineups Ready*: Shows "Start Match" (live mode) or "Submit Result" (simple mode) buttons.
+    *   *Live / Scoring*: Designated scorer can "Continue Scoring"; spectators see "Watch Live".
+    *   *Completed*: Displays read-only scorecard summaries and statistics.
+*   **Declare Playing XI ([lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx))**: Roster picking tool requiring exactly 11 players. Captains can select registered squad members or add guest players (name only), and must assign unique batting orders (1-11).
+*   **Simple Result Entry ([result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx))**: Retroactive form to log completed matches: winner selection card, final score inputs, Man of the Match, and per-player statistics accordions (batting and bowling metrics).
+    *   *24-Hour Edit Lock Window*: Results are editable for 24 hours post-submission (Rule 44). After 24 hours, the form locks, edit actions disappear, and a locked padlock icon is displayed.
+*   **Initialize Match ([start.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/start.tsx))**: Pre-match start configuration screen for captains: toss details, batting first team, opening batsmen (striker & non-striker), opening bowler, and assigned scorer.
+*   **Scorer Console ([score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx))**: Scorer-exclusive write-enabled interface to input ball events:
+    *   *Normal Ball / Extras*: Fast-tap buttons to submit runs, extra type overlays (Wide, No Ball, Bye, Leg Bye), and wickets.
+    *   *Wicket flow*: Prompts a modal to record dismissal type and choose the next batsman.
+    *   *Bowler selection modal*: Prompts at over boundaries (6 legal balls complete) to pick the next bowler (validating the non-consecutive bowling Rule 60).
+    *   *Innings transition wizard*: Prompts when 10 wickets fall or overs finish, prompting the scorer to set Innings 2 openers and bowler.
+    *   *Undo ball*: Calls `PATCH /balls/undo` to revert the single most recent delivery.
+*   **Live Spectator Viewer ([live.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/live.tsx))**: Public read-only feed polling the pre-computed match state every 5 seconds (`refetchInterval: 5000`). Renders live scorecard, active batsman run counts, active bowler stats, and over timeline widgets.
 
 ### 📊 Step-by-Step Flowchart
 

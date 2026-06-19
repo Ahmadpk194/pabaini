@@ -1336,13 +1336,25 @@ sequenceDiagram
 *   **Tabs**:
     *   `Players`: Lists registered players.
     *   `Teams`: Displays the user's teams and allows team discovery.
-    *   `Matches`: Displays match schedules (placeholder state).
+    *   `Matches`: Displays match schedules feed grouped by Live, Upcoming, and Completed sections with pull-to-refresh and a challenge button for captains.
     *   `Leaderboard`: Displays the leaderboard (placeholder state).
-*   **Store Usage**: `useSportsStore`, `useTeamsStore`, `useNotificationsStore`.
+*   **Store/Hook Usage**: `useSportsStore`, `useTeamsStore`, `useNotificationsStore`, `useMatches` query hook.
 
 ### 3. Team Details (`sports/cricket/teams/[id]/index.tsx`)
 *   **Purpose**: Displays the team's squad list.
 *   **User Actions**: Join requests (players), manage settings (captains).
+
+### 4. Match Request (`sports/cricket/matches/request.tsx`)
+*   **Purpose**: Form for team captains to request matches (or edit pending requests), including team picker, opponent team selector modal, overs, venue, scheduled date/time with helper chips, and scoring mode choice.
+
+### 5. Match Details (`sports/cricket/matches/[id]/index.tsx`)
+*   **Purpose**: Displays match details, scores, schedule, and provides status-aware actions (Accept, Decline, Cancel, Edit) for captains.
+
+### 6. Playing XI Lineup (`sports/cricket/matches/[id]/lineup.tsx`)
+*   **Purpose**: Allows captains to choose exactly 11 active squad members or register guest players (name only), rearrange batting positions (1-11) via up/down controls, and declare or edit the team lineup.
+
+### 7. Match Result Form (`sports/cricket/matches/[id]/result.tsx`)
+*   **Purpose**: Allows captains to submit or edit match results in simple scoring mode, selecting the winner, entering scores, nominating Man of the Match, and setting batting/bowling statistics for all players.
 
 ---
 
@@ -1406,7 +1418,7 @@ flowchart TD
 ### Completed Features
 *   **Authentication**: Firebase ID token validation and PG user profile creation.
 *   **Notice Board**: Announcements feed, category filters, toggle likes, and image uploads.
-*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, Simple Scoring Mode result submission, and Live Ball-by-Ball scoring (Stage 3) including openers setup, live overs tracking, strike rotation, consecutive bowler verification, innings transitions, undo log, and public live views.
+*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, Simple Scoring Mode result submission, Live Ball-by-Ball scoring (Stage 3) including openers setup, live overs tracking, strike rotation, consecutive bowler verification, innings transitions, undo log, and public live views, as well as **Matches Scheduling, Playing XI, and Results Entry UI (Mobile Stages 1, 2 & 3)** (matches list feed, send request form, opponent select sheet, squad checklist picker, batting order reordering, winner selector, MoM picker, collapsible stat inputs, and read-only scorecards).
 *   **Notifications**: Centralized notifications feed and unread badge polling.
 
 ### Partially Complete Features
@@ -1420,7 +1432,7 @@ flowchart TD
 
 ## 17. RECENT DEVELOPMENT HISTORY
 
-*   **Recently Implemented**: Live ball-by-ball scoring (Stage 3) including match start, ball recording, bowler selection, second innings startup, single-ball undo, and public live viewing.
+*   **Recently Implemented**: Live ball-by-ball scoring (Stage 3) including match start, ball recording, bowler selection, second innings startup, single-ball undo, public live viewing, and **Matches Scheduling, Lineups, & Results UI (Mobile Stages 1, 2 & 3)** including matches list feed, challenge request form, status-aware match details, custom roster selection, winner picker, MoM nominating, collapsible player stat logs, and inline read-only match scorecards.
 *   **Next Priorities**: Standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
 
 ---

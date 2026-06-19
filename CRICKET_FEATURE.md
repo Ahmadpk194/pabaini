@@ -701,6 +701,193 @@ Below are definitions for common terms used in the Pabaini cricket system:
 *   **Live Mode**: A ball-by-ball real-time match logging mode.
 *   **Captaincy Limit**: A rule restricting a single player to captaining a maximum of 2 active teams.
 *   **Target**: The score the second batting team must reach to win the match, calculated as `innings_1_score + 1`.
-*   **Extras**: Penalty runs awarded to the batting team that are not scored off the bat, including wides, no-balls, byes, and leg-byes.
 *   **Wide**: An illegal delivery that passes too far outside the batsman's reach. It awards 1 extra run and does not count as a legal ball in the over.
 *   **No-Ball**: An illegal delivery (e.g., foot fault or high bounce). It awards 1 extra run, does not count as a legal ball in the over, and batsmen cannot be dismissed off a no-ball except by run-out.
+
+## 10. Mobile Implementation
+
+### 1. Overview
+
+The Pabaini mobile application implements the full cricket match management lifecycle on the phone across four distinct operational stages: Matches List & Details (Stage 1), Playing XI Declaration (Stage 2), Simple Scorecard Submission (Stage 3), and Live Ball-by-Ball Scoring (Stage 4). Together, these features map the entire request-to-completion pipeline—allowing captains to schedule matches, declare lineups, start live matches, record events ball by ball, and view detailed spectator scoreboards—directly from their mobile devices.
+
+### 2. Screen Inventory
+
+The following screens support the cricket match coordination and scoring system:
+
+| Screen Name | File Path | One-Sentence Description | Who Can Access It |
+| :--- | :--- | :--- | :--- |
+| Matches Tab | [sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx) (Matches section) | Displays lists of live, upcoming, and completed matches. | Anyone (Residents, Guests, Captains) |
+| Send Match Request | [request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx) | Form to challenge an opponent team and propose match details. | Captains of active teams only |
+| Match Detail | [index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx) | Shows match info, lineup declarations, and status-aware action buttons. | Anyone (Actions restricted by role) |
+| Declare Playing XI | [lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx) | Selection list to declare or edit the starting 11 players. | Captains of participating teams only |
+| Simple Result Entry | [result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx) | Retroactive post-match form to submit scores and player stats. | Captains of participating teams only |
+| Initialize Match | [start.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/start.tsx) | Match start wizard to declare the toss, batting order, and openers. | Captains of participating teams only |
+| Scorer Console | [score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx) | Ball-by-ball interactive scoreboard panel for live play. | Designated Scorer only |
+| Live Spectator Viewer | [live.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/live.tsx) | Read-only scoreboard that updates in real-time. | Anyone (No action controls) |
+
+### 3. Full Navigation Map
+
+The flowchart below displays every screen node and the navigation pathways between them, triggered by user actions or state transitions:
+
+```mermaid
+flowchart TD
+    MatchesTab[Matches List Tab]
+    SendRequest[Send Match Request Screen]
+    MatchDetail[Match Detail Screen]
+    LineupDecl[Declare Playing XI Screen]
+    ResultEntry[Simple Result Entry Screen]
+    StartMatch[Initialize Match Screen]
+    ScorerConsole[Scorer Console Screen]
+    LiveViewer[Live Spectator Viewer Screen]
+    
+    MatchesTab -->|tap Challenge a Team| SendRequest
+    SendRequest -->|submit form| MatchDetail
+    MatchesTab -->|tap Match Card| MatchDetail
+    
+    MatchDetail -->|tap Declare/Edit Playing XI| LineupDecl
+    LineupDecl -->|submit 11/11 lineup| MatchDetail
+    
+    %% Simple Scoring Pathway
+    MatchDetail -->|tap Submit/Edit Result Simple Mode| ResultEntry
+    ResultEntry -->|submit final scorecard| MatchDetail
+    
+    %% Live Scoring Pathway
+    MatchDetail -->|tap Start Match Live Mode| StartMatch
+    StartMatch -->|submit toss & openers| ScorerConsole
+    MatchDetail -->|tap Continue Scoring| ScorerConsole
+    MatchDetail -->|tap Watch Live| LiveViewer
+    
+    ScorerConsole -->|match completes| MatchDetail
+    LiveViewer -->|match completes| MatchDetail
+```
+
+### 4. The Matches Tab and List
+
+*   **Three List Groupings**: Matches on the list screen are categorized into **Live Matches**, **Upcoming Matches** (both `scheduled` challenges and `pending_request` proposals), and **Completed Matches** (including `completed`, `cancelled`, and `no_result` outcomes).
+    *   *Visual Distinctions*: Live matches are highlighted with a prominent red pulsing "LIVE" badge dot, and their cards feature active scores if the innings has begun. Upcoming matches display a scheduled date and a lineup declaration checklist counter (e.g., `Lineups: 0/2` or `1/2` declared). Completed matches show a trophy icon and the final score comparison. These cards are rendered using [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
+*   **Initiating a Request**: A player can initiate a request by tapping the "Challenge a Team" button, which only appears on the Matches tab if the list is empty.
+    *   *Captaincy Check*: The button is only visible to users registered as cricket players who are captains of **1 or more active teams** (monitored by the Zustand [teamsStore](file:///c:/dev/pabaini/pabaini-mobile/src/store/sports/teamsStore.ts)). If a user is not a captain, the app hides the challenge button entirely.
+
+### 5. Sending and Responding to a Match Request
+
+*   **Send Match Request Form** (defined in [request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx)):
+    1.  **Your Team**: Pre-fills and locks to the captain's team if they only captain one team. If they captain multiple teams, it renders a custom dropdown modal listing all teams they captain.
+    2.  **Opponent Team**: Renders a custom list modal with a search filter. It displays all teams on the platform except the captain's own team and any other teams they captain.
+    3.  **Overs**: Numeric text field (defaults to 20, restricted between 1 and 100).
+    4.  **Venue**: Optional text input (up to 200 characters).
+    5.  **Scheduled Date & Time**: Optional text input requiring format `YYYY-MM-DD HH:MM`. Includes quick-helper chips ("Today +2h", "Tomorrow 10 AM", "Tomorrow 4 PM") that automatically fill the text field when tapped.
+    6.  **Scoring Mode**: Radio select buttons between "Live Scoring" and "Simple Entry".
+*   **Responding to a Request**: The challenged opponent captain opens the Match Detail screen ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx)) and is presented with two row action buttons: **Accept** and **Decline** which fire the respective API actions in [cricketMatchesApi.ts](file:///c:/dev/pabaini/pabaini-mobile/src/services/sports/cricketMatchesApi.ts). Accepting moves the status to `scheduled`, whereas declining cancels the challenge.
+*   **Editing and Cancelling**:
+    *   *Editing*: While a request is in `pending_request` status, the requesting captain can tap "Edit Request", which re-opens the request form. As outlined in the backend [Business Rules Ledger](#7-complete-business-rules-ledger) (Rules 25 & 26), edits are restricted to the challenger and can only modify details like overs, venue, and scheduled time before acceptance.
+    *   *Cancelling*: The requesting captain can tap "Cancel Request" while status is `pending_request`. Once the match status moves to `scheduled`, the captain of *either* team can tap "Cancel Match", triggering an alert confirmation.
+
+### 6. Declaring your Playing XI
+
+*   **Lineup Screen Experience** (defined in [lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx)): Captains tap "Declare Playing XI" on the Match Detail screen. The screen splits into:
+    *   *Squad Selector List*: Lists all active members of the captain's squad. Tapping a player toggles their inclusion.
+    *   *Guest Player Form*: Allows typing a guest name and tapping a plus button to add an unregistered guest player to the lineup.
+    *   *Declared List (Playing XI)*: Displays the selected players. The captain must assign their batting order (1 to 11) using "Move Up" and "Move Down" arrow buttons.
+    *   *11/11 Requirement*: The submission button is disabled unless exactly 11 players are declared (combining registered and guest players).
+*   **Visual Badges and Gatekeeper Rules**: The Match Detail screen displays separate status badges for each team under the "Playing XI Lineups" section—labeling them **Declared** (green) or **Not Declared** (yellow). Live match scoring or simple result entry cannot proceed until both badges display "Declared", serving as a strict client-side gatekeeper.
+
+### 7. Simple Scoring — Submitting a Result
+
+*   **Result Form Experience** (defined in [result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx)): Captains tap "Submit Result" (available in scheduled, simple scoring mode).
+    1.  **Winner Selection**: Two large cards representing each team. Selecting one highlights it with a gold trophy icon.
+    2.  **Final Scoreboards**: Manual text fields to input final score strings (e.g., `145/6 (20)`).
+    3.  **Man of the Match**: A custom modal list showing only the registered players in the declared Playing XI.
+    4.  **Roster Player Stats Accordions**: Renders collapsible player rows for both squads. Expanding a player row reveals input fields for batting (runs, balls, fours, sixes, dismissal type, and "not out" switch) and bowling (overs, runs conceded, wickets, wides, and no-balls).
+*   **24-Hour Edit Window**: Tapping "Edit Result" reloads the result form with previously saved parameters. As per backend Rule 44, the edit button is only visible to captains on the Match Detail screen for 24 hours post-submission (indicated by the "Editable (24h)" badge). After 24 hours, the scorecard lock triggers, the edit button disappears, and a lock emoji icon is rendered next to the scorecard header.
+*   **Scorecard Display**: The resulting scorecard on the Match Detail page renders summary cards for the winner and Man of the Match, followed by separate tables for each team detailing bat and ball statistics.
+
+### 8. Live Scoring — The Full Experience
+
+#### Starting a Match
+Either captain starts the match by tapping the "Start Match" button on the Match Detail page. This opens the **Initialize Match Screen** ([start.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/start.tsx)), where they must select:
+1.  **Toss Winner**: Selects which team won the toss.
+2.  **Batting First**: Selects which team bats first.
+3.  **Openers**: Custom dropdown lists to choose the opening Striker, opening Non-Striker, and opening Bowler from the declared lineups.
+4.  **Designated Scorer**: Optional dropdown list to select a registered squad member as the scorer (defaults to the active captain).
+
+#### Live Scoring Sequence Diagram
+The sequence diagram below displays the scorer's journey from match start, through over changes and innings breaks, to final completion:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Scorer
+    participant Client as TanStack Client
+    participant Server as NestJS API
+    
+    Note over Scorer, Server: Live Scoring Console Initialized
+    Scorer->>Client: Open scorer console (scorer auth checks pass)
+    Client->>Server: GET /live (pulls striker, non-striker, bowler, target, run rates)
+    Server-->>Client: Return live state payload
+    
+    loop Entering Deliveries
+        Scorer->>Client: Tap Runs / Extras / Wickets
+        Client->>Server: POST /balls (records runs, wickets, types)
+        Server-->>Client: Returns updated live state
+        Client->>Client: Refresh local cache & update tracker
+    end
+    
+    Note over Scorer, Server: Over ends (6 legal balls complete)
+    Server-->>Client: Live state: bowler ID is null / bowler cleared
+    Client->>Scorer: Block console, prompt with "Select Next Bowler" modal
+    Scorer->>Client: Select bowler (validates non-consecutive rule)
+    Client->>Server: PATCH /bowler (sets next active bowler)
+    Server-->>Client: Bowler updated
+    
+    Note over Scorer, Server: Innings 1 Ends (10 wickets or scheduled overs met)
+    Server-->>Client: Live state: striker/non-striker are null, innings is 2
+    Client->>Scorer: Overlay Innings 2 Initialization Wizard modal
+    Scorer->>Client: Select opening strikers & opening bowler
+    Client->>Server: PATCH /innings/start (starts 2nd innings)
+    Server-->>Client: Innings 2 active, scoring continues
+    
+    Note over Scorer, Server: Match Ends (Target met in Innings 2)
+    Server-->>Client: Match status changes to COMPLETED
+    Client->>Scorer: Redirect / render Success Completion Screen
+```
+
+#### Scorer Interactions
+*   **Normal Ball**: The scorer selects the run value from the Runs row (`0`, `1`, `2`, `3`, `4`, `6`) and taps **Record Ball**. This sends `POST /balls` with the run count and no extra types.
+*   **Extras**: The scorer selects the extra type from the selector row (`Wide`, `No Ball`, `Bye`, `Leg Bye`) and selects the run value (usually `0` or `1` unless batsmen ran additional runs). Tapping **Record Ball** maps these runs to `extra_runs` in the API payload.
+*   **Wickets**: Tapping **Wicket** opens a red modal:
+    1.  Selects wicket type (`bowled`, `caught`, `run_out`, `lbw`, `stumped`, `hit_wicket`, `retired`).
+    2.  If wickets remain, selects the next batsman from a custom dropdown list listing only remaining players in the lineup.
+    3.  Tapping **Confirm Wicket** records the ball with `is_wicket: true` and the next batsman details.
+*   **Undo Action**: Tapping the undo icon in the top header calls `PATCH /balls/undo`, reverting the most recently recorded delivery. It is limited to the single most recent delivery because the backend does not maintain a multi-ball session stack.
+
+#### Automation vs. Manual Inputs
+*   *Automated actions (No input required)*: Legal ball counting, run accumulation, strike rotation (odd runs swap batsman ends, over completion swaps ends), Target calculations, and auto-completing the match when target/overs/wickets criteria are met.
+*   *Manual triggers (Forced inputs)*: Bowler changes at over boundaries, Innings 2 opener selection, and Wicket next batsman declarations.
+
+#### Spectator Live Viewer
+Spectators tap "Watch Live" on the Match Detail screen to open the **Live Viewer** ([live.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/live.tsx)). The screen runs TanStack Query polling every 5 seconds (`refetchInterval: 5000`), drawing the live scoreboard, striker/non-striker cards, bowler cards, and the over timeline. Because it communicates via standard HTTP API requests over the internet, diaspora members living abroad (e.g., in the UAE or UK) receive real-time updates seamlessly without requiring local proximity.
+
+### 9. How Mobile Reflects Backend Rules
+
+The table below lists key backend business rules and documents how the mobile client reflects or enforces them in the UI:
+
+| Rule No. | Backend Business Rule | How Mobile Reflects / Enforces This |
+| :--- | :--- | :--- |
+| 1 | Bowling arm 'none' requires bowling type 'none'. | Onboarding style picker forms automatically disable or hide style choices if the user chooses 'none' for their bowling arm. |
+| 4 | Captaincy limit of 2 active teams. | Hides the "Create Team" button on the Teams list page in [sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx) and displays a warning note if the user already captains 2 active teams (using [teamsStore](file:///c:/dev/pabaini/pabaini-mobile/src/store/sports/teamsStore.ts)). |
+| 21 & 24 | Only captains can challenge or accept match requests. | Action buttons like "Start Match", "Accept", "Decline", and "Declare Playing XI" are hidden from normal players and guests on the Match Detail page [index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx). |
+| 25 & 26 | Matches can only be edited while pending, by the challenger. | Hides the "Edit Request" button if the match status is not `pending_request` or if the user is not the requesting captain. |
+| 29 | Playing XI lineups must consist of exactly 11 players. | The declare lineup submission button remains disabled on [lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx) and shows a warning unless the picked roster size is exactly 11 players. |
+| 44 | Match results are locked for edits after 24 hours. | The "Edit Result" button is hidden from captains once the 24-hour limit has expired, replacing it with a locked padlock icon. |
+| 48 | Lineups must be declared before starting live matches. | Hides the "Start Match" button and displays "Awaiting Lineup Declaration" if one or both teams have not set their lineup. |
+| 53 | Only the designated scorer can record live ball events. | If a non-scorer user attempts to open the scoring route [score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx), the screen's `useEffect` checks their profile ID against `match.scorer_id`, blocks interaction, and redirects them to the public Live Viewer [live.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/live.tsx). |
+| 60 | A bowler cannot bowl consecutive overs. | The Scorer screen [score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx) filters out the currently active bowler from the next bowler list when the over boundary modal prompts for selection. |
+
+### 10. Known UX Simplifications and Untested Areas
+
+1.  **Runs Input Selection**: There is no dedicated quick-tap button for scoring `5` runs in the scorer console (buttons only cover `0, 1, 2, 3, 4, 6`). To record 5 runs (e.g., from overthrows), the scorer must tap "Other", which opens a picker modal containing values `[5, 7, 8, 9, 10]`.
+2.  **Date/Time Entry Formatting**: The Send Match Request form [request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx) requires manual entry of the date/time string in the strict format `YYYY-MM-DD HH:MM`. While quick-helper chips are provided, missing or malformed inputs trigger text validation errors rather than using a native scroll wheel date-picker.
+3.  **End-to-End Test Status Caveat**: 
+    > [!IMPORTANT]
+    > **End-to-End Live Scoring Testing Caveat**:
+    > As of this writing, the complete live scoring system (start wizard, scoring console, and spectator viewer) has been fully compiled and validated for type safety. However, it has not yet been tested end-to-end on physical mobile devices with multiple concurrent users. Undiscovered issues relating to concurrent state transitions, race conditions, or network disconnection handling may exist.
