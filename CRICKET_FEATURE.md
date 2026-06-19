@@ -891,3 +891,135 @@ The table below lists key backend business rules and documents how the mobile cl
     > [!IMPORTANT]
     > **End-to-End Live Scoring Testing Caveat**:
     > As of this writing, the complete live scoring system (start wizard, scoring console, and spectator viewer) has been fully compiled and validated for type safety. However, it has not yet been tested end-to-end on physical mobile devices with multiple concurrent users. Undiscovered issues relating to concurrent state transitions, race conditions, or network disconnection handling may exist.
+
+---
+
+## 11. Manual Testing Checklist
+
+This checklist provides a step-by-step walkthrough to manually test the Cricket feature end-to-end on real mobile devices. Several flows (e.g., notifications, live scoring, action permissions) depend on real-time cross-user coordination. Testing should be performed using **two real devices** with **two active user accounts** (referred to as Account A and Account B). Do not skip ahead; each session builds on the assumptions and database state of the previous one.
+
+---
+
+### Session 1 — Team and Captaincy Rules
+
+> **Requires:** Two distinct player accounts (Account A and Account B), neither captaining more than one team initially.
+
+- [ ] **Create Team A (Account A)**: On Account A, navigate to the Sports Tab -> Teams section, tap "+ Create Team", fill out the team fields (Name: "Pabaini Kings", Year: 2026, Home Ground: "Pabaini Field"), and submit. Verify redirection to the new Team Profile.
+- [ ] **Create Team B (Account A)**: On Account A, repeat the team creation process for a second team (Name: "Swabi Stars"). Verify success and check that Account A is listed as captain for both teams on their profiles.
+- [ ] **Enforce Captaincy Limit (Mobile UI)**: On Account A, verify that the "+ Create Team" button is now disabled or replaced by a limit warning note, preventing you from starting the team creation wizard a third time.
+- [ ] **Enforce Captaincy Limit (Backend Guard)**: Attempt to issue a direct POST to `/teams` using Account A's JWT token (e.g., via Postman or curl) and verify the backend rejects it with `BadRequestException` ("You are already captain of 2 active teams. Transfer captaincy or dissolve a team before creating a new one.").
+- [ ] **Create Team C (Account B)**: On Account B, navigate to Teams, tap "+ Create Team", and create a third team (Name: "Bagram Challengers"). Verify Account B is registered as its captain.
+
+---
+
+### Session 2 — Match Request Lifecycle
+
+> **Requires:** Two captain accounts (Account A and Account B) representing Team A and Team C, with no pending challenges currently active between them.
+
+- [ ] **Verify Captain-Only Creation Access**: Log into a third, non-captain account (Account C). Navigate to the Matches tab and verify that the "+ Challenge" option is completely hidden from the header and list placeholder.
+- [ ] **Send Match Request**: On Account A, navigate to the Matches tab, tap "+ Challenge", select Team A as Your Team, select Team C as the Opponent Team, set overs to 20, select "Live Scoring" as the mode, set the venue, enter a valid date format (`YYYY-MM-DD HH:MM`), and tap "Submit". Verify redirection to the Match Detail screen.
+- [ ] **Check Challenger Action Controls**: On Account A, open the new match details. Verify that the match status badge is "Challenge Pending" (yellow) and the action buttons "Edit Request" and "Cancel Request" are visible.
+- [ ] **Check Challenge Notification Delivery**: On Account B (opponent captain), verify that a notification alert badge appears on the notification bell. Tap the bell, locate the `MATCH_REQUEST` notification card, tap it, and verify it deep-links directly to the Match Detail screen.
+- [ ] **Check Opponent Action Controls**: On Account B, open the match details. Verify that the action buttons visible are "Accept" and "Decline". Verify that "Edit Request" is hidden.
+- [ ] **Check Non-Participant Viewer Controls**: On the non-captain Account C, find the match in the Matches tab feed and tap it. Verify that the Match Detail screen renders no action buttons (no Edit, Cancel, Accept, or Decline options).
+- [ ] **Verify Duplicate Challenge Block**: On Account A, attempt to submit another challenge request against Team C. Verify that the form blocks submission or the backend returns `ConflictException` ("A pending match request already exists between these two teams").
+- [ ] **Verify Self-Challenge Block**: On Account A, attempt to submit a challenge selecting Team A as both Your Team and Opponent Team. Verify that form validation blocks selection or the backend returns `BadRequestException` ("You cannot challenge your own team").
+- [ ] **Edit Match Details (Pending State)**: On Account A, tap "Edit Request", change the venue name, and save. Verify on Account B's device that the venue updates in real-time or upon pulling to refresh.
+- [ ] **Decline Challenge Flow**: On Account B, tap "Decline". Verify that the match status badge transitions to "Cancelled" (red) on both devices, and Account A receives a `MATCH_DECLINED` inbox notification.
+- [ ] **Re-create Challenge and Accept Flow**: On Account A, submit a new challenge request matching the parameters in Step 2. On Account B, open the notification link, tap "Accept", and verify that the status badge updates to "Scheduled" (blue) on both devices, and Account A receives a `MATCH_ACCEPTED` inbox notification.
+- [ ] **Verify Scheduled Edit Block**: On Account A, attempt to edit details of the now scheduled match. Confirm that the "Edit Request" option is hidden in the UI and that a direct PATCH request to `/matches/:id` from an API client returns `BadRequestException` ("Match can only be edited while pending").
+- [ ] **Cancel Scheduled Match**: On Account B, tap "Cancel Match" and confirm the alert warning. Verify that the match status changes to "Cancelled" (red) on both screens and Account A receives a cancellation notification. Re-create the match and accept it once more so it remains in "Scheduled" status for the next sessions.
+
+---
+
+### Session 3 — Playing XI Declaration
+
+> **Requires:** A scheduled match between Team A (Account A) and Team C (Account B) with no lineups declared yet.
+
+- [ ] **Lineup Size Validation (Under-size)**: On Account A, tap "Declare Playing XI". Select 5 players from the registered squad list and add 5 guest players by typing their names and tapping "+". Attempt to submit the lineup and verify that the "Submit Lineup" button remains disabled because the roster size is only 10/11.
+- [ ] **Submit Complete Lineup**: Add 1 more guest player (bringing the total roster size to exactly 11). Verify the submit button becomes active. Tap "Submit Lineup" and confirm redirection to the Match Detail screen, showing Team A's lineup badge as "Declared" (green).
+- [ ] **Verify Opponent Roster Concealment**: On Account B's device, open the match details. Verify that Team A's status is shown as "Declared" (green) but you cannot tap it to view the player names, batting order, or guest details. Team C's status must display "Not Declared" (yellow).
+- [ ] **Check Matches Tab Checklist Indicator**: On both devices, navigate back to the main Matches list. Locate the match card and verify that the checklist label displays "Lineups: 1/2".
+- [ ] **Verify Active Member Constraint**: Attempt to declare a lineup for Team A that includes a player profile ID who is not an active member of Team A's squad (e.g. by intercepting the payload or making a direct POST to `/matches/:id/lineup`). Verify the backend rejects the request with `BadRequestException` ("Player [id] is not an active member of your team").
+- [ ] **Re-declare Lineup (Pre-match)**: On Account A, tap "Edit Lineup". Move batting order slot 2 to slot 3 using the arrow controls and submit. Verify that the updated order saves successfully.
+- [ ] **Complete Both Lineups**: On Account B, tap "Declare Playing XI", select 11 players, and submit. Verify Team C's lineup badge changes to "Declared" (green) and the match card checklist indicator updates to "Lineups: 2/2".
+
+---
+
+### Session 4 — Simple Scoring Mode
+
+> **Requires:** A scheduled match with scoring_mode set to "simple" and both lineups declared.
+
+- [ ] **Initiate Result Submission**: On Account A, tap "Submit Result". Choose Team A as the winning team from the selector cards (confirm a gold trophy outline highlights the selection).
+- [ ] **Input Scoreboard Data**: Enter final scores in the text inputs (e.g., Team A: `150/4 (20)`, Team C: `140/9 (20)`).
+- [ ] **Select Man of the Match**: Open the Man of the Match picker modal. Verify it lists only the registered players who were declared in the Playing XI lineups. Select a player.
+- [ ] **Verify Invalid Stats Submission**: Modify the stats payload to submit bowling metrics for a player who is not in the declared lineups. Verify that the API returns `BadRequestException` ("Player [id] is not in the declared Playing XI lineup for team [id]").
+- [ ] **Complete Scorecard & Submit**: Expand the accordion rows for all 11 players on each team. Input valid batting runs, balls faced, boundaries, wickets, and overs bowled, then tap "Submit Scorecard". Verify the match status transitions to "Completed" (green) on both devices.
+- [ ] **Verify Scorecard Rendering**: On the Match Detail page, verify that the scorecard section displays the winner, Man of the Match, and full batting/bowling statistics tables for both teams.
+- [ ] **Verify Career Stats Aggregation**: Navigate to the player profile of one of the registered players who scored runs in this match. Verify that their career metrics (Matches, Runs, Highest Score) have updated to aggregate the values from the scorecard.
+- [ ] **Edit Scorecard (Lock Window)**: On Account A, tap "Edit Result" (confirm the "Editable (24h)" badge is visible). Change one player's runs, save, and verify that the career stats on their player profile re-aggregate correctly with the new value.
+- [ ] **Verify Edit Lock Timeout**: On the backend, temporarily modify the lock interval in [matches.service.ts](file:///c:/dev/pabaini/pabaini-backend/src/modules/sports/cricket/matches/matches.service.ts) to set `result_locked_at` to 10 seconds in the future. Re-submit a result, wait 10 seconds, and refresh the Match Detail screen on mobile. Verify that the "Edit Result" button is replaced by a padlock icon, and direct API updates to `/matches/:id/result` throw `BadRequestException` ("Match results are locked and can no longer be edited"). Revert the backend lock interval change to 24 hours.
+
+---
+
+### Session 5 — Live Ball-by-Ball Scoring
+
+> **Requires:** A scheduled match with scoring_mode set to "live" and both lineups declared.
+
+#### Starting the Match
+
+- [ ] **Verify Non-Scorer Redirect**: On the non-participant Account C, attempt to navigate to `/sports/cricket/matches/[id]/score`. Verify that the screen's authorization guard triggers an alert popup ("Only the designated scorer is allowed...") and redirects you to the read-only Live Viewer screen.
+- [ ] **Initialize Match (Captain)**: On Account A, tap "Start Match". In the start wizard, set Toss Winner: Team A, Batting First: Team A, select opening Striker, opening Non-Striker, and opening Bowler, assign Account A as Scorer, and tap "Start Match". Verify redirection to the Scorer Console.
+
+#### Basic Ball Entry
+
+- [ ] **Record Dot Ball**: Tap `0` on the runs row, and tap "Record Ball". Verify the batsman's balls faced increases by 1, bowler's balls bowled increases by 1, and the "This Over" ticker appends a dot symbol (•).
+- [ ] **Record Boundary & Check Strike Rotation**: Tap `4` (boundary), and tap "Record Ball". Verify that the batting team's score increases by 4, the batsman's runs increase by 4, and the strike remains on the same batsman.
+- [ ] **Record Odd Run & Check Strike Rotation**: Tap `1` (runs), and tap "Record Ball". Verify that the batsman ends swap (the previous non-striker is now marked with a bat emoji as the active striker).
+- [ ] **Record Wide Extra**: Select "Wide" from the extra row, select `1` from runs (for the extra run), and tap "Record Ball". Verify that the team's score increases by 1, the bowler's runs conceded increases by 1, but the batsman's balls faced does NOT increment, and the legal ball count in the over does not change.
+
+#### Over Completion & Bowler Rotation
+
+- [ ] **Verify Over Completion Strike Rotation**: Record remaining legal balls until the over count reaches `6` legal deliveries (e.g. `0.6` overs). Verify that the batsman ends swap automatically, the over counter increments to `1.0`, and the active bowler name is cleared (`current_bowler_id = null`), blocking further ball entry.
+- [ ] **Select Bowler**: Tap "Select Bowler" in the scorer panel. Verify it modal-prompts you to pick a bowler from the opposing team's lineup. Choose a new bowler.
+- [ ] **Verify Consecutive Over Bowling Guard**: Record the second over until it reaches `6` balls (e.g. `1.6` overs). Open the bowler selection modal again. Verify that the bowler who bowled the first over is selectable, but the bowler who bowled the second over is filtered out of the selection list to prevent consecutive over violations (Rule 60).
+
+#### Wickets
+
+- [ ] **Record Wicket**: Tap "Wicket". In the red modal, select Wicket Type: "caught". In the Next Batsman selector, choose a remaining player from the lineup. Tap "Confirm Wicket".
+- [ ] **Verify Striker Dismissal**: Verify that the active striker batsman is replaced on the field by the selected next batsman, the team wickets count increments by 1, and the bowler is credited with a wicket.
+- [ ] **Conclude Innings (10 Wickets)**: Record wickets consecutively until 10 wickets have fallen. Verify that when the 10th wicket is recorded, the console blocks scoring, indicating that the first innings has concluded.
+
+#### Undo Action
+
+- [ ] **Verify Single-Ball Undo**: On the Scorer header, tap the undo icon and confirm the popup. Verify that the wickets count decrements, the dismissed batsman returns to the crease as striker, and the last ball event is deleted from the "This Over" ticker.
+- [ ] **Verify Multi-Ball Undo Block**: Tap the undo icon a second time in immediate succession. Verify that you can only undo the single most recent ball and cannot undo further back.
+
+#### Innings Transition
+
+- [ ] **Start Innings 2**: Once Innings 1 is concluded, tap "Initialize Innings 2" (or verify the modal wizard overlays automatically). Choose the opening batsman striker, non-striker, and opening bowler for Team C.
+- [ ] **Verify Target Score**: Verify that the target score is calculated correctly as `Innings 1 Score + 1`. Confirm that the required run rate (RRR) is displayed correctly on both the Scorer Console and the Live Viewer.
+
+#### Match Completion
+
+- [ ] **Verify Mid-Over Auto-Completion**: During Innings 2, record runs until the batting team's score meets or exceeds the target. Verify that the match auto-completes the instant the winning run is recorded, redirects the scorer to a success screen, and transitions the match status to "Completed".
+- [ ] **Verify Incomplete Chase Ending**: Reset the match state and test a non-chase ending where the scheduled overs run out (e.g. `20.0` overs) or the batting team loses all 10 wickets before reaching the target. Verify that the match automatically ends and declares the bowling team as the winner.
+- [ ] **Verify Final Aggregates**: Spot-check the player match statistics table on the completed Match Detail screen against what was recorded ball-by-ball. Verify player profiles have updated career totals correctly.
+
+#### Live Spectator Viewer
+
+- [ ] **Verify spectator polling**: On the non-participant Account C, open the Live Viewer screen for the match. Verify that the scoreboard, batsman run tallies, bowler figures, and over timeline update automatically without manual refresh inside the 5-second polling interval.
+- [ ] **Verify Required Run Rate (Innings 2)**: During Innings 2, verify that the required run rate (RRR) is visible on Account C's screen.
+- [ ] **Verify Auto-Redirect on Completion**: Keep the Live Viewer open on Account C's device as the scorer enters the final winning run. Verify that Account C's screen automatically transitions to show the finished scorecard/summary page without navigating away.
+
+---
+
+### Additional Checks
+
+- [ ] **Verify Notification Delivery in Background**: Send a match request from Account A to Account B while Account B's device has the Pabaini app closed or minimized in the background. Verify that an OS-level push notification is delivered (or confirm if it remains a known gap due to unwired background FCM listeners).
+- [ ] **Verify Guest Player Stat Exclusion**: Check the completed scorecard to verify guest player names and stats appear correctly. Navigate to the global Leaderboard or Player Directory and verify that guest names do not appear in any registration lists, profile pages, or stat rankings.
+- [ ] **Verify Double-Tap/Rapid Input Guard**: On the Scorer Console, rapidly double-tap the "Record Ball" button for a single delivery. Verify that the app's loading states disable buttons immediately during the request, preventing duplicate ball events from being recorded in the database.
+
+---
+
+*Note: This manual testing checklist is a living quality-assurance protocol. It should be re-run in its entirety before any future enhancements to the cricket matching system (e.g., prior to developing bilateral series or tournament brackets) to prevent regression.*
