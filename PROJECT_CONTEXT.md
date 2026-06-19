@@ -611,6 +611,16 @@ pabaini-mobile/
         *   Edit match details (overs, schedule, venue) is allowed for the challenger while status is still `pending_request`.
     *   **Playing XI Lineup Declarations**: Captains must declare a roster of exactly 11 players from their registered squad members for `scheduled` matches. The lineup can mix registered squad members (linked by `player_id`) and guest players (represented by a string `guest_name`). Batting orders must be unique rankings between 1 and 11.
     *   **Match Results (Simple Scoring Mode)**: Captains can submit final scores, winner, MoM, and detailed batting/bowling statistics for the Playing XI roster. Submitting transitions the status to `completed` and dynamically aggregates player career statistics. Updates/edits are allowed within a strict 24-hour window from initial submission, after which results lock permanently.
+    *   **Live Ball-by-Ball Scoring Mode**:
+        *   **Scorer Designation**: The starting captain assigns a `scorer_id` (defaults to the captain). Only the assigned scorer has authorization to submit ball events, assign bowlers, transition innings, or run undos.
+        *   **Illegal Deliveries**: Wides and no-balls add a penalty run to the batting team, count against the bowler's runs conceded, but do *not* increment the legal over count or register as balls faced by the batsman.
+        *   **Strike Rotation**: Odd runs (1, 3, 5) swap striker and non-striker. Strike also rotates at the end of each over (6 legal balls), meaning an odd run on the last ball of an over results in a double rotation (restoring the original strike).
+        *   **Consecutive Bowler Restriction**: Prevents a bowler from bowling two consecutive overs. Enforced on the backend by checking the bowler selection against the final ball of the previous over.
+        *   **Wickets & Replacement**: Recording a wicket dismisses the active striker. The scorer is required to select a remaining player from the lineup who has not batted yet.
+        *   **Innings Transition**: Innings transitions occur when 10 wickets fall or the scheduled overs are complete. Transitioning to the second innings sets the target score (innings 1 score + 1) and resets legal counters.
+        *   **Auto-Completion**: Match engines automatically complete live matches when target is reached, all out is reached, or overs run out in the second innings. On completion, raw ball events are aggregated into static player stats, and career totals are re-calculated.
+        *   **Single-Ball Undo**: Reverts the single most recent delivery, restoring batsman strike, bowlers, scores, and deleting the ball event row.
+        *   **Spectator Performance Views**: Spectator endpoints fetch the pre-computed match state stored directly on the match row to avoid the high database load of recalculating all ball events.
     *   **Safe Notification Triggers**: Challenging, accepting, declining, cancelling, and submitting results for matches dispatch push notification events to respective team captains and players. Decoupled in-app alert operations are handled inside a safe `try/catch` wrapper to ensure reliability.
 
 
@@ -1365,6 +1375,15 @@ sequenceDiagram
 
 ### 7. Match Result Form (`sports/cricket/matches/[id]/result.tsx`)
 *   **Purpose**: Allows captains to submit or edit match results in simple scoring mode, selecting the winner, entering scores, nominating Man of the Match, and setting batting/bowling statistics for all players.
+
+### 8. Start Match Setup (`sports/cricket/matches/[id]/start.tsx`)
+*   **Purpose**: Action wizard for captains to start live matches. Collects toss details, selects the batting first team, designates the match scorer, and picks the opening striker, non-striker, and bowler.
+
+### 9. Scorer Console Dashboard (`sports/cricket/matches/[id]/score.tsx`)
+*   **Purpose**: Dynamic scoring console for the designated scorer during live matches. Displays runs, legal over boundaries, wicket dismissals, rotates batsman strike, validates consecutive bowlers, triggers second innings setups, handles undos, and redirects to full scorecards upon automatic match completion.
+
+### 10. Spectator Live Viewer (`sports/cricket/matches/[id]/live.tsx`)
+*   **Purpose**: Read-only scoreboard polling `GET /live` every 5 seconds for spectators/diaspora. Displays pulsing live indicator badges, run rates, batsman/bowler scorecard matrices, and ball timeline details.
 
 ---
 
