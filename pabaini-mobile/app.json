@@ -8,7 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "extra": {
-      "apiUrl": "https://pabaini-production.up.railway.app/api/v1"
+      "apiUrl": "https://pabaini-production.up.railway.app/api/v1",
+      "router": {},
+      "eas": {
+        "projectId": "cc0ca69f-3a46-43b0-b8a2-fe9b7db56640"
+      }
     },
     "ios": {
       "bundleIdentifier": "com.pabaini.app",
