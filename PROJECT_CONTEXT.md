@@ -8,7 +8,7 @@
 > * **Authentication Engine**: Custom Firebase JWT validation. The mobile client obtains a token from Firebase Auth and attaches it as a Bearer header. The backend validates it in `FirebaseAuthGuard` (binds `request.authUser`) and resolves the PostgreSQL user in `DbUserGuard` (binds `request.dbUser`).
 > * **Standard Response Envelope**: Every backend response is wrapped in a global interceptor outputting `{ success: boolean, status: number, message?: string, data: T }`. Error filters capture Nest `HttpException` objects and map them to `{ success: false, status: number, message: string, errors?: string[], data: null }`.
 > * **Notice Board (Announcements)**: CRUD operations on the announcements feed. Admins and moderators can post, pin, and edit notices. Categories like `urgent` and `jirga_decision` trigger global push notifications via Firebase Cloud Messaging (FCM).
-> * **Sports Hub (Cricket)**: Features a player registration wizard, team creation, team rosters, squad invite systems, join requests, and notification alerts.
+> * **Sports Hub (Cricket)**: Features player registration, team squad management (invites/requests), match scheduling request lifecycle, Playing XI declarations, and two scoring modes: Simple (retroactive scorecards with a 24-hour edit lock) and Live (real-time ball-by-ball scoring console with bowler consecutive over validation, strike rotation, innings transition, undo features, and optimized pre-computed polling views).
 > * **State Management & Caching**: TanStack React Query manages mobile data caches, while Zustand stores manage transient/persisted UI state (auth session, sports registrations, unread notification badges).
 
 ---
@@ -26,7 +26,7 @@
 *   **Key Features**:
     *   **Notice Board**: Category-based notices (general, event, urgent, jirga_decision) with toggle likes, image uploads (stored on Supabase Storage), pinned posts, and soft/hard deletion safety rules.
     *   **Notification Center**: Grouped in-app alert inbox (Today, Yesterday, Earlier) and Firebase Cloud Messaging (FCM) background/foreground push notifications.
-    *   **Sports Hub (Cricket)**: Multi-step style onboarding (batsman/bowler details), custom team creation (names, home grounds, founding years), captain dashboards (inviting players, accepting join requests, transferring captaincy), and mock player stats profiles.
+    *   **Sports Hub (Cricket)**: Multi-step style onboarding (batsman/bowler details), custom team creation (names, home grounds, founding years), captain dashboards (inviting players, accepting join requests, transferring captaincy), match scheduling requests (captain-to-captain challenges), Playing XI selection (registered & guest players), simple scoring scorecard submission (24h edit window), live ball-by-ball scoring (scorer console, live viewer), and automatically aggregated career player statistics profiles.
     *   **Profile Setup**: Inline editing of user names, diaspora status, village of origin, and profile photo uploads.
 *   **Current Development Stage**: Active Development. Backend and mobile compilation are successful. The database schema is live on Supabase, and basic CRUD, auth, users, announcements, sports, and notifications are implemented.
 
@@ -209,7 +209,17 @@ pabaini-mobile/
 │   ├── profile/               # Public user profiles
 │   │   └── [id].tsx           # Dynamic user profile details
 │   ├── sports/                # Sports detail stack
-│   │   └── cricket/           # Cricket-specific onboarding and squads
+│   │   └── cricket/           # Cricket onboarding, squads, and matches
+│   │       ├── matches/       # Matches routing and live dashboard views
+│   │       │   ├── [id]/      # Dynamic match scoring and details stack
+│   │       │   │   ├── index.tsx  # Match details and action controls
+│   │       │   │   ├── lineup.tsx # Playing XI selector and reordering
+│   │       │   │   ├── live.tsx   # Live spectator match viewer (5s poll)
+│   │       │   │   ├── result.tsx # Simple post-match scorecard form
+│   │       │   │   ├── score.tsx  # Scorer real-time ball-by-ball console
+│   │       │   │   └── start.tsx  # Toss declaration and openers setup
+│   │       │   ├── _layout.tsx    # Matches stack routing definition
+│   │       │   └── request.tsx    # Match request/edit challenge wizard
 │   │       ├── onboarding/    # Style registration screens
 │   │       └── teams/         # Roster creation and management interfaces
 │   ├── _layout.tsx            # Global stack navigator and providers
@@ -1418,7 +1428,7 @@ flowchart TD
 ### Completed Features
 *   **Authentication**: Firebase ID token validation and PG user profile creation.
 *   **Notice Board**: Announcements feed, category filters, toggle likes, and image uploads.
-*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, Simple Scoring Mode result submission, Live Ball-by-Ball scoring (Stage 3) including openers setup, live overs tracking, strike rotation, consecutive bowler verification, innings transitions, undo log, and public live views, as well as **Matches Scheduling, Playing XI, and Results Entry UI (Mobile Stages 1, 2 & 3)** (matches list feed, send request form, opponent select sheet, squad checklist picker, batting order reordering, winner selector, MoM picker, collapsible stat inputs, and read-only scorecards).
+*   **Sports Hub (Cricket)**: Player registrations, team squad management, invitations/join requests, match scheduling requests, Playing XI lineup declarations, Simple Scoring Mode result submissions (24-hour edit lock window), and Live ball-by-ball scoring (openers setup, live overs tracking, strike rotation, consecutive bowler validation, innings transitions, undo log, and pre-computed live spectating). UI features are fully built across all phases including: matches feed, challenge request form, status-aware details screens, custom lineup checklist picker (batting order 1-11 reordering), Simple Result Form (winner, MoM, collapsible scorecard entry), Scorer Dashboard (runs, extras, wickets, bowler selectors, next batsman modal), and Spectator Live Viewer (5s auto-polling).
 *   **Notifications**: Centralized notifications feed and unread badge polling.
 
 ### Partially Complete Features
@@ -1432,7 +1442,7 @@ flowchart TD
 
 ## 17. RECENT DEVELOPMENT HISTORY
 
-*   **Recently Implemented**: Live ball-by-ball scoring (Stage 3) including match start, ball recording, bowler selection, second innings startup, single-ball undo, public live viewing, and **Matches Scheduling, Lineups, & Results UI (Mobile Stages 1, 2 & 3)** including matches list feed, challenge request form, status-aware match details, custom roster selection, winner picker, MoM nominating, collapsible player stat logs, and inline read-only match scorecards.
+*   **Recently Implemented**: Completed **Stage 4 (Live Scoring & Live Viewer UI)** on mobile: Start match setup, Scorer ball-by-ball console, batsman/bowler selectors, innings transitions, undo ball utility, and spectator 5-second polling Live Match Viewer, completing all 4 phases of the Cricket feature.
 *   **Next Priorities**: Standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
 
 ---
@@ -1454,7 +1464,7 @@ flowchart TD
 
 ## 20. FUTURE ROADMAP
 
-*   **Short-term Goals**: Implement live ball-by-ball scoring, tournament standings, and leaders leaderboards.
+*   **Short-term Goals**: Implement tournament standings, leaders leaderboards, and MVP ranking metrics.
 *   **Medium-term Goals**: Wire up background push notifications and launch the blood donor matching network.
 *   **Long-term Goals**: Introduce tournament brackets, match history graphs, and support for additional sports (like football and volleyball).
 
