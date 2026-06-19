@@ -12,4 +12,6 @@ export enum NotificationType {
   MATCH_DECLINED = 'match_declined',
   MATCH_CANCELLED = 'match_cancelled',
   MATCH_RESULT_SUBMITTED = 'match_result_submitted',
+  MATCH_STARTED = 'match_started',
+  MATCH_COMPLETED = 'match_completed',
 }

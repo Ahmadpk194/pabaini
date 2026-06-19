@@ -14,8 +14,11 @@
 | Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
 | Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
 | Notifications Module | 4 | ✅ Live |
-| Sports — Phase 3 (Matches & Standings) | 6 | 🗓 Roadmap |
-| **Total** | **46** | |
+| Sports — Phase 3 (Matches & Lineups) | 9 | ✅ Live |
+| Sports — Phase 3 (Simple Scoring Mode) | 2 | ✅ Live |
+| Sports — Phase 3 (Live Scoring) | 6 | ✅ Live |
+| Sports — Phase 3 (Leaderboard & Standings) | 2 | 🗓 Roadmap |
+| **Total** | **59** | |
 
 ---
 
@@ -109,9 +112,17 @@ interface ApiResponse<T> {
 - [#50 — POST `/sports/cricket/matches/:id/result`](#50-post-sportscricketmatchesidresult) — Submit scorecard & result
 - [#51 — PATCH `/sports/cricket/matches/:id/result`](#51-patch-sportscricketmatchesidresult) — Edit scorecard & result (within 24 hours)
 
-### 9. Sports Module — Phase 3 (Live Scoring & Leaderboard) 🗓 Roadmap
-- [#52 — GET `/sports/cricket/leaderboard`](#52-get-sportscricketleaderboard) — Leaderboard standings
-- [#53 — GET `/sports/cricket/stats/mvp`](#53-get-sportscricketstatsmvp) — MVP rankings
+### 9. Sports Module — Phase 3 (Live Scoring) ✅ Implemented
+- [#52 — PATCH `/sports/cricket/matches/:id/start`](#52-patch-sportscricketmatchesidstart) — Start match live scoring
+- [#53 — POST `/sports/cricket/matches/:id/balls`](#53-post-sportscricketmatchesidballs) — Record a single ball event
+- [#54 — PATCH `/sports/cricket/matches/:id/bowler`](#54-patch-sportscricketmatchesidbowler) — Select bowler for new over
+- [#55 — PATCH `/sports/cricket/matches/:id/innings/start`](#55-patch-sportscricketmatchesidinningsstart) — Start second innings
+- [#56 — PATCH `/sports/cricket/matches/:id/balls/undo`](#56-patch-sportscricketmatchesidballsundo) — Undo last ball
+- [#57 — GET `/sports/cricket/matches/:id/live`](#57-get-sportscricketmatchesidlive) — Public live scoring view
+
+### 10. Sports Module — Phase 3 (Leaderboard & Standings) 🗓 Roadmap
+- [#58 — GET `/sports/cricket/leaderboard`](#58-get-sportscricketleaderboard) — Leaderboard standings
+- [#59 — GET `/sports/cricket/stats/mvp`](#59-get-sportscricketstatsmvp) — MVP rankings
 
 ---
 
@@ -2424,13 +2435,287 @@ curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/result \
 
 ---
 
-## 9. Sports Module — Phase 3 (Live Scoring & Leaderboard) 🗓 Roadmap
+## 9. Sports Module — Phase 3 (Live Scoring) ✅ Implemented
+
+These endpoints allow a designated scorer to record ball-by-ball events for live matches, update match live state in real-time, and allow any user to retrieve near real-time live match scorecard views.
+
+---
+
+### #52 · PATCH `/sports/cricket/matches/:id/start`
+
+Starts live scoring for a scheduled match. Status transitions to `live`.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/start` |
+| **Access** | 🔴 Protected *(Team A or Team B Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body (`StartMatchDto`)**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `scorer_id` | `number` | No | ID of the designated scorer player (optional, defaults to captain) |
+| `toss_winner_team_id` | `number` | ✅ Yes | ID of the team that won the toss |
+| `batting_first_team_id` | `number` | ✅ Yes | ID of the team batting first |
+| `opening_striker_id` | `number` | No | ID of the opening striker batsman |
+| `opening_striker_guest_name` | `string` | No | Guest name of the opening striker (if unregistered) |
+| `opening_non_striker_id` | `number` | No | ID of the opening non-striker batsman |
+| `opening_non_striker_guest_name` | `string` | No | Guest name of the opening non-striker (if unregistered) |
+| `opening_bowler_id` | `number` | No | ID of the opening bowler |
+| `opening_bowler_guest_name` | `string` | No | Guest name of the opening bowler (if unregistered) |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/start \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "toss_winner_team_id": 1,
+    "batting_first_team_id": 1,
+    "opening_striker_id": 1,
+    "opening_non_striker_id": 3,
+    "opening_bowler_id": 4
+  }'
+```
+
+---
+
+### #53 · POST `/sports/cricket/matches/:id/balls`
+
+Records a single delivery event. Modifies scores, wickets, overs, legal balls, strike rotations, and handles wickets.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/balls` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body (`RecordBallDto`)**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `runs` | `number` | ✅ Yes | Runs scored off the bat (0–6) |
+| `extra_type` | `string` | No | Extra delivery type: `wide` · `no_ball` · `bye` · `leg_bye` · `penalty` |
+| `extra_runs` | `number` | No | Extra runs conceded (default 0) |
+| `is_wicket` | `boolean` | ✅ Yes | Set to `true` if a wicket fell |
+| `wicket_type` | `string` | No | Dismissal type: `bowled` · `caught` · `caught_behind` · `run_out` · `lbw` · `stumped` · `retired` · `hit_wicket` · `handled_ball` · `double_hit` · `obstructing_field` · `timed_out` |
+| `next_batsman_id` | `number` | No | ID of the incoming batsman (required if wicket falls and wickets < 10) |
+| `next_batsman_guest_name` | `string` | No | Guest name of the incoming batsman (required if wicket falls and wickets < 10) |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/1/balls \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "runs": 1,
+    "extra_type": null,
+    "extra_runs": 0,
+    "is_wicket": false
+  }'
+```
+
+---
+
+### #54 · PATCH `/sports/cricket/matches/:id/bowler`
+
+Sets the bowler for the next over. Prevents consecutive overs from the same bowler.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/bowler` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body (`SelectBowlerDto`)**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `bowler_id` | `number` | No | ID of the new bowler player |
+| `bowler_guest_name` | `string` | No | Guest name of the new bowler (if unregistered) |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/bowler \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"bowler_id": 5}'
+```
+
+---
+
+### #55 · PATCH `/sports/cricket/matches/:id/innings/start`
+
+Starts the second innings of the match by setting the initial batsmen and bowler.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/innings/start` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body (`StartSecondInningsDto`)**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `opening_striker_id` | `number` | No | ID of the opening striker batsman |
+| `opening_striker_guest_name` | `string` | No | Guest name of the opening striker |
+| `opening_non_striker_id` | `number` | No | ID of the opening non-striker batsman |
+| `opening_non_striker_guest_name` | `string` | No | Guest name of the opening non-striker |
+| `opening_bowler_id` | `number` | No | ID of the opening bowler |
+| `opening_bowler_guest_name` | `string` | No | Guest name of the opening bowler |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/innings/start \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "opening_striker_id": 4,
+    "opening_non_striker_id": 5,
+    "opening_bowler_id": 1
+  }'
+```
+
+---
+
+### #56 · PATCH `/sports/cricket/matches/:id/balls/undo`
+
+Undoes the single most recent delivery in the match, reverting score details, runs, wicket counts, overs, and strike rotation.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/balls/undo` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/balls/undo \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+---
+
+### #57 · GET `/sports/cricket/matches/:id/live`
+
+Retrieves a near real-time live view of the match scoring, batsman statistics, bowler statistics, and events in the current over.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/live` |
+| **Access** | 🟢 Public |
+| **Status** | ✅ Live |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/live
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "status": "live",
+    "current_innings": 1,
+    "score": "1/0",
+    "overs": "0.1",
+    "target": null,
+    "current_run_rate": 6,
+    "required_run_rate": null,
+    "striker": {
+      "id": 1,
+      "name": "Ahmad Pabaini",
+      "avatar_url": null,
+      "runs": 1,
+      "balls": 1
+    },
+    "non_striker": {
+      "id": 3,
+      "name": "Hamza Swabi",
+      "avatar_url": null,
+      "runs": 0,
+      "balls": 0
+    },
+    "bowler": {
+      "id": 4,
+      "name": "Messi Khan",
+      "avatar_url": null,
+      "overs": "0.1",
+      "runs_given": 1,
+      "wickets": 0
+    },
+    "this_over": [
+      {
+        "runs": 1,
+        "extra_type": null,
+        "is_wicket": false
+      }
+    ],
+    "balls_remaining_in_over": 5
+  }
+}
+```
+
+---
+
+## 10. Sports Module — Phase 3 (Leaderboard & Standings) 🗓 Roadmap
 
 These endpoints are planned for future Phase 3 development and are not yet implemented.
 
 ---
 
-### #52 · GET `/sports/cricket/leaderboard`
+### #58 · GET `/sports/cricket/leaderboard`
 
 Returns real-time standings and stats leaders.
 
@@ -2443,7 +2728,7 @@ Returns real-time standings and stats leaders.
 
 ---
 
-### #53 · GET `/sports/cricket/stats/mvp`
+### #59 · GET `/sports/cricket/stats/mvp`
 
 Returns top players sorted by dynamically calculated MVP rating indexes.
 

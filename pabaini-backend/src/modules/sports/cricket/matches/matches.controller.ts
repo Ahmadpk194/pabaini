@@ -20,6 +20,10 @@ import { QueryMatchesDto } from './dto/query-matches.dto';
 import { DeclareLineupDto } from './dto/declare-lineup.dto';
 import { SubmitResultDto } from './dto/submit-result.dto';
 import { EditResultDto } from './dto/edit-result.dto';
+import { StartMatchDto } from './dto/start-match.dto';
+import { RecordBallDto } from './dto/record-ball.dto';
+import { SelectBowlerDto } from './dto/select-bowler.dto';
+import { StartSecondInningsDto } from './dto/start-second-innings.dto';
 
 
 @Controller('matches')
@@ -123,5 +127,65 @@ export class MatchesController {
   ) {
     const match = await this.matchesService.editResult(id, dto, user.id);
     return { data: match, message: 'Match result updated successfully' };
+  }
+
+  @Patch(':id/start')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async startMatch(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+    @Body() dto: StartMatchDto,
+  ) {
+    const match = await this.matchesService.startMatch(id, dto, user.id);
+    return { data: match, message: 'Match started successfully' };
+  }
+
+  @Post(':id/balls')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async recordBall(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+    @Body() dto: RecordBallDto,
+  ) {
+    const match = await this.matchesService.recordBall(id, dto, user.id);
+    return { data: match, message: 'Ball recorded successfully' };
+  }
+
+  @Patch(':id/bowler')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async selectBowler(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+    @Body() dto: SelectBowlerDto,
+  ) {
+    const match = await this.matchesService.selectBowler(id, dto, user.id);
+    return { data: match, message: 'Bowler selected successfully' };
+  }
+
+  @Patch(':id/innings/start')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async startSecondInnings(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+    @Body() dto: StartSecondInningsDto,
+  ) {
+    const match = await this.matchesService.startSecondInnings(id, dto, user.id);
+    return { data: match, message: 'Second innings started successfully' };
+  }
+
+  @Patch(':id/balls/undo')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async undoLastBall(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+  ) {
+    const match = await this.matchesService.undoLastBall(id, user.id);
+    return { data: match, message: 'Last ball undone successfully' };
+  }
+
+  @Get(':id/live')
+  async getLiveView(@Param('id', ParseIntPipe) id: number) {
+    const liveView = await this.matchesService.getLiveView(id);
+    return { data: liveView, message: 'Live view retrieved successfully' };
   }
 }

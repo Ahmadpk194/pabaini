@@ -1167,11 +1167,17 @@
       <button class="nav-link" onclick="jumpToCard('card-49')"><span class="nav-method m-GET">GET</span>/matches/:id/lineup<span class="nav-number">#49</span></button>
       <button class="nav-link" onclick="jumpToCard('card-50')"><span class="nav-method m-POST">POST</span>/matches/:id/result<span class="nav-number">#50</span></button>
       <button class="nav-link" onclick="jumpToCard('card-51')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/result<span class="nav-number">#51</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-52')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/start<span class="nav-number">#52</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-53')"><span class="nav-method m-POST">POST</span>/matches/:id/balls<span class="nav-number">#53</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-54')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/bowler<span class="nav-number">#54</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-55')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/innings/start<span class="nav-number">#55</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-56')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/balls/undo<span class="nav-number">#56</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-57')"><span class="nav-method m-GET">GET</span>/matches/:id/live<span class="nav-number">#57</span></button>
     </div>
     <div class="nav-group" id="nav-matches-planned">
       <div class="nav-group-label">Sports — Phase 3 (Scoring & Standings) 🗓</div>
-      <button class="nav-link" onclick="jumpToCard('card-52')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/leaderboard<span class="nav-number">#52</span></button>
-      <button class="nav-link" onclick="jumpToCard('card-53')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/stats/mvp<span class="nav-number">#53</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-58')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/leaderboard<span class="nav-number">#58</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-59')" style="opacity:0.6"><span class="nav-method m-GET">GET</span>/cricket/stats/mvp<span class="nav-number">#59</span></button>
     </div>
   </div>
 </nav>
@@ -1182,11 +1188,11 @@
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-tabs">
-      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">53</span></button>
+      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">59</span></button>
       <button class="tab-pill" id="tab-auth" onclick="filterTab('auth', this)">Auth <span class="tab-count">1</span></button>
       <button class="tab-pill" id="tab-users" onclick="filterTab('users', this)">Users <span class="tab-count">7</span></button>
       <button class="tab-pill" id="tab-announcements" onclick="filterTab('announcements', this)">Announcements <span class="tab-count">9</span></button>
-      <button class="tab-pill" id="tab-sports" onclick="filterTab('sports', this)">Sports <span class="tab-count">32</span></button>
+      <button class="tab-pill" id="tab-sports" onclick="filterTab('sports', this)">Sports <span class="tab-count">38</span></button>
       <button class="tab-pill" id="tab-notifications" onclick="filterTab('notifications', this)">Notifications <span class="tab-count">4</span></button>
     </div>
   </div>
@@ -1198,7 +1204,7 @@
     <p class="hero-desc">Complete developer reference for the Pabaini village community platform — Firebase authentication, PostgreSQL, Supabase Storage, and FCM push notifications.</p>
     <div class="stats-grid">
       <div class="stat-chip">
-        <div class="stat-value">53</div>
+        <div class="stat-value">59</div>
         <div class="stat-label">Total Endpoints</div>
       </div>
       <div class="stat-chip">
@@ -1214,7 +1220,7 @@
         <div class="stat-label">Announcements</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-value">32</div>
+        <div class="stat-value">38</div>
         <div class="stat-label">Sports</div>
       </div>
     </div>
@@ -4164,19 +4170,320 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- Phase 3 planned divider -->
-    <div class="phase-divider roadmap" data-category="sports">
-      <span class="phase-badge phase-roadmap">🗓 Phase 3 — Planned</span>
+    <!-- Phase 3 live scoring divider -->
+    <div class="phase-divider" data-category="sports">
+      <span class="phase-badge phase-live">✅ Live</span>
       <div>
-        <div class="phase-divider-title">Phase 3 — Live Scoring & Standings</div>
-        <div class="phase-divider-desc">Endpoints #52–53: Leaderboard standings, and list MVP statistics</div>
+        <div class="phase-divider-title">Phase 3 — Live Scoring</div>
+        <div class="phase-divider-desc">Endpoints #52–57: Live scoring controls, ball recording, bowler selection, innings startup, undo last ball, and public live views</div>
       </div>
     </div>
 
     <!-- #52 -->
-    <div class="endpoint-card roadmap-card" id="card-52" data-category="sports" data-path="/sports/cricket/leaderboard" data-desc="get leaderboard standings stats phase 3 roadmap planned">
+    <div class="endpoint-card" id="card-52" data-category="sports" data-path="/sports/cricket/matches/:id/start" data-desc="patch start match live scoring toss batting first striker non-striker bowler opener captain">
       <div class="endpoint-header" onclick="toggleCard(this)">
         <span class="endpoint-number">#52</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/start</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Captain</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/start')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Starts live scoring for a scheduled match. Transitions status to 'live', sets assigned scorer, initializes live over/ball metrics, sets openers, and dispatches start notification.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">scorer_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of designated scorer player (optional, defaults to captain)</td></tr>
+              <tr><td><span class="param-name">toss_winner_team_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-yes">Yes</span></td><td>ID of the team that won the toss</td></tr>
+              <tr><td><span class="param-name">batting_first_team_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-yes">Yes</span></td><td>ID of the team batting first</td></tr>
+              <tr><td><span class="param-name">opening_striker_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of the opening striker batsman</td></tr>
+              <tr><td><span class="param-name">opening_striker_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of the opening striker (if unregistered)</td></tr>
+              <tr><td><span class="param-name">opening_non_striker_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of the opening non-striker batsman</td></tr>
+              <tr><td><span class="param-name">opening_non_striker_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of the opening non-striker (if unregistered)</td></tr>
+              <tr><td><span class="param-name">opening_bowler_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of the opening bowler</td></tr>
+              <tr><td><span class="param-name">opening_bowler_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of the opening bowler (if unregistered)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/start \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "toss_winner_team_id": 1,
+    "batting_first_team_id": 1,
+    "opening_striker_id": 1,
+    "opening_non_striker_id": 3,
+    "opening_bowler_id": 4
+  }'</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/start', {
+  toss_winner_team_id: 1,
+  batting_first_team_id: 1,
+  opening_striker_id: 1,
+  opening_non_striker_id: 3,
+  opening_bowler_id: 4
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #53 -->
+    <div class="endpoint-card" id="card-53" data-category="sports" data-path="/sports/cricket/matches/:id/balls" data-desc="post record ball event runs extras wicket next batsman scorer only">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#53</span>
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/balls</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Scorer</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/balls')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Records a single delivery event. Modifies scores, wickets, overs, legal balls, strike rotations, handles wickets, and checks auto-completion triggers.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">runs</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-yes">Yes</span></td><td>Runs scored off the bat (0-6)</td></tr>
+              <tr><td><span class="param-name">extra_type</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Extra delivery type: <code>'wide'</code>, <code>'no_ball'</code>, <code>'bye'</code>, <code>'leg_bye'</code>, <code>'penalty'</code></td></tr>
+              <tr><td><span class="param-name">extra_runs</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Extra runs conceded (defaults to 0)</td></tr>
+              <tr><td><span class="param-name">is_wicket</span></td><td><span class="param-type">boolean</span></td><td><span class="param-required req-yes">Yes</span></td><td>Set to true if a wicket fell</td></tr>
+              <tr><td><span class="param-name">wicket_type</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Dismissal mode: <code>'bowled'</code>, <code>'caught'</code>, <code>'lbw'</code>, <code>'run_out'</code>, <code>'stumped'</code>, <code>'retired'</code>, etc.</td></tr>
+              <tr><td><span class="param-name">next_batsman_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of incoming batsman (required if wickets < 10)</td></tr>
+              <tr><td><span class="param-name">next_batsman_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of incoming batsman (required if wickets < 10)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/1/balls \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "runs": 1,
+    "extra_type": null,
+    "extra_runs": 0,
+    "is_wicket": false
+  }'</div>
+          <div class="code-pane" data-lang="axios">axios.post('/api/v1/sports/cricket/matches/1/balls', {
+  runs: 1,
+  extra_type: null,
+  extra_runs: 0,
+  is_wicket: false
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #54 -->
+    <div class="endpoint-card" id="card-54" data-category="sports" data-path="/sports/cricket/matches/:id/bowler" data-desc="patch select bowler over consecutive over scorer only">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#54</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/bowler</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Scorer</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/bowler')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Sets bowler for the upcoming over. Prevents the bowler from bowling two consecutive overs.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">bowler_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of new bowler player</td></tr>
+              <tr><td><span class="param-name">bowler_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of new bowler (if unregistered)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/bowler \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"bowler_id": 5}'</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/bowler', { bowler_id: 5 }, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #55 -->
+    <div class="endpoint-card" id="card-55" data-category="sports" data-path="/sports/cricket/matches/:id/innings/start" data-desc="patch start second innings batsman bowler openers scorer only">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#55</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/innings/start</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Scorer</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/innings/start')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Starts the second innings of the match by setting the initial batsmen and bowler.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">opening_striker_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of opening striker batsman</td></tr>
+              <tr><td><span class="param-name">opening_striker_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of opening striker</td></tr>
+              <tr><td><span class="param-name">opening_non_striker_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of opening non-striker batsman</td></tr>
+              <tr><td><span class="param-name">opening_non_striker_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of opening non-striker</td></tr>
+              <tr><td><span class="param-name">opening_bowler_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of opening bowler</td></tr>
+              <tr><td><span class="param-name">opening_bowler_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of opening bowler</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/innings/start \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "opening_striker_id": 4,
+    "opening_non_striker_id": 5,
+    "opening_bowler_id": 1
+  }'</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/innings/start', {
+  opening_striker_id: 4,
+  opening_non_striker_id: 5,
+  opening_bowler_id: 1
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #56 -->
+    <div class="endpoint-card" id="card-56" data-category="sports" data-path="/sports/cricket/matches/:id/balls/undo" data-desc="patch undo last ball delivery scorer only">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#56</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/balls/undo</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Scorer</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/balls/undo')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Undoes the single most recent delivery in the match, reverting score details, runs, wicket counts, overs, and strike rotation.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/balls/undo \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/balls/undo', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #57 -->
+    <div class="endpoint-card" id="card-57" data-category="sports" data-path="/sports/cricket/matches/:id/live" data-desc="get live view scorecard batsman bowler current over run rate public">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#57</span>
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/live</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/live')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Retrieves a near real-time live view of the match scoring, batsman statistics, bowler statistics, and events in the current over. Public - no authentication required.</p>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/live</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/sports/cricket/matches/1/live');</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "data": {
+    "status": "live",
+    "current_innings": 1,
+    "score": "1/0",
+    "overs": "0.1",
+    "target": null,
+    "current_run_rate": 6,
+    "required_run_rate": null,
+    "striker": { "id": 1, "name": "Ahmad Pabaini", "avatar_url": null, "runs": 1, "balls": 1 },
+    "non_striker": { "id": 3, "name": "Hamza Swabi", "avatar_url": null, "runs": 0, "balls": 0 },
+    "bowler": { "id": 4, "name": "Messi Khan", "avatar_url": null, "overs": "0.1", "runs_given": 1, "wickets": 0 },
+    "this_over": [
+      { "runs": 1, "extra_type": null, "is_wicket": false }
+    ],
+    "balls_remaining_in_over": 5
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 planned divider -->
+    <div class="phase-divider roadmap" data-category="sports">
+      <span class="phase-badge phase-roadmap">🗓 Phase 3 — Planned</span>
+      <div>
+        <div class="phase-divider-title">Phase 3 — Leaderboard & Standings</div>
+        <div class="phase-divider-desc">Endpoints #58–59: Leaderboard standings, and MVP statistics</div>
+      </div>
+    </div>
+
+    <!-- #58 -->
+    <div class="endpoint-card roadmap-card" id="card-58" data-category="sports" data-path="/sports/cricket/leaderboard" data-desc="get leaderboard standings stats phase 3 roadmap planned">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#58</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/leaderboard</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>
@@ -4187,10 +4494,10 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
       </div>
     </div>
 
-    <!-- #53 -->
-    <div class="endpoint-card roadmap-card" id="card-53" data-category="sports" data-path="/sports/cricket/stats/mvp" data-desc="get mvp rankings standings public phase 3 roadmap planned">
+    <!-- #59 -->
+    <div class="endpoint-card roadmap-card" id="card-59" data-category="sports" data-path="/sports/cricket/stats/mvp" data-desc="get mvp rankings standings public phase 3 roadmap planned">
       <div class="endpoint-header" onclick="toggleCard(this)">
-        <span class="endpoint-number">#53</span>
+        <span class="endpoint-number">#59</span>
         <span class="method-tag GET muted">GET</span>
         <span class="path-text">/api/v1/sports/cricket/stats/mvp</span>
         <span class="auth-badge auth-roadmap">Roadmap — Phase 3</span>

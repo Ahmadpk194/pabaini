@@ -317,7 +317,7 @@ pabaini-mobile/
     *   Composite performance index: `Index(['user_id', 'is_read', 'created_at'])`.
 
 ### 5. `cricket_player_profiles` Table
-*   **Purpose**: Player styles and registration configurations for cricket players.
+*   **Purpose**: Player styles, registration configurations, and career statistics for cricket players.
 *   **Columns**:
     *   `id` (`integer`, Primary Key, Autoincrement): System identifier.
     *   `user_id` (`integer`, Unique, Required): ForeignKey mapping to `users(id)`.
@@ -326,6 +326,15 @@ pabaini-mobile/
     *   `bowling_arm` (`enum`, Required): `right`, `left`, `none`.
     *   `bowling_type` (`enum`, Required): `fast`, `medium`, `spin`, `none`.
     *   `is_active` (`boolean`, Default: `true`): Active status flag.
+    *   `total_matches` (`integer`, Default: `0`): Aggregated count of matches played.
+    *   `total_runs` (`integer`, Default: `0`): Aggregated total career runs scored.
+    *   `total_balls_faced` (`integer`, Default: `0`): Aggregated total balls faced while batting.
+    *   `total_fours` (`integer`, Default: `0`): Aggregated total career fours hit.
+    *   `total_sixes` (`integer`, Default: `0`): Aggregated total career sixes hit.
+    *   `highest_score` (`integer`, Default: `0`): Personal best/highest score in an innings.
+    *   `total_wickets` (`integer`, Default: `0`): Aggregated total career bowling wickets taken.
+    *   `total_overs_bowled` (`decimal(5,1)`, Default: `0.0`): Aggregated total overs bowled.
+    *   `total_runs_given` (`integer`, Default: `0`): Aggregated total runs conceded while bowling.
     *   `created_at` (`timestamp`): Profile registration date.
     *   `updated_at` (`timestamp`): Last updated profile date.
 *   **Relationships**:
@@ -389,7 +398,7 @@ pabaini-mobile/
     *   One-to-Many with `cricket_matches` (mapped by `series_id`).
 
 ### 9. `cricket_matches` Table
-*   **Purpose**: Stores scheduled and completed match entries.
+*   **Purpose**: Stores scheduled and completed match entries along with pre-computed live scoring data.
 *   **Columns**:
     *   `id` (`integer`, Primary Key, Autoincrement): Core match identifier.
     *   `series_id` (`integer`, Nullable): ForeignKey referencing `cricket_series(id)` ON DELETE SET NULL.
@@ -405,10 +414,33 @@ pabaini-mobile/
     *   `status` (`enum`, Default: `'pending_request'`): Match status (`'pending_request'`, `'scheduled'`, `'live'`, `'completed'`, `'cancelled'`, `'no_result'`).
     *   `winner_team_id` (`integer`, Nullable): ForeignKey referencing `cricket_teams(id)` ON DELETE SET NULL.
     *   `man_of_match_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
-    *   `team_a_score` (`varchar(20)`, Nullable): Formatted scoreboard runs/wickets for Team A (e.g. `"145/6"`).
-    *   `team_b_score` (`varchar(20)`, Nullable): Formatted scoreboard runs/wickets for Team B (e.g. `"146/3"`).
+    *   `team_a_score` (`varchar(20)`, Nullable): Formatted scoreboard score string for Team A.
+    *   `team_b_score` (`varchar(20)`, Nullable): Formatted scoreboard score string for Team B.
     *   `team_a_lineup_set` (`boolean`, Default: `false`): Flag identifying if Team A lineup was declared.
     *   `team_b_lineup_set` (`boolean`, Default: `false`): Flag identifying if Team B lineup was declared.
+    *   `current_innings` (`integer`, Nullable): The current active innings (1 or 2) for live matches.
+    *   `current_over` (`integer`, Default: `0`): The completed overs count during live play.
+    *   `current_ball` (`integer`, Default: `0`): The legal ball count of the current over (0-5).
+    *   `current_batting_team_id` (`integer`, Nullable): ForeignKey referencing `cricket_teams(id)` for the active batting side.
+    *   `striker_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` for the striker.
+    *   `striker_guest_name` (`varchar(100)`, Nullable): Guest batsman name currently on strike.
+    *   `non_striker_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` for the non-striker.
+    *   `non_striker_guest_name` (`varchar(100)`, Nullable): Guest batsman name at the non-striker end.
+    *   `current_bowler_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` for the current bowler.
+    *   `current_bowler_guest_name` (`varchar(100)`, Nullable): Guest bowler name.
+    *   `innings_1_score` (`integer`, Default: `0`): Innings 1 accumulated runs.
+    *   `innings_1_wickets` (`integer`, Default: `0`): Innings 1 wickets fallen.
+    *   `innings_1_overs` (`decimal(4,1)`, Default: `0.0`): Innings 1 overs bowled count.
+    *   `innings_1_batting_team_id` (`integer`, Nullable): ForeignKey referencing `cricket_teams(id)`.
+    *   `innings_2_score` (`integer`, Default: `0`): Innings 2 accumulated runs.
+    *   `innings_2_wickets` (`integer`, Default: `0`): Innings 2 wickets fallen.
+    *   `innings_2_overs` (`decimal(4,1)`, Default: `0.0`): Innings 2 overs bowled count.
+    *   `innings_2_batting_team_id` (`integer`, Nullable): ForeignKey referencing `cricket_teams(id)`.
+    *   `target` (`integer`, Nullable): Target score to win (innings 1 score + 1).
+    *   `last_ball_event_id` (`integer`, Nullable): ForeignKey referencing the latest recorded `cricket_ball_events(id)`.
+    *   `is_tie` (`boolean`, Default: `false`): Flag indicating if the completed match was a tie.
+    *   `result_submitted_at` (`timestamp`, Nullable): Datetime when simple scorecard or live match ended.
+    *   `result_locked_at` (`timestamp`, Nullable): Datetime when the 24-hour result editing window expires.
     *   `created_at` (`timestamp`): Automatically populated creation date.
     *   `updated_at` (`timestamp`): Automatically updated modification date.
 *   **Constraints**:
@@ -1041,6 +1073,95 @@ graph TD
 *   **Business Logic**: Modifies the scorecard results. Edits are allowed only within 24 hours of result submission. Overwriting player stats triggers complete recalculation of career stats for both previously recorded players and newly added players.
 *   **Success Response (`200 OK`)**: Returns the updated match payload.
 
+#### PATCH `/sports/cricket/matches/:id/start`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/start`
+*   **Auth Required**: 🔐 Yes (Team A or Team B Captain only)
+*   **Body**:
+    ```json
+    {
+      "scorer_id": 2,
+      "toss_winner_team_id": 1,
+      "batting_first_team_id": 1,
+      "opening_striker_id": 1,
+      "opening_non_striker_id": 3,
+      "opening_bowler_id": 4
+    }
+    ```
+*   **Business Logic**: Starts live scoring for a scheduled match. Status transitions to `live`, sets assigned scorer, initializes live over/ball metrics, sets openers, and dispatches start notification.
+*   **Success Response (`200 OK`)**: Returns updated match details.
+
+#### POST `/sports/cricket/matches/:id/balls`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/balls`
+*   **Auth Required**: 🔐 Yes (Assigned Scorer only)
+*   **Body**:
+    ```json
+    {
+      "runs": 1,
+      "extra_type": null,
+      "extra_runs": 0,
+      "is_wicket": false
+    }
+    ```
+*   **Business Logic**: Records a single ball delivery. Adjusts scores, legal counters, strike rotations, handles wickets with next batsman updates, and checks auto-completion triggers.
+*   **Success Response (`201 Created`)**: Returns updated match details.
+
+#### PATCH `/sports/cricket/matches/:id/bowler`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/bowler`
+*   **Auth Required**: 🔐 Yes (Assigned Scorer only)
+*   **Body**:
+    ```json
+    {
+      "bowler_id": 5
+    }
+    ```
+*   **Business Logic**: Sets bowler for the upcoming over. Prevents bowler from bowling two consecutive overs.
+*   **Success Response (`200 OK`)**: Returns updated match details.
+
+#### PATCH `/sports/cricket/matches/:id/innings/start`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/innings/start`
+*   **Auth Required**: 🔐 Yes (Assigned Scorer only)
+*   **Body**:
+    ```json
+    {
+      "opening_striker_id": 4,
+      "opening_non_striker_id": 5,
+      "opening_bowler_id": 1
+    }
+    ```
+*   **Business Logic**: Starts the second innings with specified openers.
+*   **Success Response (`200 OK`)**: Returns updated match details.
+
+#### PATCH `/sports/cricket/matches/:id/balls/undo`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/balls/undo`
+*   **Auth Required**: 🔐 Yes (Assigned Scorer only)
+*   **Business Logic**: Undoes the single most recent delivery in the match, reverting score details, runs, wicket counts, overs, and strike rotation.
+*   **Success Response (`200 OK`)**: Returns updated match details.
+
+#### GET `/sports/cricket/matches/:id/live`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/live`
+*   **Auth Required**: 🟢 No (Public)
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": {
+        "status": "live",
+        "current_innings": 1,
+        "score": "1/0",
+        "overs": "0.1",
+        "target": null,
+        "current_run_rate": 6.0,
+        "required_run_rate": null,
+        "striker": { "id": 1, "name": "Striker Name", "runs": 1, "balls": 1 },
+        "non_striker": { "id": 3, "name": "Non Striker Name", "runs": 0, "balls": 0 },
+        "bowler": { "id": 4, "name": "Bowler Name", "overs": "0.1", "runs_given": 1, "wickets": 0 },
+        "this_over": [{ "runs": 1, "extra_type": null, "is_wicket": false }],
+        "balls_remaining_in_over": 5
+      }
+    }
+    ```
+
 ---
 
 ### Notifications Module
@@ -1088,6 +1209,13 @@ graph TD
     *   `team_invite_declined` (to captain)
     *   `team_member_removed` (to player)
     *   `team_captaincy_transferred` (to new captain)
+    *   `match_request` (to opponent captain)
+    *   `match_accepted` (to challenger captain)
+    *   `match_declined` (to challenger captain)
+    *   `match_cancelled` (to other captain)
+    *   `match_result_submitted` (to other captain)
+    *   `match_started` (to both captains)
+    *   `match_completed` (to both captains)
 *   **Read/Unread System**:
     *   The mobile client displays a red notification badge on the bell icon.
     *   Uses a **35-second polling loop** on the Sports tab to update the unread badge count via TanStack Query and Zustand.
@@ -1278,22 +1406,22 @@ flowchart TD
 ### Completed Features
 *   **Authentication**: Firebase ID token validation and PG user profile creation.
 *   **Notice Board**: Announcements feed, category filters, toggle likes, and image uploads.
-*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, and Simple Scoring Mode scorecard results submission with dynamic career statistics aggregation.
+*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, Simple Scoring Mode result submission, and Live Ball-by-Ball scoring (Stage 3) including openers setup, live overs tracking, strike rotation, consecutive bowler verification, innings transitions, undo log, and public live views.
 *   **Notifications**: Centralized notifications feed and unread badge polling.
 
 ### Partially Complete Features
 *   **Push Notifications**: FCM push notification delivery is implemented in the backend, but client-side background/foreground listeners are not yet fully wired.
 
 ### Planned Features
-*   **Matches & Standings**: Live ball-by-ball scoring (Stage 3), standings leaderboards, and MVP ranking metrics.
+*   **Matches & Standings**: Standings leaderboards and MVP ranking metrics.
 *   **Donors Registry**: Blood donors registry search list.
 
 ---
 
 ## 17. RECENT DEVELOPMENT HISTORY
 
-*   **Recently Implemented**: Match scheduling and Playing XI lineup declarations (Stage 1), Simple Scoring result submissions, and dynamic player career stats aggregation with a 24-hour editing window lock (Stage 2).
-*   **Next Priorities**: Live ball-by-ball scoring (Stage 3), standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
+*   **Recently Implemented**: Live ball-by-ball scoring (Stage 3) including match start, ball recording, bowler selection, second innings startup, single-ball undo, and public live viewing.
+*   **Next Priorities**: Standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
 
 ---
 

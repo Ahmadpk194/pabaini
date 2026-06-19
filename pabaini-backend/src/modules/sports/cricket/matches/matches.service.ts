@@ -17,7 +17,7 @@ import { TeamMember } from '../teams/entities/team-member.entity';
 import { CricketPlayerProfile } from '../entities/cricket-player-profile.entity';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from 'src/modules/notifications/enums/notification-type.enum';
-import { MatchStatus, MatchScoringMode } from './enums/matches.enums';
+import { MatchStatus, MatchScoringMode, BallExtraType, HowOut } from './enums/matches.enums';
 import { TeamMemberStatus } from '../teams/enums/team-member-status.enum';
 import { RequestMatchDto } from './dto/request-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
@@ -25,6 +25,10 @@ import { QueryMatchesDto } from './dto/query-matches.dto';
 import { DeclareLineupDto } from './dto/declare-lineup.dto';
 import { SubmitResultDto } from './dto/submit-result.dto';
 import { EditResultDto } from './dto/edit-result.dto';
+import { StartMatchDto } from './dto/start-match.dto';
+import { RecordBallDto } from './dto/record-ball.dto';
+import { SelectBowlerDto } from './dto/select-bowler.dto';
+import { StartSecondInningsDto } from './dto/start-second-innings.dto';
 
 
 @Injectable()
@@ -884,6 +888,867 @@ export class MatchesService {
           avatar_url: p.player?.user?.avatar_url || null,
         })),
       },
+    };
+  }
+
+  async startMatch(matchId: number, dto: StartMatchDto, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: { captain: { user: true } },
+        team_b: { captain: { user: true } },
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.SCHEDULED) {
+      throw new BadRequestException('Match is not in scheduled status');
+    }
+
+    if (match.scoring_mode !== MatchScoringMode.LIVE) {
+      throw new BadRequestException('This match is not set to live scoring mode');
+    }
+
+    if (!match.team_a_lineup_set || !match.team_b_lineup_set) {
+      throw new BadRequestException('Both teams must declare their Playing XI before starting');
+    }
+
+    const isTeamACaptain = match.team_a.captain_id === playerProfile.id;
+    const isTeamBCaptain = match.team_b.captain_id === playerProfile.id;
+    if (!isTeamACaptain && !isTeamBCaptain) {
+      throw new ForbiddenException('Only the captain of Team A or Team B can start the match');
+    }
+
+    if (dto.batting_first_team_id !== match.team_a_id && dto.batting_first_team_id !== match.team_b_id) {
+      throw new BadRequestException('Batting first team must be one of the participating teams');
+    }
+
+    const defaultScorerId = playerProfile.id;
+    const finalScorerId = dto.scorer_id || defaultScorerId;
+
+    if (dto.scorer_id) {
+      const activeMember = await this.teamMemberRepo.findOne({
+        where: [
+          { team_id: match.team_a_id, player_id: dto.scorer_id, status: TeamMemberStatus.ACTIVE },
+          { team_id: match.team_b_id, player_id: dto.scorer_id, status: TeamMemberStatus.ACTIVE },
+        ],
+      });
+      if (!activeMember) {
+        throw new BadRequestException('The selected scorer is not an active member of either participating team');
+      }
+    }
+
+    const matchPlayers = await this.matchPlayerRepo.find({
+      where: { match_id: matchId },
+    });
+
+    const battingLineup = matchPlayers.filter(mp => mp.team_id === dto.batting_first_team_id);
+    const bowlingTeamId = dto.batting_first_team_id === match.team_a_id ? match.team_b_id : match.team_a_id;
+    const bowlingLineup = matchPlayers.filter(mp => mp.team_id === bowlingTeamId);
+
+    // Striker validation
+    if (dto.opening_striker_id) {
+      const ok = battingLineup.some(mp => mp.player_id === dto.opening_striker_id);
+      if (!ok) throw new BadRequestException('Opening striker must be in the batting team Playing XI');
+    } else if (dto.opening_striker_guest_name && dto.opening_striker_guest_name.trim()) {
+      const ok = battingLineup.some(mp => mp.guest_name === dto.opening_striker_guest_name);
+      if (!ok) throw new BadRequestException('Opening striker guest must be in the batting team Playing XI');
+    } else {
+      throw new BadRequestException('Opening striker is required');
+    }
+
+    // Non-striker validation
+    if (dto.opening_non_striker_id) {
+      const ok = battingLineup.some(mp => mp.player_id === dto.opening_non_striker_id);
+      if (!ok) throw new BadRequestException('Opening non-striker must be in the batting team Playing XI');
+    } else if (dto.opening_non_striker_guest_name && dto.opening_non_striker_guest_name.trim()) {
+      const ok = battingLineup.some(mp => mp.guest_name === dto.opening_non_striker_guest_name);
+      if (!ok) throw new BadRequestException('Opening non-striker guest must be in the batting team Playing XI');
+    } else {
+      throw new BadRequestException('Opening non-striker is required');
+    }
+
+    // Bowler validation
+    if (dto.opening_bowler_id) {
+      const ok = bowlingLineup.some(mp => mp.player_id === dto.opening_bowler_id);
+      if (!ok) throw new BadRequestException('Opening bowler must be in the bowling team Playing XI');
+    } else if (dto.opening_bowler_guest_name && dto.opening_bowler_guest_name.trim()) {
+      const ok = bowlingLineup.some(mp => mp.guest_name === dto.opening_bowler_guest_name);
+      if (!ok) throw new BadRequestException('Opening bowler guest must be in the bowling team Playing XI');
+    } else {
+      throw new BadRequestException('Opening bowler is required');
+    }
+
+    await this.matchRepo.manager.transaction(async (manager) => {
+      match.status = MatchStatus.LIVE;
+      match.scorer_id = finalScorerId;
+      match.current_innings = 1;
+      match.current_over = 0;
+      match.current_ball = 0;
+      match.current_batting_team_id = dto.batting_first_team_id;
+      match.innings_1_batting_team_id = dto.batting_first_team_id;
+      match.innings_2_batting_team_id = bowlingTeamId;
+
+      match.striker_id = dto.opening_striker_id || undefined;
+      match.striker_guest_name = dto.opening_striker_guest_name || undefined;
+      match.non_striker_id = dto.opening_non_striker_id || undefined;
+      match.non_striker_guest_name = dto.opening_non_striker_guest_name || undefined;
+      match.current_bowler_id = dto.opening_bowler_id || undefined;
+      match.current_bowler_guest_name = dto.opening_bowler_guest_name || undefined;
+
+      await manager.save(CricketMatch, match);
+    });
+
+    try {
+      const captains = [match.team_a.captain?.user, match.team_b.captain?.user].filter(u => !!u);
+      for (const captainUser of captains) {
+        await this.notificationsService.create({
+          user_id: captainUser.id,
+          type: NotificationType.MATCH_STARTED,
+          title: 'Match is live',
+          body: `${match.team_a.name} vs ${match.team_b.name} is now live! Watch ball-by-ball scoring.`,
+          deep_link: `/sports/cricket/matches/${match.id}`,
+          metadata: { match_id: match.id },
+        });
+      }
+    } catch (err: any) {
+      console.warn(`Failed to send match started notification: ${err.message}`);
+    }
+
+    return this.findOneMatch(match.id);
+  }
+
+  async selectBowler(matchId: number, dto: SelectBowlerDto, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: true,
+        team_b: true,
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can select bowlers');
+    }
+
+    if (match.current_bowler_id || match.current_bowler_guest_name) {
+      throw new BadRequestException('A bowler is already set for the current over');
+    }
+
+    const matchPlayers = await this.matchPlayerRepo.find({
+      where: { match_id: match.id },
+    });
+
+    const bowlingTeamId = match.current_batting_team_id === match.team_a_id ? match.team_b_id : match.team_a_id;
+    const bowlingLineup = matchPlayers.filter(mp => mp.team_id === bowlingTeamId);
+
+    if (dto.bowler_id) {
+      const ok = bowlingLineup.some(mp => mp.player_id === dto.bowler_id);
+      if (!ok) throw new BadRequestException('Selected bowler must be in the bowling team Playing XI');
+    } else if (dto.bowler_guest_name && dto.bowler_guest_name.trim()) {
+      const ok = bowlingLineup.some(mp => mp.guest_name === dto.bowler_guest_name);
+      if (!ok) throw new BadRequestException('Selected bowler guest must be in the bowling team Playing XI');
+    } else {
+      throw new BadRequestException('Bowler is required');
+    }
+
+    if (match.last_ball_event_id) {
+      const lastBall = await this.ballEventRepo.findOne({
+        where: { id: match.last_ball_event_id },
+      });
+      if (lastBall && lastBall.over_number === match.current_over - 1) {
+        if (dto.bowler_id && lastBall.bowler_id === dto.bowler_id) {
+          throw new BadRequestException('Bowler cannot bowl two consecutive overs');
+        }
+        if (dto.bowler_guest_name && lastBall.bowler_guest_name === dto.bowler_guest_name) {
+          throw new BadRequestException('Bowler cannot bowl two consecutive overs');
+        }
+      }
+    }
+
+    match.current_bowler_id = dto.bowler_id || undefined;
+    match.current_bowler_guest_name = dto.bowler_guest_name || undefined;
+
+    await this.matchRepo.save(match);
+    return this.findOneMatch(match.id);
+  }
+
+  async startSecondInnings(matchId: number, dto: StartSecondInningsDto, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: true,
+        team_b: true,
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.current_innings !== 2) {
+      throw new BadRequestException('Second innings is not active');
+    }
+
+    if (match.striker_id || match.striker_guest_name) {
+      throw new BadRequestException('Second innings has already started');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can start the second innings');
+    }
+
+    const matchPlayers = await this.matchPlayerRepo.find({
+      where: { match_id: match.id },
+    });
+
+    const battingTeamId = match.current_batting_team_id;
+    const bowlingTeamId = battingTeamId === match.team_a_id ? match.team_b_id : match.team_a_id;
+
+    const battingLineup = matchPlayers.filter(mp => mp.team_id === battingTeamId);
+    const bowlingLineup = matchPlayers.filter(mp => mp.team_id === bowlingTeamId);
+
+    // Striker validation
+    if (dto.opening_striker_id) {
+      const ok = battingLineup.some(mp => mp.player_id === dto.opening_striker_id);
+      if (!ok) throw new BadRequestException('Opening striker must be in the batting team Playing XI');
+    } else if (dto.opening_striker_guest_name && dto.opening_striker_guest_name.trim()) {
+      const ok = battingLineup.some(mp => mp.guest_name === dto.opening_striker_guest_name);
+      if (!ok) throw new BadRequestException('Opening striker guest must be in the batting team Playing XI');
+    } else {
+      throw new BadRequestException('Opening striker is required');
+    }
+
+    // Non-striker validation
+    if (dto.opening_non_striker_id) {
+      const ok = battingLineup.some(mp => mp.player_id === dto.opening_non_striker_id);
+      if (!ok) throw new BadRequestException('Opening non-striker must be in the batting team Playing XI');
+    } else if (dto.opening_non_striker_guest_name && dto.opening_non_striker_guest_name.trim()) {
+      const ok = battingLineup.some(mp => mp.guest_name === dto.opening_non_striker_guest_name);
+      if (!ok) throw new BadRequestException('Opening non-striker guest must be in the batting team Playing XI');
+    } else {
+      throw new BadRequestException('Opening non-striker is required');
+    }
+
+    // Bowler validation
+    if (dto.opening_bowler_id) {
+      const ok = bowlingLineup.some(mp => mp.player_id === dto.opening_bowler_id);
+      if (!ok) throw new BadRequestException('Opening bowler must be in the bowling team Playing XI');
+    } else if (dto.opening_bowler_guest_name && dto.opening_bowler_guest_name.trim()) {
+      const ok = bowlingLineup.some(mp => mp.guest_name === dto.opening_bowler_guest_name);
+      if (!ok) throw new BadRequestException('Opening bowler guest must be in the bowling team Playing XI');
+    } else {
+      throw new BadRequestException('Opening bowler is required');
+    }
+
+    match.striker_id = dto.opening_striker_id || undefined;
+    match.striker_guest_name = dto.opening_striker_guest_name || undefined;
+    match.non_striker_id = dto.opening_non_striker_id || undefined;
+    match.non_striker_guest_name = dto.opening_non_striker_guest_name || undefined;
+    match.current_bowler_id = dto.opening_bowler_id || undefined;
+    match.current_bowler_guest_name = dto.opening_bowler_guest_name || undefined;
+
+    await this.matchRepo.save(match);
+    return this.findOneMatch(match.id);
+  }
+
+  private async transitionInnings(match: CricketMatch, entityManager: EntityManager): Promise<void> {
+    if (match.current_innings === 1) {
+      match.target = match.innings_1_score + 1;
+      match.current_innings = 2;
+      match.current_over = 0;
+      match.current_ball = 0;
+      const nextBattingTeamId = match.innings_1_batting_team_id === match.team_a_id ? match.team_b_id : match.team_a_id;
+      match.current_batting_team_id = nextBattingTeamId;
+      match.innings_2_batting_team_id = nextBattingTeamId;
+
+      match.striker_id = undefined;
+      match.striker_guest_name = undefined;
+      match.non_striker_id = undefined;
+      match.non_striker_guest_name = undefined;
+      match.current_bowler_id = undefined;
+      match.current_bowler_guest_name = undefined;
+
+      await entityManager.save(CricketMatch, match);
+    } else if (match.current_innings === 2) {
+      await this.completeMatch(match, entityManager);
+    }
+  }
+
+  private async completeMatch(match: CricketMatch, entityManager: EntityManager): Promise<void> {
+    let winner_team_id: number | null = null;
+    let is_tie = false;
+
+    const score2 = match.innings_2_score;
+    const targetVal = match.target || 0;
+
+    if (score2 >= targetVal) {
+      winner_team_id = match.innings_2_batting_team_id || null;
+    } else if (score2 < targetVal - 1) {
+      winner_team_id = match.innings_1_batting_team_id || null;
+    } else {
+      is_tie = true;
+      winner_team_id = null;
+    }
+
+    match.winner_team_id = winner_team_id || undefined;
+    match.is_tie = is_tie;
+
+    const score1Str = `${match.innings_1_score}/${match.innings_1_wickets} (${match.innings_1_overs})`;
+    const score2Str = `${match.innings_2_score}/${match.innings_2_wickets} (${match.innings_2_overs})`;
+
+    if (match.innings_1_batting_team_id === match.team_a_id) {
+      match.team_a_score = score1Str;
+      match.team_b_score = score2Str;
+    } else {
+      match.team_a_score = score2Str;
+      match.team_b_score = score1Str;
+    }
+
+    const now = new Date();
+    const lockedAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    match.status = MatchStatus.COMPLETED;
+    match.result_submitted_at = now;
+    match.result_locked_at = lockedAt;
+
+    await entityManager.save(CricketMatch, match);
+
+    const ballEvents = await entityManager.find(CricketBallEvent, {
+      where: { match_id: match.id },
+    });
+
+    const matchPlayers = await entityManager.find(CricketMatchPlayer, {
+      where: { match_id: match.id },
+    });
+
+    const statsToSave: CricketPlayerMatchStats[] = [];
+
+    for (const mp of matchPlayers) {
+      const battingEvents = ballEvents.filter(e =>
+        mp.player_id ? e.batsman_id === mp.player_id : e.batsman_guest_name === mp.guest_name
+      );
+
+      const bowlingEvents = ballEvents.filter(e =>
+        mp.player_id ? e.bowler_id === mp.player_id : e.bowler_guest_name === mp.guest_name
+      );
+
+      const runs = battingEvents.reduce((sum, e) => sum + (e.runs || 0), 0);
+      const ballsFaced = battingEvents.filter(e => e.extra_type !== BallExtraType.WIDE).length;
+      const fours = battingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.runs === 4).length;
+      const sixes = battingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.runs === 6).length;
+
+      const wicketEvent = battingEvents.find(e => e.is_wicket);
+      const howOut = wicketEvent ? (wicketEvent.wicket_type as HowOut) : undefined;
+      const isNotOut = !wicketEvent;
+
+      const legalBowledEvents = bowlingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL);
+      const legalBalls = legalBowledEvents.length;
+      const oversBowled = Math.floor(legalBalls / 6) + (legalBalls % 6) / 10;
+
+      const runsGiven = bowlingEvents.reduce((sum, e) => {
+        if (e.extra_type === BallExtraType.BYE || e.extra_type === BallExtraType.LEG_BYE) {
+          return sum;
+        }
+        return sum + (e.runs || 0) + (e.extra_runs || 0);
+      }, 0);
+
+      const wickets = bowlingEvents.filter(e =>
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+      ).length;
+
+      const wides = bowlingEvents.filter(e => e.extra_type === BallExtraType.WIDE).length;
+      const noBalls = bowlingEvents.filter(e => e.extra_type === BallExtraType.NO_BALL).length;
+
+      const statRecord = entityManager.create(CricketPlayerMatchStats, {
+        match_id: match.id,
+        team_id: mp.team_id,
+        player_id: mp.player_id || undefined,
+        guest_name: mp.guest_name || undefined,
+        runs,
+        balls_faced: ballsFaced,
+        fours,
+        sixes,
+        how_out: howOut || undefined,
+        is_not_out: isNotOut,
+        overs_bowled: oversBowled,
+        runs_given: runsGiven,
+        wickets,
+        wides,
+        no_balls: noBalls,
+      });
+
+      statsToSave.push(statRecord);
+    }
+
+    await entityManager.save(CricketPlayerMatchStats, statsToSave);
+
+    const registeredPlayerIds = Array.from(
+      new Set(
+        matchPlayers
+          .map(mp => mp.player_id)
+          .filter((id): id is number => !!id)
+      )
+    );
+
+    for (const pId of registeredPlayerIds) {
+      await this.aggregatePlayerStats(pId, entityManager);
+    }
+
+    try {
+      const fullMatch = await entityManager.findOne(CricketMatch, {
+        where: { id: match.id },
+        relations: {
+          team_a: { captain: { user: true } },
+          team_b: { captain: { user: true } },
+        },
+      });
+
+      if (fullMatch) {
+        let notificationTitle = 'Match completed';
+        if (is_tie) {
+          notificationTitle = 'Match tied';
+        } else if (winner_team_id) {
+          const winningTeamName = winner_team_id === fullMatch.team_a_id ? fullMatch.team_a.name : fullMatch.team_b.name;
+          notificationTitle = `${winningTeamName} won the match`;
+        }
+
+        const captains = [fullMatch.team_a.captain?.user, fullMatch.team_b.captain?.user].filter(u => !!u);
+        for (const captainUser of captains) {
+          await this.notificationsService.create({
+            user_id: captainUser.id,
+            type: NotificationType.MATCH_COMPLETED,
+            title: notificationTitle,
+            body: `Match final score: ${fullMatch.team_a_score} vs ${fullMatch.team_b_score}. Click to see scorecard.`,
+            deep_link: `/sports/cricket/matches/${fullMatch.id}`,
+            metadata: { match_id: fullMatch.id },
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn(`Failed to send match completion notification: ${err.message}`);
+    }
+  }
+
+  async recordBall(matchId: number, dto: RecordBallDto, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: { captain: { user: true } },
+        team_b: { captain: { user: true } },
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can record balls');
+    }
+
+    if (!match.striker_id && !match.striker_guest_name) {
+      throw new BadRequestException('No striker batsman set on the field');
+    }
+
+    if (!match.current_bowler_id && !match.current_bowler_guest_name) {
+      throw new BadRequestException('No bowler set for the current over. Please select a bowler first.');
+    }
+
+    const isLegal = dto.extra_type !== BallExtraType.WIDE && dto.extra_type !== BallExtraType.NO_BALL;
+
+    const matchPlayers = await this.matchPlayerRepo.find({
+      where: { match_id: match.id },
+    });
+
+    const battingTeamId = match.current_batting_team_id;
+    const battingLineup = matchPlayers.filter(mp => mp.team_id === battingTeamId);
+
+    const currentWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
+    const isWicket = dto.is_wicket;
+
+    if (isWicket) {
+      if (!dto.wicket_type) {
+        throw new BadRequestException('Wicket type is required when is_wicket is true');
+      }
+
+      const willNeedNextBatsman = currentWickets < 9;
+      if (willNeedNextBatsman) {
+        if (!dto.next_batsman_id && (!dto.next_batsman_guest_name || !dto.next_batsman_guest_name.trim())) {
+          throw new BadRequestException('Next batsman is required for wicket event');
+        }
+        if (dto.next_batsman_id) {
+          const ok = battingLineup.some(mp => mp.player_id === dto.next_batsman_id);
+          if (!ok) throw new BadRequestException('Next batsman must belong to the batting Playing XI');
+          if (dto.next_batsman_id === match.non_striker_id) {
+            throw new BadRequestException('Next batsman cannot be the current non-striker');
+          }
+        } else if (dto.next_batsman_guest_name) {
+          const ok = battingLineup.some(mp => mp.guest_name === dto.next_batsman_guest_name);
+          if (!ok) throw new BadRequestException('Next batsman guest must belong to the batting Playing XI');
+          if (dto.next_batsman_guest_name === match.non_striker_guest_name) {
+            throw new BadRequestException('Next batsman guest cannot be the current non-striker');
+          }
+        }
+      }
+    }
+
+    await this.matchRepo.manager.transaction(async (manager) => {
+      const existingBallsCount = await manager.count(CricketBallEvent, {
+        where: {
+          match_id: match.id,
+          innings: match.current_innings,
+          over_number: match.current_over,
+        },
+      });
+
+      const event = manager.create(CricketBallEvent, {
+        match_id: match.id,
+        innings: match.current_innings,
+        over_number: match.current_over,
+        ball_number: existingBallsCount,
+        batsman_id: match.striker_id || undefined,
+        batsman_guest_name: match.striker_guest_name || undefined,
+        bowler_id: match.current_bowler_id || undefined,
+        bowler_guest_name: match.current_bowler_guest_name || undefined,
+        runs: dto.runs,
+        extra_type: dto.extra_type || undefined,
+        extra_runs: dto.extra_runs || 0,
+        is_wicket: dto.is_wicket,
+        wicket_type: dto.wicket_type || undefined,
+      });
+
+      const savedEvent = await manager.save(CricketBallEvent, event);
+      match.last_ball_event_id = savedEvent.id;
+
+      const totalRunsThisBall = dto.runs + (dto.extra_runs || 0);
+
+      if (match.current_innings === 1) {
+        match.innings_1_score += totalRunsThisBall;
+        if (isWicket) match.innings_1_wickets += 1;
+      } else {
+        match.innings_2_score += totalRunsThisBall;
+        if (isWicket) match.innings_2_wickets += 1;
+      }
+
+      if (dto.runs % 2 !== 0) {
+        const tempStrikerId = match.striker_id;
+        const tempStrikerGuest = match.striker_guest_name;
+        match.striker_id = match.non_striker_id;
+        match.striker_guest_name = match.non_striker_guest_name;
+        match.non_striker_id = tempStrikerId;
+        match.non_striker_guest_name = tempStrikerGuest;
+      }
+
+      let overEnded = false;
+      if (isLegal) {
+        match.current_ball += 1;
+        if (match.current_ball === 6) {
+          match.current_ball = 0;
+          match.current_over += 1;
+          overEnded = true;
+        }
+      }
+
+      if (match.current_innings === 1) {
+        match.innings_1_overs = match.current_over + (match.current_ball / 10);
+      } else {
+        match.innings_2_overs = match.current_over + (match.current_ball / 10);
+      }
+
+      if (isWicket) {
+        const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
+        if (finalWickets >= 10) {
+          match.striker_id = undefined;
+          match.striker_guest_name = undefined;
+        } else {
+          match.striker_id = dto.next_batsman_id || undefined;
+          match.striker_guest_name = dto.next_batsman_guest_name || undefined;
+        }
+      }
+
+      if (overEnded) {
+        const tempStrikerId = match.striker_id;
+        const tempStrikerGuest = match.striker_guest_name;
+        match.striker_id = match.non_striker_id;
+        match.striker_guest_name = match.non_striker_guest_name;
+        match.non_striker_id = tempStrikerId;
+        match.non_striker_guest_name = tempStrikerGuest;
+
+        match.current_bowler_id = undefined;
+        match.current_bowler_guest_name = undefined;
+      }
+
+      await manager.save(CricketMatch, match);
+
+      const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
+      const isEndConditions = finalWickets >= 10 || match.current_over >= match.overs;
+
+      if (match.current_innings === 1 && isEndConditions) {
+        await this.transitionInnings(match, manager);
+      } else if (match.current_innings === 2) {
+        const targetReached = match.target !== null && match.target !== undefined && match.innings_2_score >= match.target;
+        if (isEndConditions || targetReached) {
+          await this.completeMatch(match, manager);
+        }
+      }
+    });
+
+    return this.findOneMatch(match.id);
+  }
+
+  async undoLastBall(matchId: number, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can undo balls');
+    }
+
+    if (!match.last_ball_event_id) {
+      throw new BadRequestException('No ball to undo');
+    }
+
+    const ballEvent = await this.ballEventRepo.findOne({
+      where: { id: match.last_ball_event_id },
+    });
+    if (!ballEvent) {
+      throw new NotFoundException('Last ball event not found');
+    }
+
+    await this.matchRepo.manager.transaction(async (manager) => {
+      const totalRunsThisBall = ballEvent.runs + ballEvent.extra_runs;
+      if (match.current_innings === 1) {
+        match.innings_1_score -= totalRunsThisBall;
+        if (ballEvent.is_wicket) match.innings_1_wickets -= 1;
+      } else {
+        match.innings_2_score -= totalRunsThisBall;
+        if (ballEvent.is_wicket) match.innings_2_wickets -= 1;
+      }
+
+      if (ballEvent.runs % 2 !== 0) {
+        const tempStrikerId = match.striker_id;
+        const tempStrikerGuest = match.striker_guest_name;
+        match.striker_id = match.non_striker_id;
+        match.striker_guest_name = match.non_striker_guest_name;
+        match.non_striker_id = tempStrikerId;
+        match.non_striker_guest_name = tempStrikerGuest;
+      }
+
+      const isLegal = ballEvent.extra_type !== BallExtraType.WIDE && ballEvent.extra_type !== BallExtraType.NO_BALL;
+
+      if (isLegal) {
+        if (match.current_ball === 0) {
+          match.current_ball = 5;
+          match.current_over -= 1;
+
+          const tempStrikerId = match.striker_id;
+          const tempStrikerGuest = match.striker_guest_name;
+          match.striker_id = match.non_striker_id;
+          match.striker_guest_name = match.non_striker_guest_name;
+          match.non_striker_id = tempStrikerId;
+          match.non_striker_guest_name = tempStrikerGuest;
+
+          match.current_bowler_id = ballEvent.bowler_id || undefined;
+          match.current_bowler_guest_name = ballEvent.bowler_guest_name || undefined;
+        } else {
+          match.current_ball -= 1;
+        }
+      }
+
+      if (match.current_innings === 1) {
+        match.innings_1_overs = match.current_over + (match.current_ball / 10);
+      } else {
+        match.innings_2_overs = match.current_over + (match.current_ball / 10);
+      }
+
+      if (ballEvent.is_wicket) {
+        match.striker_id = ballEvent.batsman_id || undefined;
+        match.striker_guest_name = ballEvent.batsman_guest_name || undefined;
+      }
+
+      await manager.remove(CricketBallEvent, ballEvent);
+
+      const prevEvent = await manager.findOne(CricketBallEvent, {
+        where: {
+          match_id: match.id,
+        },
+        order: { id: 'DESC' },
+      });
+
+      match.last_ball_event_id = prevEvent ? prevEvent.id : undefined;
+
+      await manager.save(CricketMatch, match);
+    });
+
+    return this.findOneMatch(match.id);
+  }
+
+  async getLiveView(matchId: number): Promise<any> {
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: true,
+        team_b: true,
+        striker: { user: true },
+        non_striker: { user: true },
+        current_bowler: { user: true },
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    const currentInnings = match.current_innings || 1;
+    const currentOver = match.current_over;
+
+    const thisOverEvents = await this.ballEventRepo.find({
+      where: {
+        match_id: matchId,
+        innings: currentInnings,
+        over_number: currentOver,
+      },
+      order: { ball_number: 'ASC' },
+    });
+
+    const allEvents = await this.ballEventRepo.find({
+      where: { match_id: matchId },
+    });
+
+    const getBatsmanStats = (id?: number, guestName?: string) => {
+      const playerEvents = allEvents.filter(e =>
+        id ? e.batsman_id === id : e.batsman_guest_name === guestName
+      );
+      const runs = playerEvents.reduce((sum, e) => sum + e.runs, 0);
+      const balls = playerEvents.filter(e => e.extra_type !== BallExtraType.WIDE).length;
+      return { runs, balls };
+    };
+
+    const getBowlerStats = (id?: number, guestName?: string) => {
+      const playerEvents = allEvents.filter(e =>
+        id ? e.bowler_id === id : e.bowler_guest_name === guestName
+      );
+      const legalBowls = playerEvents.filter(e =>
+        e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL
+      ).length;
+      const overs = `${Math.floor(legalBowls / 6)}.${legalBowls % 6}`;
+
+      const runs_given = playerEvents.reduce((sum, e) => {
+        if (e.extra_type === BallExtraType.BYE || e.extra_type === BallExtraType.LEG_BYE) {
+          return sum;
+        }
+        return sum + e.runs + e.extra_runs;
+      }, 0);
+
+      const wickets = playerEvents.filter(e =>
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+      ).length;
+
+      return { overs, runs_given, wickets };
+    };
+
+    const strikerStats = (match.striker_id || match.striker_guest_name)
+      ? getBatsmanStats(match.striker_id, match.striker_guest_name)
+      : { runs: 0, balls: 0 };
+
+    const nonStrikerStats = (match.non_striker_id || match.non_striker_guest_name)
+      ? getBatsmanStats(match.non_striker_id, match.non_striker_guest_name)
+      : { runs: 0, balls: 0 };
+
+    const bowlerStats = (match.current_bowler_id || match.current_bowler_guest_name)
+      ? getBowlerStats(match.current_bowler_id, match.current_bowler_guest_name)
+      : { overs: '0.0', runs_given: 0, wickets: 0 };
+
+    const scoreVal = currentInnings === 1 ? match.innings_1_score : match.innings_2_score;
+    const oversBowledDecimal = match.current_over + (match.current_ball / 6);
+    const currentRunRate = oversBowledDecimal > 0 ? parseFloat((scoreVal / oversBowledDecimal).toFixed(2)) : 0.0;
+
+    let requiredRunRate: number | null = null;
+    if (currentInnings === 2 && match.target !== null && match.target !== undefined) {
+      const totalOvers = match.overs;
+      const oversRemaining = totalOvers - oversBowledDecimal;
+      const runsNeeded = match.target - match.innings_2_score;
+      requiredRunRate = oversRemaining > 0 ? parseFloat((runsNeeded / oversRemaining).toFixed(2)) : 0.0;
+      if (runsNeeded <= 0) requiredRunRate = 0.0;
+    }
+
+    const strikerObj = (match.striker_id || match.striker_guest_name) ? {
+      id: match.striker_id || null,
+      name: match.striker?.user?.name || match.striker_guest_name,
+      avatar_url: match.striker?.user?.avatar_url || null,
+      ...strikerStats,
+    } : null;
+
+    const nonStrikerObj = (match.non_striker_id || match.non_striker_guest_name) ? {
+      id: match.non_striker_id || null,
+      name: match.non_striker?.user?.name || match.non_striker_guest_name,
+      avatar_url: match.non_striker?.user?.avatar_url || null,
+      ...nonStrikerStats,
+    } : null;
+
+    const bowlerObj = (match.current_bowler_id || match.current_bowler_guest_name) ? {
+      id: match.current_bowler_id || null,
+      name: match.current_bowler?.user?.name || match.current_bowler_guest_name,
+      avatar_url: match.current_bowler?.user?.avatar_url || null,
+      ...bowlerStats,
+    } : null;
+
+    const scoreString = currentInnings === 1 
+      ? `${match.innings_1_score}/${match.innings_1_wickets}` 
+      : `${match.innings_2_score}/${match.innings_2_wickets}`;
+
+    const oversString = `${match.current_over}.${match.current_ball}`;
+
+    return {
+      status: match.status,
+      current_innings: currentInnings,
+      score: scoreString,
+      overs: oversString,
+      target: match.target || null,
+      current_run_rate: currentRunRate,
+      required_run_rate: requiredRunRate,
+      striker: strikerObj,
+      non_striker: nonStrikerObj,
+      bowler: bowlerObj,
+      this_over: thisOverEvents.map(e => ({
+        runs: e.runs,
+        extra_type: e.extra_type || null,
+        is_wicket: e.is_wicket,
+      })),
+      balls_remaining_in_over: 6 - match.current_ball,
     };
   }
 }
