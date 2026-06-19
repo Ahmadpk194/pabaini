@@ -10,6 +10,10 @@ async function bootstrap() {
   // common prefix api/v1 for all routes
   app.setGlobalPrefix('api/v1');
 
+  app.enableCors({
+    origin: '*',
+  });
+
   // enable validation
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -23,6 +27,6 @@ async function bootstrap() {
   // standard error format
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();
