@@ -18,7 +18,13 @@ async function bootstrap() {
   }));
 
   app.enableCors({
-    origin: '*',
+    origin: [
+      'http://localhost:3000',
+      'https://pabaini-production.up.railway.app',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // standard response format
