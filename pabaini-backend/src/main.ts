@@ -10,10 +10,6 @@ async function bootstrap() {
   // common prefix api/v1 for all routes
   app.setGlobalPrefix('api/v1');
 
-  app.enableCors({
-    origin: '*',
-  });
-
   // enable validation
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -21,14 +17,22 @@ async function bootstrap() {
     transform: true,
   }));
 
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'pabaini-production.up.railway.app',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   // standard response format
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // standard error format
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-
-  await app.listen(port, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
