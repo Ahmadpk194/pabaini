@@ -7,6 +7,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "extra": {
+      "apiUrl": "https://pabaini-production.up.railway.app/api/v1"
+    },
     "ios": {
       "bundleIdentifier": "com.pabaini.app",
       "supportsTablet": true
@@ -37,12 +40,6 @@
           "android": {
             "newArchEnabled": true
           }
-        }
-      ],
-      [
-        "@react-native-firebase/app",
-        {
-          "config": "./GoogleService-Info.plist"
         }
       ],
       "@react-native-google-signin/google-signin",
