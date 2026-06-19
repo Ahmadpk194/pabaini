@@ -94,13 +94,24 @@ interface ApiResponse<T> {
 - [#38 — PATCH `/notifications/read-all`](#38-patch-notificationsread-all) — Mark all read
 - [#39 — PATCH `/notifications/:id/read`](#39-patch-notificationsidread) — Mark specific read
 
-### 7. Sports Module — Phase 3 🗓 Roadmap
-- [#40 — POST `/sports/cricket/matches`](#40-post-sportscricketmatches) — Schedule match
+### 7. Sports Module — Phase 3 (Matches & Lineups) ✅ Implemented
+- [#40 — POST `/sports/cricket/matches/request`](#40-post-sportscricketmatchesrequest) — Challenge opponent team
 - [#41 — GET `/sports/cricket/matches`](#41-get-sportscricketmatches) — List matches
 - [#42 — GET `/sports/cricket/matches/:id`](#42-get-sportscricketmatchesid) — Get match details
-- [#43 — PATCH `/sports/cricket/matches/:id/scores`](#43-patch-sportscricketmatchesidscores) — Record scores
-- [#44 — GET `/sports/cricket/leaderboard`](#44-get-sportscricketleaderboard) — Leaderboard standings
-- [#45 — GET `/sports/cricket/stats/mvp`](#45-get-sportscricketstatsmvp) — MVP rankings
+- [#43 — PATCH `/sports/cricket/matches/:id/accept`](#43-patch-sportscricketmatchesidaccept) — Accept match request
+- [#44 — PATCH `/sports/cricket/matches/:id/decline`](#44-patch-sportscricketmatchesiddecline) — Decline match request
+- [#45 — PATCH `/sports/cricket/matches/:id`](#45-patch-sportscricketmatchesid) — Edit match details
+- [#47 — PATCH `/sports/cricket/matches/:id/cancel`](#47-patch-sportscricketmatchesidcancel) — Cancel match request
+- [#48 — POST `/sports/cricket/matches/:id/lineup`](#48-post-sportscricketmatchesidlineup) — Declare Playing XI lineup
+- [#49 — GET `/sports/cricket/matches/:id/lineup`](#49-get-sportscricketmatchesidlineup) — View declared lineups
+
+### 8. Sports Module — Phase 3 (Simple Scoring Mode) ✅ Implemented
+- [#50 — POST `/sports/cricket/matches/:id/result`](#50-post-sportscricketmatchesidresult) — Submit scorecard & result
+- [#51 — PATCH `/sports/cricket/matches/:id/result`](#51-patch-sportscricketmatchesidresult) — Edit scorecard & result (within 24 hours)
+
+### 9. Sports Module — Phase 3 (Live Scoring & Leaderboard) 🗓 Roadmap
+- [#52 — GET `/sports/cricket/leaderboard`](#52-get-sportscricketleaderboard) — Leaderboard standings
+- [#53 — GET `/sports/cricket/stats/mvp`](#53-get-sportscricketstatsmvp) — MVP rankings
 
 ---
 
@@ -1881,102 +1892,558 @@ Marks a single notification as read, validating ownership.
 
 ---
 
-### Sports — Phase 3 🗓 Roadmap
+## 7. Sports Module — Phase 3 (Matches & Lineups)
 
-> These endpoints are **planned** for Phase 3 development. They are not yet implemented.
+The Matches module handles challenges between team captains, schedule status transitions, and playing XI declarations.
 
 ---
 
-### #40 · POST `/sports/cricket/matches`
+### #40 · POST `/sports/cricket/matches/request`
 
-Schedules a tournament match between two registered teams.
+Challenges another team. Only available to team captains.
 
 | | |
 |---|---|
 | **Method** | `POST` |
-| **Path** | `/api/v1/sports/cricket/matches` |
-| **Access** | 🔴 Protected *(Admin / Organizer)* |
-| **Status** | 🗓 Planned — Phase 3 |
+| **Path** | `/api/v1/sports/cricket/matches/request` |
+| **Access** | 🔴 Protected *(Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
 
 **Request Body**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `team_a_id` | `number` | ✅ Yes | ID of team A |
-| `team_b_id` | `number` | ✅ Yes | ID of team B |
-| `scheduled_at` | `string` | ✅ Yes | ISO-8601 timestamp |
-| `overs` | `number` | ✅ Yes | Total overs per innings |
-| `location` | `string` | ✅ Yes | Ground name or location |
+| `opponent_team_id` | `number` | ✅ Yes | ID of the team being challenged |
+| `overs` | `number` | ✅ Yes | Total overs per innings (minimum 1) |
+| `scoring_mode` | `string` | ✅ Yes | Scoring style: `'simple'` or `'live'` |
+| `venue` | `string` | No | Ground name or venue |
+| `scheduled_at` | `string` | No | ISO-8601 schedule timestamp |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/request \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "opponent_team_id": 2,
+    "overs": 20,
+    "scoring_mode": "simple",
+    "venue": "Pabaini Cricket Ground",
+    "scheduled_at": "2026-06-25T17:00:00.000Z"
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "data": {
+    "id": 1,
+    "series_id": null,
+    "tournament_id": null,
+    "team_a_id": 1,
+    "team_b_id": 2,
+    "requested_by": 1,
+    "overs": 20,
+    "venue": "Pabaini Cricket Ground",
+    "scheduled_at": "2026-06-25T17:00:00.000Z",
+    "scoring_mode": "simple",
+    "scorer_id": null,
+    "status": "pending_request",
+    "winner_team_id": null,
+    "man_of_match_id": null,
+    "team_a_score": null,
+    "team_b_score": null,
+    "team_a_lineup_set": false,
+    "team_b_lineup_set": false,
+    "created_at": "2026-06-19T01:30:00.000Z",
+    "updated_at": "2026-06-19T01:30:00.000Z"
+  }
+}
+```
 
 ---
 
 ### #41 · GET `/sports/cricket/matches`
 
-Lists all matches with optional filters for status (completed/live/upcoming).
+Lists all matches with optional status and team filters.
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/v1/sports/cricket/matches` |
 | **Access** | 🟢 Public |
-| **Status** | 🗓 Planned — Phase 3 |
+| **Status** | ✅ Live |
+
+**Query Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `status` | `string` | No | Match status filter (e.g. `'pending_request'`, `'scheduled'`) |
+| `team_id` | `number` | No | Team ID filter (retrieves matches where team is team A or B) |
+| `page` | `number` | No | Page number (defaults to `1`) |
+| `limit` | `number` | No | Items per page (defaults to `20`) |
+
+**cURL Example**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&page=1&limit=10"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": [
+    {
+      "id": 1,
+      "series_id": null,
+      "tournament_id": null,
+      "team_a_id": 1,
+      "team_b_id": 2,
+      "requested_by": 1,
+      "overs": 20,
+      "venue": "Pabaini Cricket Ground",
+      "scheduled_at": "2026-06-25T17:00:00.000Z",
+      "scoring_mode": "simple",
+      "scorer_id": null,
+      "status": "scheduled",
+      "winner_team_id": null,
+      "man_of_match_id": null,
+      "team_a_score": null,
+      "team_b_score": null,
+      "team_a_lineup_set": false,
+      "team_b_lineup_set": false,
+      "created_at": "2026-06-19T01:30:00.000Z",
+      "updated_at": "2026-06-19T01:35:00.000Z",
+      "team_a": {
+        "id": 1,
+        "name": "Pabaini Kings"
+      },
+      "team_b": {
+        "id": 2,
+        "name": "Pabaini Stars"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
 
 ---
 
 ### #42 · GET `/sports/cricket/matches/:id`
 
-Retrieves detailed match details, scorecards, and MVP metrics.
+Retrieves full match details.
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/v1/sports/cricket/matches/:id` |
 | **Access** | 🟢 Public |
-| **Status** | 🗓 Planned — Phase 3 |
+| **Status** | ✅ Live |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1
+```
 
 ---
 
-### #43 · PATCH `/sports/cricket/matches/:id/scores`
+### #43 · PATCH `/sports/cricket/matches/:id/accept`
 
-Records or updates live scores, overs played, and match result for a scheduled match.
+Accepts a match request. Only available to the challenged team captain (`team_b`).
 
 | | |
 |---|---|
 | **Method** | `PATCH` |
-| **Path** | `/api/v1/sports/cricket/matches/:id/scores` |
-| **Access** | 🔴 Protected *(Designated Scorer / Admin)* |
-| **Status** | 🗓 Planned — Phase 3 |
+| **Path** | `/api/v1/sports/cricket/matches/:id/accept` |
+| **Access** | 🔴 Protected *(Team B Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/accept \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`** (returns updated match, status changed to `'scheduled'`).
+
+---
+
+### #44 · PATCH `/sports/cricket/matches/:id/decline`
+
+Declines a match request. Only available to the challenged team captain (`team_b`).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/decline` |
+| **Access** | 🔴 Protected *(Team B Captain only)* |
+| **Status** | ✅ Live |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/decline \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "message": "Match request declined"
+}
+```
+
+---
+
+### #45 · PATCH `/sports/cricket/matches/:id`
+
+Updates details of a pending match request. Only available to the challenging captain (`requested_by`) while status is `'pending_request'`.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id` |
+| **Access** | 🔴 Protected *(Requesting Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
 
 **Request Body**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `runs_team_a` | `number` | No | Runs scored by Team A |
-| `wickets_team_a` | `number` | No | Wickets lost by Team A |
-| `overs_team_a` | `number` | No | Overs played by Team A |
-| `runs_team_b` | `number` | No | Runs scored by Team B |
-| `wickets_team_b` | `number` | No | Wickets lost by Team B |
-| `overs_team_b` | `number` | No | Overs played by Team B |
-| `status` | `string` | ✅ Yes | `live` or `completed` |
-| `winner_team_id` | `number` | No | ID of the winning team |
-| `man_of_the_match_profile_id` | `number` | No | Profile ID of Man of the Match |
+| `overs` | `number` | No | Over counts (minimum 1) |
+| `scoring_mode` | `string` | No | `'simple'` or `'live'` |
+| `venue` | `string` | No | Ground name or venue |
+| `scheduled_at` | `string` | No | ISO-8601 schedule timestamp |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"overs": 15, "venue": "New Ground"}'
+```
 
 ---
 
-### #44 · GET `/sports/cricket/leaderboard`
+### #47 · PATCH `/sports/cricket/matches/:id/cancel`
 
-Returns real-time tournament standings, top run-scorers, wicket leaders, and MVP index.
+Cancels a match.
+- If status is `pending_request`: Only the challenger (`requested_by`) can cancel.
+- If status is `scheduled`: Either team's captain can cancel.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/cancel` |
+| **Access** | 🔴 Protected |
+| **Status** | ✅ Live |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/cancel \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+---
+
+### #48 · POST `/sports/cricket/matches/:id/lineup`
+
+Declares a team's playing XI (11 players). Only available to the captains of Team A or Team B. Match status must be `scheduled`.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/lineup` |
+| **Access** | 🔴 Protected *(Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `players` | `array` | ✅ Yes | Array containing exactly 11 player objects |
+
+**Lineup Player Object**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `player_id` | `number` | No | Member profile ID (if registered, must be an active squad member) |
+| `guest_name` | `string` | No | Display name (if unregistered guest player) |
+| `batting_order` | `number` | ✅ Yes | Order rank index between 1 and 11 (must be unique) |
+
+*Note: Either `player_id` or `guest_name` must be set, but not both.*
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/1/lineup \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "players": [
+      { "player_id": 1, "batting_order": 1 },
+      { "player_id": 3, "batting_order": 2 },
+      { "guest_name": "Hamza (Guest)", "batting_order": 3 },
+      { "player_id": 4, "batting_order": 4 },
+      { "player_id": 5, "batting_order": 5 },
+      { "player_id": 6, "batting_order": 6 },
+      { "player_id": 7, "batting_order": 7 },
+      { "player_id": 8, "batting_order": 8 },
+      { "player_id": 9, "batting_order": 9 },
+      { "player_id": 10, "batting_order": 10 },
+      { "player_id": 11, "batting_order": 11 }
+    ]
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "data": [
+    {
+      "id": 1,
+      "match_id": 1,
+      "team_id": 1,
+      "player_id": 1,
+      "guest_name": null,
+      "batting_order": 1
+    }
+  ],
+  "message": "Lineup declared successfully"
+}
+```
+
+---
+
+### #49 · GET `/sports/cricket/matches/:id/lineup`
+
+Retrieves both teams' declared lineups.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/lineup` |
+| **Access** | 🟢 Public |
+| **Status** | ✅ Live |
+
+**cURL Example**
+
+```bash
+curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/lineup
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "team_a": {
+      "lineup_set": true,
+      "players": [
+        {
+          "id": 1,
+          "batting_order": 1,
+          "player_id": 1,
+          "guest_name": null,
+          "name": "Ahmad",
+          "avatar_url": "https://xyz.supabase.co/storage/v1/object/public/pabaini-media/profiles/1.png"
+        }
+      ]
+    },
+    "team_b": {
+      "lineup_set": false,
+      "players": []
+    }
+  }
+}
+```
+
+---
+
+## 8. Sports Module — Phase 3 (Simple Scoring Mode) ✅ Implemented
+
+These endpoints allow team captains to submit and edit match result scorecards, calculating career statistics updates in background transactions.
+
+---
+
+### #50 · POST `/sports/cricket/matches/:id/result`
+
+Submits the final scorecard result. The match status becomes `'completed'` and career profile statistics are updated dynamically.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/result` |
+| **Access** | 🔴 Protected *(Team A or Team B Captain only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body (`SubmitResultDto`)**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `winner_team_id` | `number` | ✅ Yes | ID of the winning team |
+| `man_of_match_id` | `number` | No | Player profile ID of the Man of the Match |
+| `team_a_score` | `string` | ✅ Yes | Team A final score, e.g. `"152/5 (20)"` |
+| `team_b_score` | `string` | ✅ Yes | Team B final score, e.g. `"153/3 (19.2)"` |
+| `player_stats` | `array` | ✅ Yes | Array of `PlayerStatDto` player statistics |
+
+**PlayerStatDto Object**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `player_id` | `number` | No | Registered player profile ID (required if not guest) |
+| `guest_name` | `string` | No | Guest player name (required if not registered) |
+| `team_id` | `number` | ✅ Yes | Team ID the player belongs to |
+| `runs` | `number` | ✅ Yes | Batting runs scored (min 0) |
+| `balls_faced` | `number` | ✅ Yes | Batting balls faced (min 0) |
+| `fours` | `number` | ✅ Yes | Batting fours hit (min 0) |
+| `sixes` | `number` | ✅ Yes | Batting sixes hit (min 0) |
+| `how_out` | `string` | No | Dismissal type (`'bowled'`, `'caught'`, `'run_out'`, `'lbw'`, `'stumped'`, `'hit_wicket'`, `'retired'`) |
+| `is_not_out` | `boolean` | ✅ Yes | Batsman status (not out) |
+| `overs_bowled` | `number` | ✅ Yes | Bowling overs bowled, e.g. `3.4` (min 0) |
+| `runs_given` | `number` | ✅ Yes | Bowling runs conceded (min 0) |
+| `wickets` | `number` | ✅ Yes | Bowling wickets taken (min 0) |
+| `wides` | `number` | ✅ Yes | Bowling wides conceded (min 0) |
+| `no_balls` | `number` | ✅ Yes | Bowling no-balls conceded (min 0) |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/1/result \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "winner_team_id": 1,
+    "man_of_match_id": 2,
+    "team_a_score": "120/4 (20)",
+    "team_b_score": "121/2 (18.4)",
+    "player_stats": [
+      {
+        "player_id": 2,
+        "team_id": 1,
+        "runs": 45,
+        "balls_faced": 30,
+        "fours": 5,
+        "sixes": 1,
+        "how_out": "caught",
+        "is_not_out": false,
+        "overs_bowled": 3.0,
+        "runs_given": 18,
+        "wickets": 2,
+        "wides": 1,
+        "no_balls": 0
+      }
+    ]
+  }'
+```
+
+---
+
+### #51 · PATCH `/sports/cricket/matches/:id/result`
+
+Edits a submitted match result. Allowed only within 24 hours of result submission.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/result` |
+| **Access** | 🔴 Protected *(Team A or Team B Captain only)* |
+| **Status** | ✅ Live |
+
+**Request Body (`EditResultDto`)**
+
+*All fields are optional for partial updates. If `player_stats` is provided, all old stats for the match are replaced and aggregates recalculated.*
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/result \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "team_a_score": "122/4 (20)"
+  }'
+```
+
+---
+
+## 9. Sports Module — Phase 3 (Live Scoring & Leaderboard) 🗓 Roadmap
+
+These endpoints are planned for future Phase 3 development and are not yet implemented.
+
+---
+
+### #52 · GET `/sports/cricket/leaderboard`
+
+Returns real-time standings and stats leaders.
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/v1/sports/cricket/leaderboard` |
 | **Access** | 🟢 Public |
-| **Status** | 🗓 Planned — Phase 3 |
+| **Status** | 🗓 Planned |
 
 ---
 
-### #45 · GET `/sports/cricket/stats/mvp`
+### #53 · GET `/sports/cricket/stats/mvp`
 
 Returns top players sorted by dynamically calculated MVP rating indexes.
 
@@ -1985,49 +2452,6 @@ Returns top players sorted by dynamically calculated MVP rating indexes.
 | **Method** | `GET` |
 | **Path** | `/api/v1/sports/cricket/stats/mvp` |
 | **Access** | 🟢 Public |
-| **Status** | 🗓 Planned — Phase 3 |
-
----
-
-## 8. User Profile Design Architecture
-
-The mobile frontend implements a unified, high-performance, and resilient screen layout for viewing any resident's profile (including self, which supports editing and account sign-out). Below is the component layout and data flow mapping:
-
-```mermaid
-graph TD
-    User([User App Interface]) -->|Select / Tap | ProfileRoute[profile/[id].tsx Screen]
-    ProfileRoute -->|Mounts| UserProfileView[UserProfileView Component]
-    
-    UserProfileView -->|Check isOwnProfile| CacheCheck{Is own profile?}
-    CacheCheck -->|Yes| LoadCache[Fetch Cached Auth & Sports Store Data]
-    LoadCache -->|Instant Render| RenderContent[Render ScrollView Content]
-    
-    CacheCheck -->|No| SkeletonState[Render ProfileSkeleton Shimmer]
-    
-    UserProfileView -->|API Fetch on mount| FetchAPI[GET /api/v1/users/:id/profile]
-    FetchAPI -->|Success| ReconcileData[Reconcile/Merge Fresh Profile Data]
-    FetchAPI -->|404 Error| Error404[Render Profile Not Found Screen]
-    FetchAPI -->|Network Error| ErrorNet[Render Load Failed Retry Screen]
-    
-    ReconcileData -->|Update State| RenderContent
-    
-    RenderContent -->|Delegates User Header| GenSection[GeneralInfoSection Component]
-    RenderContent -->|Delegates Sports Section| CricketSection[CricketSection Component]
-    
-    GenSection -->|Is Own Profile & Edit Mode| EditForm[Inline Editable Fields + Save/Cancel]
-    GenSection -->|Normal View| QuietHeader[Quiet Centered Avatar & Secondary Metadata]
-    
-    CricketSection -->|Pill Toggles| StatTierToggle[Competitive / Casual Toggle]
-    StatTierToggle -->|Toggle State| QuietStatsGrid[Classic Stats Grid]
-    CricketSection -->|Iterate Memberships| CurrentPastTeams[Current & Past TeamChips]
-    CurrentPastTeams -->|Tap TeamChip| TeamDetail[Route to sports/cricket/teams/[id]]
-```
-
-### Architectural Key Elements:
-1. **Zero-Flash Self Rendering**: When viewing your own profile, `UserProfileView` initializes its state from Zustand local caches (`useAuth` and `useSportsStore`) instantly on mount. This displays your profile card and data immediately without loading shimmers, fetching in the background to silently reconcile any fresh database records.
-2. **Resilience to Partial Failures**: Sibling sports sub-scopes (e.g. `cricket`) are isolated. If a player profile or statistics lookup throws an error, the backend logs a warning and returns `cricket: null`, allowing the core user profile to render successfully.
-3. **Decoupled Styling**: Unlike the bold sports onboarding cards, the profile screen adopts a clean, centered typography layout prioritizing scannability, utilizing `useTheme()` spacing, border, and secondary color tags.
-
----
+| **Status** | 🗓 Planned |
 
 *© 2026 Pabaini Village Portal. Built with NestJS · PostgreSQL · Supabase · Firebase.*

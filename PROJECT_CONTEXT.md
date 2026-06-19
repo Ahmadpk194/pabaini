@@ -175,6 +175,13 @@ pabaini-backend/
 │   │   │   └── cricket/       # Cricket sub-scope
 │   │   │       ├── entities/  # CricketPlayerProfile entity
 │   │   │       ├── enums/     # CricketRole, BattingHand, BowlingArm, BowlingType
+│   │   │       ├── matches/   # Matches request, lineups, and series coordination
+│   │   │       │   ├── dto/   # DTOs: request-match.dto.ts, declare-lineup.dto.ts, etc.
+│   │   │       │   ├── entities/ # Entities: cricket-match.entity.ts, cricket-series.entity.ts, etc.
+│   │   │       │   ├── enums/ # enums: matches.enums.ts
+│   │   │       │   ├── matches.controller.ts
+│   │   │       │   ├── matches.module.ts
+│   │   │       │   └── matches.service.ts
 │   │   │       ├── players/   # Player profile signup controllers/services
 │   │   │       ├── stats/     # Player stats (competitive/casual matches)
 │   │   │       └── teams/     # Team squads, invites, requests, captaincy
@@ -362,6 +369,125 @@ pabaini-mobile/
 *   **Indexes**:
     *   Unique composite constraint: `Unique(['team_id', 'player_id'])`.
 
+### 8. `cricket_series` Table
+*   **Purpose**: Manages multi-match cricket series played between two teams.
+*   **Columns**:
+    *   `id` (`integer`, Primary Key, Autoincrement): Core series identifier.
+    *   `title` (`varchar(150)`, Required): Display name of the series.
+    *   `team_a_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `team_b_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `total_matches` (`integer`, Required): Maximum planned match count.
+    *   `team_a_wins` (`integer`, Default: `0`): Wins tally for Team A.
+    *   `team_b_wins` (`integer`, Default: `0`): Wins tally for Team B.
+    *   `status` (`enum`, Default: `'ongoing'`): Series status (`'ongoing'`, `'completed'`).
+    *   `created_by` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `created_at` (`timestamp`): Automatically populated creation date.
+    *   `updated_at` (`timestamp`): Automatically updated modification date.
+*   **Relationships**:
+    *   Many-to-One with `cricket_teams` (as `team_a` and `team_b`).
+    *   Many-to-One with `cricket_player_profiles` (as series creator).
+    *   One-to-Many with `cricket_matches` (mapped by `series_id`).
+
+### 9. `cricket_matches` Table
+*   **Purpose**: Stores scheduled and completed match entries.
+*   **Columns**:
+    *   `id` (`integer`, Primary Key, Autoincrement): Core match identifier.
+    *   `series_id` (`integer`, Nullable): ForeignKey referencing `cricket_series(id)` ON DELETE SET NULL.
+    *   `tournament_id` (`integer`, Nullable): Placeholder for tournament associations.
+    *   `team_a_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `team_b_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `requested_by` (`integer`, Required): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE CASCADE.
+    *   `overs` (`integer`, Required): Total overs count per innings (minimum 1).
+    *   `venue` (`varchar(200)`, Nullable): Match venue name.
+    *   `scheduled_at` (`timestamp`, Nullable): ISO-8601 scheduled datetime.
+    *   `scoring_mode` (`enum`, Default: `'simple'`): Scoring style (`'simple'`, `'live'`).
+    *   `scorer_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `status` (`enum`, Default: `'pending_request'`): Match status (`'pending_request'`, `'scheduled'`, `'live'`, `'completed'`, `'cancelled'`, `'no_result'`).
+    *   `winner_team_id` (`integer`, Nullable): ForeignKey referencing `cricket_teams(id)` ON DELETE SET NULL.
+    *   `man_of_match_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `team_a_score` (`varchar(20)`, Nullable): Formatted scoreboard runs/wickets for Team A (e.g. `"145/6"`).
+    *   `team_b_score` (`varchar(20)`, Nullable): Formatted scoreboard runs/wickets for Team B (e.g. `"146/3"`).
+    *   `team_a_lineup_set` (`boolean`, Default: `false`): Flag identifying if Team A lineup was declared.
+    *   `team_b_lineup_set` (`boolean`, Default: `false`): Flag identifying if Team B lineup was declared.
+    *   `created_at` (`timestamp`): Automatically populated creation date.
+    *   `updated_at` (`timestamp`): Automatically updated modification date.
+*   **Constraints**:
+    *   `chk_match_context`: Verifies that `series_id` and `tournament_id` cannot both be set at the same time (`CHECK (series_id IS NULL OR tournament_id IS NULL)`).
+*   **Relationships**:
+    *   Many-to-One with `cricket_series` (mapped by `series_id`).
+    *   Many-to-One with `cricket_teams` (as `team_a`, `team_b`, and `winner_team`).
+    *   Many-to-One with `cricket_player_profiles` (as requester, scorer, and MVP).
+    *   One-to-Many with `cricket_match_players` (as playing lineup).
+    *   One-to-Many with `cricket_player_match_stats` (as player scorecard entries).
+    *   One-to-Many with `cricket_ball_events` (as ball-by-ball log).
+
+### 10. `cricket_match_players` Table
+*   **Purpose**: Roster of declared playing XI lineups for scheduled matches.
+*   **Columns**:
+    *   `id` (`integer`, Primary Key, Autoincrement): Lineup player identifier.
+    *   `match_id` (`integer`, Required): ForeignKey referencing `cricket_matches(id)` ON DELETE CASCADE.
+    *   `team_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `player_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL for registered players.
+    *   `guest_name` (`varchar(100)`, Nullable): Name of guest player (unregistered).
+    *   `batting_order` (`integer`, Nullable): Integer index between 1 and 11 indicating batting order.
+    *   `created_at` (`timestamp`): Populated creation date.
+*   **Constraints**:
+    *   `chk_player_or_guest`: Verifies either `player_id` is defined OR `guest_name` is set, but never both null (`CHECK (player_id IS NOT NULL OR guest_name IS NOT NULL)`).
+*   **Relationships**:
+    *   Many-to-One with `cricket_matches` (mapped by `match_id`).
+    *   Many-to-One with `cricket_teams` (mapped by `team_id`).
+    *   Many-to-One with `cricket_player_profiles` (mapped by `player_id`).
+
+### 11. `cricket_player_match_stats` Table
+*   **Purpose**: Performance scorecards/statistics per player per match.
+*   **Columns**:
+    *   `id` (`integer`, Primary Key, Autoincrement): Performance stats entry identifier.
+    *   `match_id` (`integer`, Required): ForeignKey referencing `cricket_matches(id)` ON DELETE CASCADE.
+    *   `team_id` (`integer`, Required): ForeignKey referencing `cricket_teams(id)` ON DELETE CASCADE.
+    *   `player_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `guest_name` (`varchar(100)`, Nullable): Name of guest player (if unregistered).
+    *   `runs` (`integer`, Default: `0`): Batting runs scored.
+    *   `balls_faced` (`integer`, Default: `0`): Batting balls faced.
+    *   `fours` (`integer`, Default: `0`): Batting fours hit.
+    *   `sixes` (`integer`, Default: `0`): Batting sixes hit.
+    *   `how_out` (`varchar(50)`, Nullable): Mode of dismissal (`'bowled'`, `'caught'`, etc.).
+    *   `is_not_out` (`boolean`, Default: `false`): Flag for unbeaten innings.
+    *   `overs_bowled` (`decimal(4,1)`, Default: `0`): Bowling overs bowled.
+    *   `runs_given` (`integer`, Default: `0`): Bowling runs conceded.
+    *   `wickets` (`integer`, Default: `0`): Bowling wickets taken.
+    *   `wides` (`integer`, Default: `0`): Bowling wide balls delivered.
+    *   `no_balls` (`integer`, Default: `0`): Bowling no-balls delivered.
+    *   `created_at` (`timestamp`): Populated creation date.
+    *   `updated_at` (`timestamp`): Last modified date.
+*   **Relationships**:
+    *   Many-to-One with `cricket_matches` (mapped by `match_id`).
+    *   Many-to-One with `cricket_teams` (mapped by `team_id`).
+    *   Many-to-One with `cricket_player_profiles` (mapped by `player_id`).
+
+### 12. `cricket_ball_events` Table
+*   **Purpose**: Ball-by-ball record of matches for live scoring and detailed stats.
+*   **Columns**:
+    *   `id` (`integer`, Primary Key, Autoincrement): Ball event identifier.
+    *   `match_id` (`integer`, Required): ForeignKey referencing `cricket_matches(id)` ON DELETE CASCADE.
+    *   `innings` (`integer`, Required): Innings number (e.g. `1` or `2`).
+    *   `over_number` (`integer`, Required): Over index (0-indexed or 1-indexed).
+    *   `ball_number` (`integer`, Required): Ball index in the current over.
+    *   `batsman_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `bowler_id` (`integer`, Nullable): ForeignKey referencing `cricket_player_profiles(id)` ON DELETE SET NULL.
+    *   `batsman_guest_name` (`varchar(100)`, Nullable): Guest batsman name if unregistered.
+    *   `bowler_guest_name` (`varchar(100)`, Nullable): Guest bowler name if unregistered.
+    *   `runs` (`integer`, Default: `0`): Runs off the bat.
+    *   `extra_type` (`varchar(20)`, Nullable): Special delivery types (`'wide'`, `'no_ball'`, etc.).
+    *   `extra_runs` (`integer`, Default: `0`): Runs scored off extra deliveries.
+    *   `is_wicket` (`boolean`, Default: `false`): Wicket flag.
+    *   `wicket_type` (`varchar(50)`, Nullable): Wicket classification mode.
+    *   `created_at` (`timestamp`): Automatically populated creation date.
+*   **Relationships**:
+    *   Many-to-One with `cricket_matches` (mapped by `match_id`).
+    *   Many-to-One with `cricket_player_profiles` (as batsman and bowler).
+*   **Indexes**:
+    *   Unique composite index `idx_ball_events_unique`: `Unique(['match_id', 'innings', 'over_number', 'ball_number'])` to ensure uniqueness of ball event keys.
+
 ---
 
 ## 6. BACKEND MODULES
@@ -416,6 +542,13 @@ pabaini-mobile/
     ├── cricket/
     │   ├── entities/             # Player profile schemas
     │   ├── enums/                # Batting/bowling hands and role enums
+    │   ├── matches/              # Matches request, lineups, and series coordination
+    │   │   ├── dto/              # DTOs: request-match.dto.ts, declare-lineup.dto.ts, etc.
+    │   │   ├── entities/         # Entities: cricket-match.entity.ts, cricket-series.entity.ts, etc.
+    │   │   ├── enums/            # enums: matches.enums.ts
+    │   │   ├── matches.controller.ts
+    │   │   ├── matches.module.ts
+    │   │   └── matches.service.ts
     │   ├── players/              # Profile signups, list queries
     │   ├── stats/                # Matches count, economy metrics
     │   └── teams/                # Squad invites, request loops, transfers
@@ -427,6 +560,17 @@ pabaini-mobile/
         *   Creating a team executes a transaction that creates the team record and inserts the captain as an active member.
         *   Active members cannot request to join a team again.
         *   Only captains can invite players or transfer captaincy.
+    *   **Captain-to-Captain Challenges**: A match request represents a challenge from one team's captain to another. The requester must be the captain of `team_a` and the opponent must be `team_b`. Rejects challenges if either team is not active or if a captain is challenging their own team.
+    *   **State Machine Transitions**: Matches transition through standard statuses:
+        *   Challenging starts a `pending_request` status.
+        *   Challenged captain can `/accept` (changes status to `scheduled`) or `/decline` (status changes to `cancelled`).
+        *   Challenging captain can `/cancel` a pending match request.
+        *   Scheduled matches can be cancelled by either captain.
+        *   Edit match details (overs, schedule, venue) is allowed for the challenger while status is still `pending_request`.
+    *   **Playing XI Lineup Declarations**: Captains must declare a roster of exactly 11 players from their registered squad members for `scheduled` matches. The lineup can mix registered squad members (linked by `player_id`) and guest players (represented by a string `guest_name`). Batting orders must be unique rankings between 1 and 11.
+    *   **Match Results (Simple Scoring Mode)**: Captains can submit final scores, winner, MoM, and detailed batting/bowling statistics for the Playing XI roster. Submitting transitions the status to `completed` and dynamically aggregates player career statistics. Updates/edits are allowed within a strict 24-hour window from initial submission, after which results lock permanently.
+    *   **Safe Notification Triggers**: Challenging, accepting, declining, cancelling, and submitting results for matches dispatch push notification events to respective team captains and players. Decoupled in-app alert operations are handled inside a safe `try/catch` wrapper to ensure reliability.
+
 
 ### Notifications Module
 *   **Purpose**: Centralized inbox database logging and push notifications.
@@ -710,6 +854,193 @@ graph TD
     { "success": true, "status": 200, "data": { "id": 5, "status": "active" } }
     ```
 
+#### POST `/sports/cricket/matches/request`
+*   **Route**: `/api/v1/sports/cricket/matches/request`
+*   **Auth Required**: 🔐 Yes (Captain only)
+*   **Body**:
+    ```json
+    {
+      "opponent_team_id": 2,
+      "overs": 20,
+      "scoring_mode": "simple",
+      "venue": "Pabaini Cricket Ground",
+      "scheduled_at": "2026-06-25T17:00:00.000Z"
+    }
+    ```
+*   **Business Logic**: Creates a match request challenge. Status is initialized as `pending_request`.
+*   **Success Response (`201 Created`)**:
+    ```json
+    {
+      "success": true,
+      "status": 201,
+      "data": {
+        "id": 1,
+        "team_a_id": 1,
+        "team_b_id": 2,
+        "requested_by": 1,
+        "status": "pending_request"
+      }
+    }
+    ```
+
+#### GET `/sports/cricket/matches`
+*   **Route**: `/api/v1/sports/cricket/matches`
+*   **Auth Required**: 🟢 No (Public)
+*   **Query Params**: `status` (optional), `team_id` (optional), `page` (default 1), `limit` (default 20)
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": [{ "id": 1, "status": "pending_request" }]
+    }
+    ```
+
+#### GET `/sports/cricket/matches/:id`
+*   **Route**: `/api/v1/sports/cricket/matches/:id`
+*   **Auth Required**: 🟢 No (Public)
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "id": 1, "status": "pending_request", "team_a": {}, "team_b": {} }
+    }
+    ```
+
+#### PATCH `/sports/cricket/matches/:id/accept`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/accept`
+*   **Auth Required**: 🔐 Yes (Team B Captain only)
+*   **Business Logic**: Accepts a match challenge. Status transitions to `scheduled`.
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "id": 1, "status": "scheduled" }
+    }
+    ```
+
+#### PATCH `/sports/cricket/matches/:id/decline`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/decline`
+*   **Auth Required**: 🔐 Yes (Team B Captain only)
+*   **Business Logic**: Declines a match challenge. Status transitions to `cancelled`.
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "message": "Match request declined" }
+    }
+    ```
+
+#### PATCH `/sports/cricket/matches/:id`
+*   **Route**: `/api/v1/sports/cricket/matches/:id`
+*   **Auth Required**: 🔐 Yes (Requesting Captain only)
+*   **Body**:
+    ```json
+    {
+      "overs": 15,
+      "venue": "New Ground"
+    }
+    ```
+*   **Business Logic**: Edits the details of a pending match request.
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "id": 1, "overs": 15, "venue": "New Ground" }
+    }
+    ```
+
+#### PATCH `/sports/cricket/matches/:id/cancel`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/cancel`
+*   **Auth Required**: 🔐 Yes (Captain only)
+*   **Business Logic**: Cancels the match challenge or scheduled match.
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "id": 1, "status": "cancelled" }
+    }
+    ```
+
+#### POST `/sports/cricket/matches/:id/lineup`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/lineup`
+*   **Auth Required**: 🔐 Yes (Captain only)
+*   **Body**:
+    ```json
+    {
+      "players": [
+        { "player_id": 1, "batting_order": 1 },
+        { "guest_name": "Asif (Guest)", "batting_order": 2 },
+        { "player_id": 3, "batting_order": 3 }
+      ]
+    }
+    ```
+*   **Business Logic**: Declares a lineup of exactly 11 players for a scheduled match.
+*   **Success Response (`201 Created`)**:
+    ```json
+    {
+      "success": true,
+      "status": 201,
+      "data": [{ "id": 1, "match_id": 1, "batting_order": 1 }]
+    }
+    ```
+
+#### GET `/sports/cricket/matches/:id/lineup`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/lineup`
+*   **Auth Required**: 🟢 No (Public)
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": { "team_a": { "lineup_set": true, "players": [] }, "team_b": { "lineup_set": false, "players": [] } }
+    }
+    ```
+
+#### POST `/sports/cricket/matches/:id/result`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/result`
+*   **Auth Required**: 🔐 Yes (Team A or Team B Captain only)
+*   **Body**:
+    ```json
+    {
+      "winner_team_id": 1,
+      "man_of_match_id": 2,
+      "team_a_score": "120/4 (20)",
+      "team_b_score": "121/2 (18.4)",
+      "player_stats": [
+        {
+          "player_id": 2,
+          "team_id": 1,
+          "runs": 45,
+          "balls_faced": 30,
+          "fours": 5,
+          "sixes": 1,
+          "how_out": "caught",
+          "is_not_out": false,
+          "overs_bowled": 3.0,
+          "runs_given": 18,
+          "wickets": 2,
+          "wides": 1,
+          "no_balls": 0
+        }
+      ]
+    }
+    ```
+*   **Business Logic**: Submits final match result scorecard. Transitions status to `completed`, records player match stats, updates audit timestamps (`result_submitted_at` and `result_locked_at`), and recalculates career statistics for all registered players in the stats payload.
+*   **Success Response (`200 OK`)**: Returns the complete match payload including populated `player_stats` list and a computed virtual flag `is_result_editable` (`true`).
+
+#### PATCH `/sports/cricket/matches/:id/result`
+*   **Route**: `/api/v1/sports/cricket/matches/:id/result`
+*   **Auth Required**: 🔐 Yes (Team A or Team B Captain only)
+*   **Body**: Same structure as `SubmitResultDto` but all fields are optional (for partial scorecard edits).
+*   **Business Logic**: Modifies the scorecard results. Edits are allowed only within 24 hours of result submission. Overwriting player stats triggers complete recalculation of career stats for both previously recorded players and newly added players.
+*   **Success Response (`200 OK`)**: Returns the updated match payload.
+
 ---
 
 ### Notifications Module
@@ -947,28 +1278,27 @@ flowchart TD
 ### Completed Features
 *   **Authentication**: Firebase ID token validation and PG user profile creation.
 *   **Notice Board**: Announcements feed, category filters, toggle likes, and image uploads.
-*   **Sports Hub (Cricket)**: Player registrations, teams management, and squad invitations.
+*   **Sports Hub (Cricket)**: Player registrations, teams management, squad invitations, matches scheduling, Playing XI lineup declarations, and Simple Scoring Mode scorecard results submission with dynamic career statistics aggregation.
 *   **Notifications**: Centralized notifications feed and unread badge polling.
 
 ### Partially Complete Features
 *   **Push Notifications**: FCM push notification delivery is implemented in the backend, but client-side background/foreground listeners are not yet fully wired.
 
 ### Planned Features
-*   **Matches & Standings**: Tournament scheduling, scoring systems, standings, and leaders ranking metrics (Phase 3).
+*   **Matches & Standings**: Live ball-by-ball scoring (Stage 3), standings leaderboards, and MVP ranking metrics.
 *   **Donors Registry**: Blood donors registry search list.
 
 ---
 
 ## 17. RECENT DEVELOPMENT HISTORY
 
-*   **Recently Implemented**: Sports Phase 2 squad organization (squad management, captaincy transfers, invites, and requests) and unread notification badge count polling.
-*   **Next Priorities**: Match scheduling, tournament scorecards, MVP standings, and the blood donors registry database structure.
+*   **Recently Implemented**: Match scheduling and Playing XI lineup declarations (Stage 1), Simple Scoring result submissions, and dynamic player career stats aggregation with a 24-hour editing window lock (Stage 2).
+*   **Next Priorities**: Live ball-by-ball scoring (Stage 3), standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
 
 ---
 
 ## 18. KNOWN TECHNICAL DEBT
 
-*   **Mock Player Stats**: The stats engine currently returns empty mock statistics; real aggregation queries against match tables must be implemented once the matches module is built.
 *   **FCM Token Storage**: Firebase tokens are stored directly on the `User` record as a string array; scaling this may cause locking issues. Moving tokens to a separate `user_device_tokens` table is recommended for future production use.
 *   **Client FCM Observers**: Needs foreground and background push event handlers inside the client mobile app.
 
@@ -984,7 +1314,7 @@ flowchart TD
 
 ## 20. FUTURE ROADMAP
 
-*   **Short-term Goals**: Implement match scheduling, score recording, and tournament standings interfaces.
+*   **Short-term Goals**: Implement live ball-by-ball scoring, tournament standings, and leaders leaderboards.
 *   **Medium-term Goals**: Wire up background push notifications and launch the blood donor matching network.
 *   **Long-term Goals**: Introduce tournament brackets, match history graphs, and support for additional sports (like football and volleyball).
 

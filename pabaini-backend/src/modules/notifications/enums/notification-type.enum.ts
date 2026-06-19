@@ -7,4 +7,9 @@ export enum NotificationType {
   TEAM_INVITE_DECLINED = 'team_invite_declined',
   TEAM_MEMBER_REMOVED = 'team_member_removed',
   TEAM_CAPTAINCY_TRANSFERRED = 'team_captaincy_transferred',
+  MATCH_REQUEST = 'match_request',
+  MATCH_ACCEPTED = 'match_accepted',
+  MATCH_DECLINED = 'match_declined',
+  MATCH_CANCELLED = 'match_cancelled',
+  MATCH_RESULT_SUBMITTED = 'match_result_submitted',
 }

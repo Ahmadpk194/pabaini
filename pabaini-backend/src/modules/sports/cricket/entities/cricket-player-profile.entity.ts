@@ -49,6 +49,36 @@ export class CricketPlayerProfile {
   @Column({ default: true })
   is_active!: boolean;
 
+  @Column({ type: 'int', default: 0, name: 'total_matches' })
+  total_matches!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_runs' })
+  total_runs!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_balls_faced' })
+  total_balls_faced!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_fours' })
+  total_fours!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_sixes' })
+  total_sixes!: number;
+
+  @Column({ type: 'int', default: 0, name: 'highest_score' })
+  highest_score!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_wickets' })
+  total_wickets!: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 1, default: 0, name: 'total_overs_bowled', transformer: {
+    to: (value: number) => value,
+    from: (value: string) => parseFloat(value),
+  } })
+  total_overs_bowled!: number;
+
+  @Column({ type: 'int', default: 0, name: 'total_runs_given' })
+  total_runs_given!: number;
+
   @CreateDateColumn()
   created_at!: Date;
 
