@@ -11,7 +11,7 @@
       "apiUrl": "https://pabaini-production.up.railway.app/api/v1",
       "router": {},
       "eas": {
-        "projectId": "cc0ca69f-3a46-43b0-b8a2-fe9b7db56640"
+        "projectId": "4b1061bd-79b3-46bd-82c2-7a815df8e9bd"
       }
     },
     "ios": {
@@ -48,6 +48,7 @@
       ],
       "@react-native-google-signin/google-signin",
       "@react-native-firebase/messaging"
-    ]
+    ],
+    "owner": "ahmadpk194"
   }
 }
