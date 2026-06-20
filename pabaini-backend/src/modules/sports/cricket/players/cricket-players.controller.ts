@@ -48,12 +48,13 @@ export class CricketPlayersController {
   async getAllPlayers(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('search') search?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
     const finalLimit = Math.min(limitNum, 50);
 
-    const result = await this.cricketPlayersService.getAllPlayers(pageNum, finalLimit);
+    const result = await this.cricketPlayersService.getAllPlayers(pageNum, finalLimit, search);
     return { data: result, message: 'Cricket players list retrieved successfully' };
   }
 }

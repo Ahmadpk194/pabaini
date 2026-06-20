@@ -28,7 +28,7 @@ import { StartSecondInningsDto } from './dto/start-second-innings.dto';
 
 @Controller('matches')
 export class MatchesController {
-  constructor(private readonly matchesService: MatchesService) {}
+  constructor(private readonly matchesService: MatchesService) { }
 
   @Post('request')
   @UseGuards(FirebaseAuthGuard, DbUserGuard)
@@ -81,7 +81,7 @@ export class MatchesController {
   @Get()
   async findAllMatches(@Query() query: QueryMatchesDto) {
     const result = await this.matchesService.findAllMatches(query);
-    return { data: result.data, meta: result.meta, message: 'Matches retrieved successfully' };
+    return { data: result, message: 'Matches retrieved successfully' };
   }
 
   @Get(':id')

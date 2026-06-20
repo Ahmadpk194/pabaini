@@ -92,6 +92,10 @@ export class SubmitResultDto {
   man_of_match_id?: number;
 
   @IsString()
+  @IsOptional()
+  man_of_match_guest_name?: string;
+
+  @IsString()
   @IsNotEmpty()
   team_a_score!: string;
 

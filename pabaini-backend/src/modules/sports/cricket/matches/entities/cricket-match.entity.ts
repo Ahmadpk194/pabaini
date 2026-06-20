@@ -95,6 +95,9 @@ export class CricketMatch {
   @JoinColumn({ name: 'man_of_match_id' })
   man_of_match?: CricketPlayerProfile;
 
+  @Column({ length: 100, nullable: true, name: 'man_of_match_guest_name' })
+  man_of_match_guest_name?: string;
+
   @Column({ length: 20, nullable: true })
   team_a_score?: string;
 

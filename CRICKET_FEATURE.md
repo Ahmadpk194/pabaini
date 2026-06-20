@@ -92,6 +92,19 @@ The following fields exist on the player profile entity (`CricketPlayerProfile`)
 1.  **Bowling Arm & Type Consistency**: If a player's `bowling_arm` is set to `none`, then their `bowling_type` must also be set to `none`. Any attempt to violate this consistency rule throws a `BadRequestException` ("If bowling arm is none, bowling type must also be none"). This is enforced during profile creation and profile updates.
 2.  **Unique Profile**: A user can only have one cricket player profile. Creating a duplicate profile throws a `ConflictException` ("Cricket player profile already exists").
 
+### Searchable Player Directory
+The mobile client provides a dedicated discover page (`players/index.tsx`) where users can search all registered players in the village. It features:
+*   **Sticky Name Search Bar**: Filters players dynamically by name on the backend.
+*   **Skeletons & Infinite Scroll**: Paginated list fetching 10 players at a time with smooth infinite scroll and placeholder skeleton loading states.
+*   **Pull-to-refresh**: Enables dragging down the player feed to refresh registered profiles.
+*   **See All CTA**: Accessible from the Sports Tab dashboard as a redirect next to the "Other Registered Players" section.
+
+### Real-Time Career Statistics Engine
+Rather than simple static mock figures, the backend aggregates career metrics directly from the match player stats table.
+*   **Tier Segregation**: Career stats are divided into **Competitive** (associated with a tournament series) and **Casual** (standard friendly matches) tiers.
+*   **Metrics Aggregated**: Runs, matches, innings, highest score, batting average, strike rate, boundaries (fours/sixes), wickets, economy, and best bowling figures.
+*   **Recalculation Trigger**: Full recalculations are run inside a transaction whenever a scorecard is submitted or edited, preventing drift and race conditions.
+
 ---
 
 ## 4. Teams
@@ -202,7 +215,7 @@ Simple Scoring Mode is a retroactive, post-match data entry tool. It is used to 
     *   The match must be in `scheduled` status.
     *   The winner team ID must match one of the participating team IDs.
     *   All player stats submitted must belong to players declared in the Playing XI.
-    *   The Man of the Match must be a registered player in the lineup.
+    *   The Man of the Match must be a player in the match lineup (either a registered player by ID or a guest player by name).
 *   **24-Hour Edit Window**:
     *   Upon result submission, the backend records `result_submitted_at = now()` and sets a lock boundary `result_locked_at = now() + 24 hours`.
     *   Captains can edit the results (`MatchesService.editResult`) as long as the current time is before `result_locked_at`.
@@ -268,12 +281,12 @@ For every delivery, the scorer posts runs, extra types, runs from extras, and wi
 An over is complete when `current_ball` reaches 6. 
 *   The system increments `current_over`, resets `current_ball` to 0, swaps striker/non-striker, and clears the bowler fields (`current_bowler_id = null`).
 *   The scorer must select a bowler (`PATCH /matches/:id/bowler`) before entering the next ball.
-*   **Consecutive Over Restriction**: A bowler cannot bowl two consecutive overs. The system enforces this by checking the new bowler's identity against the bowler ID recorded in the previous over's final ball event, throwing a `BadRequestException` ("Bowler cannot bowl two consecutive overs") if they match.
+*   **Consecutive Over Restriction**: A bowler cannot bowl two consecutive overs. The system enforces this by checking the new bowler's identity against the bowler ID recorded in the previous over's final ball event, throwing a `BadRequestException` ("Bowler cannot bowl two consecutive overs") if they match. However, the scorer can bypass this constraint on the backend by passing `bypass_consecutive_check` flag (which prompts a confirmation dialog in the mobile UI). The endpoint is idempotent; if the requested bowler is already active, it returns success without throwing consecutive bowler errors.
 
 #### 5. Wicket Handling
 If a wicket falls (`is_wicket = true`), the scorer records the wicket type.
 *   **Striker Dismissal Simplification**: To keep scoring fast and simple, run-outs and other wickets are always assumed to dismiss the **striker**.
-*   If the innings has wickets remaining (wickets < 10), the scorer must provide a `next_batsman_id` or `next_batsman_guest_name` in the payload. The dismissed striker is replaced on the field by this next batsman.
+*   If the innings has wickets remaining (wickets < 10), the scorer must provide a `next_batsman_id` or `next_batsman_guest_name` in the payload. The dismissed striker is replaced on the field by this next batsman. The batsman picker dropdown list filters automatically to only show Playing XI players who have not been dismissed yet.
 
 #### 6. Innings Transition
 An innings transitions when 10 wickets fall or the scheduled overs are complete.
@@ -648,7 +661,7 @@ The following ledger details every constraint, business rule, and validation che
 | 40 | **Winner validation** | `MatchesService.submitResult` & `editResult` | `BadRequestException` ("Winner team must be one of the participating teams") |
 | 41 | **Playing XI lineup set check** | `MatchesService.submitResult` | `BadRequestException` ("Playing XI lineup has not been declared for this match") |
 | 42 | **Stats match squad list** | `MatchesService.submitResult` & `editResult` | `BadRequestException` ("Player [identifier] is not in the declared Playing XI lineup for team [id]") |
-| 43 | **Man of match alignment** | `MatchesService.submitResult` & `editResult` | `BadRequestException` ("Man of the match must be a registered player in the match lineup") |
+| 43 | **Man of match alignment** | `MatchesService.submitResult` & `editResult` | `BadRequestException` ("Man of the match must be a player in the match lineup") |
 | 44 | **Result Edit lock window** | `MatchesService.editResult` | `BadRequestException` ("Match results are locked and can no longer be edited") |
 | 45 | **Result Edit permissions** | `MatchesService.editResult` | `ForbiddenException` ("Only the captain of Team A or Team B can edit results") |
 | 46 | **Start Live match status** | `MatchesService.startMatch` | `BadRequestException` ("Match is not in scheduled status") |
@@ -665,7 +678,7 @@ The following ledger details every constraint, business rule, and validation che
 | 57 | **Select Bowler status** | `MatchesService.selectBowler` | `BadRequestException` ("Match is not live") |
 | 58 | **Over bowler slot empty** | `MatchesService.selectBowler` | `BadRequestException` ("A bowler is already set for the current over") |
 | 59 | **Select Bowler roster check** | `MatchesService.selectBowler` | `BadRequestException` ("Selected bowler must be in the bowling team Playing XI") |
-| 60 | **Consecutive Over bowling check** | `MatchesService.selectBowler` | `BadRequestException` ("Bowler cannot bowl two consecutive overs") |
+| 60 | **Consecutive Over bowling check** | `MatchesService.selectBowler` | `BadRequestException` ("Bowler cannot bowl two consecutive overs") (bypassed if bypass_consecutive_check is true) |
 | 61 | **Start 2nd Innings status** | `MatchesService.startSecondInnings` | `BadRequestException` ("Match is not live" or "Second innings is not active") |
 | 62 | **Start 2nd Innings state** | `MatchesService.startSecondInnings` | `BadRequestException` ("Second innings has already started") |
 | 63 | **Undo ball live status** | `MatchesService.undoLastBall` | `BadRequestException` ("Match is not live") |

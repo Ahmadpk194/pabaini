@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class SelectBowlerDto {
   @IsInt()
@@ -8,4 +8,8 @@ export class SelectBowlerDto {
   @IsString()
   @IsOptional()
   bowler_guest_name?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  bypass_consecutive_check?: boolean;
 }

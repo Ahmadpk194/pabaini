@@ -533,6 +533,11 @@ export class MatchesService {
       if (!isMomInLineup) {
         throw new BadRequestException('Man of the match must be a registered player in the match lineup');
       }
+    } else if (dto.man_of_match_guest_name) {
+      const isMomInLineup = matchPlayers.some((mp) => mp.guest_name === dto.man_of_match_guest_name);
+      if (!isMomInLineup) {
+        throw new BadRequestException('Man of the match must be a guest player in the match lineup');
+      }
     }
 
     await this.matchRepo.manager.transaction(async (manager) => {
@@ -564,7 +569,8 @@ export class MatchesService {
 
       match.status = MatchStatus.COMPLETED;
       match.winner_team_id = dto.winner_team_id;
-      match.man_of_match_id = dto.man_of_match_id || undefined;
+      match.man_of_match_id = dto.man_of_match_id || null as any;
+      match.man_of_match_guest_name = dto.man_of_match_guest_name || null as any;
       match.team_a_score = dto.team_a_score;
       match.team_b_score = dto.team_b_score;
       match.result_submitted_at = now;
@@ -682,6 +688,11 @@ export class MatchesService {
       if (!isMomInLineup) {
         throw new BadRequestException('Man of the match must be a registered player in the match lineup');
       }
+    } else if (dto.man_of_match_guest_name) {
+      const isMomInLineup = matchPlayers.some((mp) => mp.guest_name === dto.man_of_match_guest_name);
+      if (!isMomInLineup) {
+        throw new BadRequestException('Man of the match must be a guest player in the match lineup');
+      }
     }
 
     const oldStats = await this.statsRepo.find({
@@ -731,7 +742,18 @@ export class MatchesService {
       }
 
       if (dto.winner_team_id !== undefined) match.winner_team_id = dto.winner_team_id;
-      if (dto.man_of_match_id !== undefined) match.man_of_match_id = dto.man_of_match_id || undefined;
+      if (dto.man_of_match_id !== undefined) {
+        match.man_of_match_id = dto.man_of_match_id || null as any;
+        if (dto.man_of_match_id) {
+          match.man_of_match_guest_name = null as any;
+        }
+      }
+      if (dto.man_of_match_guest_name !== undefined) {
+        match.man_of_match_guest_name = dto.man_of_match_guest_name || null as any;
+        if (dto.man_of_match_guest_name) {
+          match.man_of_match_id = null as any;
+        }
+      }
       if (dto.team_a_score !== undefined) match.team_a_score = dto.team_a_score;
       if (dto.team_b_score !== undefined) match.team_b_score = dto.team_b_score;
 
@@ -931,14 +953,13 @@ export class MatchesService {
     const finalScorerId = dto.scorer_id || defaultScorerId;
 
     if (dto.scorer_id) {
-      const activeMember = await this.teamMemberRepo.findOne({
-        where: [
-          { team_id: match.team_a_id, player_id: dto.scorer_id, status: TeamMemberStatus.ACTIVE },
-          { team_id: match.team_b_id, player_id: dto.scorer_id, status: TeamMemberStatus.ACTIVE },
-        ],
+      // Verifies that the selected scorer is a registered, active player in the system.
+      // Neutral scorers (non-team members) are allowed.
+      const scorerProfile = await this.playerProfileRepo.findOne({
+        where: { id: dto.scorer_id, is_active: true },
       });
-      if (!activeMember) {
-        throw new BadRequestException('The selected scorer is not an active member of either participating team');
+      if (!scorerProfile) {
+        throw new BadRequestException('The selected scorer must be a valid, active cricket player');
       }
     }
 
@@ -993,12 +1014,12 @@ export class MatchesService {
       match.innings_1_batting_team_id = dto.batting_first_team_id;
       match.innings_2_batting_team_id = bowlingTeamId;
 
-      match.striker_id = dto.opening_striker_id || undefined;
-      match.striker_guest_name = dto.opening_striker_guest_name || undefined;
-      match.non_striker_id = dto.opening_non_striker_id || undefined;
-      match.non_striker_guest_name = dto.opening_non_striker_guest_name || undefined;
-      match.current_bowler_id = dto.opening_bowler_id || undefined;
-      match.current_bowler_guest_name = dto.opening_bowler_guest_name || undefined;
+      match.striker_id = dto.opening_striker_id || null as any;
+      match.striker_guest_name = dto.opening_striker_guest_name || null as any;
+      match.non_striker_id = dto.opening_non_striker_id || null as any;
+      match.non_striker_guest_name = dto.opening_non_striker_guest_name || null as any;
+      match.current_bowler_id = dto.opening_bowler_id || null as any;
+      match.current_bowler_guest_name = dto.opening_bowler_guest_name || null as any;
 
       await manager.save(CricketMatch, match);
     });
@@ -1045,6 +1066,12 @@ export class MatchesService {
     }
 
     if (match.current_bowler_id || match.current_bowler_guest_name) {
+      const isSameBowler =
+        (dto.bowler_id && match.current_bowler_id === dto.bowler_id) ||
+        (dto.bowler_guest_name && match.current_bowler_guest_name === dto.bowler_guest_name);
+      if (isSameBowler) {
+        return this.findOneMatch(match.id);
+      }
       throw new BadRequestException('A bowler is already set for the current over');
     }
 
@@ -1065,7 +1092,7 @@ export class MatchesService {
       throw new BadRequestException('Bowler is required');
     }
 
-    if (match.last_ball_event_id) {
+    if (!dto.bypass_consecutive_check && match.last_ball_event_id) {
       const lastBall = await this.ballEventRepo.findOne({
         where: { id: match.last_ball_event_id },
       });
@@ -1079,8 +1106,8 @@ export class MatchesService {
       }
     }
 
-    match.current_bowler_id = dto.bowler_id || undefined;
-    match.current_bowler_guest_name = dto.bowler_guest_name || undefined;
+    match.current_bowler_id = dto.bowler_id || null as any;
+    match.current_bowler_guest_name = dto.bowler_guest_name || null as any;
 
     await this.matchRepo.save(match);
     return this.findOneMatch(match.id);
@@ -1109,7 +1136,7 @@ export class MatchesService {
     }
 
     if (match.striker_id || match.striker_guest_name) {
-      throw new BadRequestException('Second innings has already started');
+      return this.findOneMatch(match.id);
     }
 
     if (match.scorer_id !== playerProfile.id) {
@@ -1159,12 +1186,12 @@ export class MatchesService {
       throw new BadRequestException('Opening bowler is required');
     }
 
-    match.striker_id = dto.opening_striker_id || undefined;
-    match.striker_guest_name = dto.opening_striker_guest_name || undefined;
-    match.non_striker_id = dto.opening_non_striker_id || undefined;
-    match.non_striker_guest_name = dto.opening_non_striker_guest_name || undefined;
-    match.current_bowler_id = dto.opening_bowler_id || undefined;
-    match.current_bowler_guest_name = dto.opening_bowler_guest_name || undefined;
+    match.striker_id = dto.opening_striker_id || null as any;
+    match.striker_guest_name = dto.opening_striker_guest_name || null as any;
+    match.non_striker_id = dto.opening_non_striker_id || null as any;
+    match.non_striker_guest_name = dto.opening_non_striker_guest_name || null as any;
+    match.current_bowler_id = dto.opening_bowler_id || null as any;
+    match.current_bowler_guest_name = dto.opening_bowler_guest_name || null as any;
 
     await this.matchRepo.save(match);
     return this.findOneMatch(match.id);
@@ -1180,12 +1207,12 @@ export class MatchesService {
       match.current_batting_team_id = nextBattingTeamId;
       match.innings_2_batting_team_id = nextBattingTeamId;
 
-      match.striker_id = undefined;
-      match.striker_guest_name = undefined;
-      match.non_striker_id = undefined;
-      match.non_striker_guest_name = undefined;
-      match.current_bowler_id = undefined;
-      match.current_bowler_guest_name = undefined;
+      match.striker_id = null as any;
+      match.striker_guest_name = null as any;
+      match.non_striker_id = null as any;
+      match.non_striker_guest_name = null as any;
+      match.current_bowler_id = null as any;
+      match.current_bowler_guest_name = null as any;
 
       await entityManager.save(CricketMatch, match);
     } else if (match.current_innings === 2) {
@@ -1482,11 +1509,11 @@ export class MatchesService {
       if (isWicket) {
         const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
         if (finalWickets >= 10) {
-          match.striker_id = undefined;
-          match.striker_guest_name = undefined;
+          match.striker_id = null as any;
+          match.striker_guest_name = null as any;
         } else {
-          match.striker_id = dto.next_batsman_id || undefined;
-          match.striker_guest_name = dto.next_batsman_guest_name || undefined;
+          match.striker_id = dto.next_batsman_id || null as any;
+          match.striker_guest_name = dto.next_batsman_guest_name || null as any;
         }
       }
 
@@ -1498,8 +1525,8 @@ export class MatchesService {
         match.non_striker_id = tempStrikerId;
         match.non_striker_guest_name = tempStrikerGuest;
 
-        match.current_bowler_id = undefined;
-        match.current_bowler_guest_name = undefined;
+        match.current_bowler_id = null as any;
+        match.current_bowler_guest_name = null as any;
       }
 
       await manager.save(CricketMatch, match);
@@ -1582,8 +1609,8 @@ export class MatchesService {
           match.non_striker_id = tempStrikerId;
           match.non_striker_guest_name = tempStrikerGuest;
 
-          match.current_bowler_id = ballEvent.bowler_id || undefined;
-          match.current_bowler_guest_name = ballEvent.bowler_guest_name || undefined;
+          match.current_bowler_id = ballEvent.bowler_id || null as any;
+          match.current_bowler_guest_name = ballEvent.bowler_guest_name || null as any;
         } else {
           match.current_ball -= 1;
         }
@@ -1596,8 +1623,8 @@ export class MatchesService {
       }
 
       if (ballEvent.is_wicket) {
-        match.striker_id = ballEvent.batsman_id || undefined;
-        match.striker_guest_name = ballEvent.batsman_guest_name || undefined;
+        match.striker_id = ballEvent.batsman_id || null as any;
+        match.striker_guest_name = ballEvent.batsman_guest_name || null as any;
       }
 
       await manager.remove(CricketBallEvent, ballEvent);
@@ -1732,6 +1759,21 @@ export class MatchesService {
 
     const oversString = `${match.current_over}.${match.current_ball}`;
 
+    let lastBowler: any = null;
+    if (match.last_ball_event_id) {
+      const lastBall = allEvents.find(e => e.id === match.last_ball_event_id);
+      if (lastBall) {
+        lastBowler = {
+          id: lastBall.bowler_id || null,
+          name: lastBall.bowler_guest_name || null,
+        };
+      }
+    }
+
+    const dismissedPlayers = allEvents
+      .filter(e => e.innings === currentInnings && e.is_wicket)
+      .map(e => e.batsman_id ? `p-${e.batsman_id}` : `g-${e.batsman_guest_name}`);
+
     return {
       status: match.status,
       current_innings: currentInnings,
@@ -1743,12 +1785,14 @@ export class MatchesService {
       striker: strikerObj,
       non_striker: nonStrikerObj,
       bowler: bowlerObj,
+      last_bowler: lastBowler,
       this_over: thisOverEvents.map(e => ({
         runs: e.runs,
         extra_type: e.extra_type || null,
         is_wicket: e.is_wicket,
       })),
       balls_remaining_in_over: 6 - match.current_ball,
+      dismissed_players: dismissedPlayers,
     };
   }
 }

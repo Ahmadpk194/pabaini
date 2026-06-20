@@ -3990,6 +3990,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
             <tbody>
               <tr><td><span class="param-name">winner_team_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-yes">Yes</span></td><td>Database ID of the winning team (must be team_a or team_b)</td></tr>
               <tr><td><span class="param-name">man_of_match_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Profile ID of the Man of the Match (must be a registered player in match lineups)</td></tr>
+              <tr><td><span class="param-name">man_of_match_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest player name of the Man of the Match (must be in Playing XI)</td></tr>
               <tr><td><span class="param-name">team_a_score</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-yes">Yes</span></td><td>Team A score string, e.g. <code>"152/5 (20)"</code></td></tr>
               <tr><td><span class="param-name">team_b_score</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-yes">Yes</span></td><td>Team B score string, e.g. <code>"153/3 (19.2)"</code></td></tr>
               <tr><td><span class="param-name">player_stats</span></td><td><span class="param-type">array</span></td><td><span class="param-required req-yes">Yes</span></td><td>Array containing player statistics objects</td></tr>
@@ -4310,7 +4311,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
         <span class="toggle-icon">▾</span>
       </div>
       <div class="endpoint-body">
-        <p class="endpoint-desc">Sets bowler for the upcoming over. Prevents the bowler from bowling two consecutive overs.</p>
+        <p class="endpoint-desc">Sets bowler for the upcoming over. Prevents the bowler from bowling two consecutive overs, unless <code>bypass_consecutive_check</code> is set. This endpoint is idempotent; if the requested bowler is already active for the over, it returns the current match state instead of throwing an error.</p>
         <div class="field-label">Required Headers</div>
         <div class="headers-block">
           <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
@@ -4323,6 +4324,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
             <tbody>
               <tr><td><span class="param-name">bowler_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>ID of new bowler player</td></tr>
               <tr><td><span class="param-name">bowler_guest_name</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Guest name of new bowler (if unregistered)</td></tr>
+              <tr><td><span class="param-name">bypass_consecutive_check</span></td><td><span class="param-type">boolean</span></td><td><span class="param-required req-no">No</span></td><td>Bypasses consecutive over restrictions for the bowler if set to <code>true</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -4438,7 +4440,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
         <span class="toggle-icon">▾</span>
       </div>
       <div class="endpoint-body">
-        <p class="endpoint-desc">Retrieves a near real-time live view of the match scoring, batsman statistics, bowler statistics, and events in the current over. Public - no authentication required.</p>
+        <p class="endpoint-desc">Retrieves a near real-time live view of the match scoring, batsman statistics, bowler statistics, events in the current over, and a list of dismissed players (<code>dismissed_players</code>) containing IDs of dismissed registered players and names of dismissed guest players. Public - no authentication required.</p>
         <div class="code-panel">
           <div class="code-tabs">
             <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
@@ -4464,7 +4466,8 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
     "this_over": [
       { "runs": 1, "extra_type": null, "is_wicket": false }
     ],
-    "balls_remaining_in_over": 5
+    "balls_remaining_in_over": 5,
+    "dismissed_players": [1]
   }
 }</div>
         </div>

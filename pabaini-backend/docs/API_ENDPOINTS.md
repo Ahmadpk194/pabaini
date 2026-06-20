@@ -2350,7 +2350,8 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `winner_team_id` | `number` | ✅ Yes | ID of the winning team |
-| `man_of_match_id` | `number` | No | Player profile ID of the Man of the Match |
+| `man_of_match_id` | `number` | No | Player profile ID of the Man of the Match (registered player) |
+| `man_of_match_guest_name` | `string` | No | Guest player name of the Man of the Match |
 | `team_a_score` | `string` | ✅ Yes | Team A final score, e.g. `"152/5 (20)"` |
 | `team_b_score` | `string` | ✅ Yes | Team B final score, e.g. `"153/3 (19.2)"` |
 | `player_stats` | `array` | ✅ Yes | Array of `PlayerStatDto` player statistics |
@@ -2538,7 +2539,7 @@ curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/1/balls \
 
 ### #54 · PATCH `/sports/cricket/matches/:id/bowler`
 
-Sets the bowler for the next over. Prevents consecutive overs from the same bowler.
+Sets the bowler for the next over. Prevents consecutive overs from the same bowler, unless `bypass_consecutive_check` is enabled. The endpoint is idempotent; if the requested bowler is already active for the over, it returns the current match state instead of throwing an error.
 
 | | |
 |---|---|
@@ -2560,6 +2561,7 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 |---|---|---|---|
 | `bowler_id` | `number` | No | ID of the new bowler player |
 | `bowler_guest_name` | `string` | No | Guest name of the new bowler (if unregistered) |
+| `bypass_consecutive_check` | `boolean` | No | Bypasses consecutive over restrictions for the bowler if set to `true` |
 
 **cURL Example**
 
@@ -2702,7 +2704,8 @@ curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/live
         "is_wicket": false
       }
     ],
-    "balls_remaining_in_over": 5
+    "balls_remaining_in_over": 5,
+    "dismissed_players": [1]
   }
 }
 ```

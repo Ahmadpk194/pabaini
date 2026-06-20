@@ -19,6 +19,10 @@ export class EditResultDto {
 
   @IsString()
   @IsOptional()
+  man_of_match_guest_name?: string;
+
+  @IsString()
+  @IsOptional()
   team_a_score?: string;
 
   @IsString()

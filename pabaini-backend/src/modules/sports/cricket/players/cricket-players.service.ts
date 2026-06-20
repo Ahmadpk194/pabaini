@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { CricketPlayerProfile } from '../entities/cricket-player-profile.entity';
 import { CreateCricketPlayerProfileDto } from './dto/create-cricket-player-profile.dto';
 import { UpdateCricketPlayerProfileDto } from './dto/update-cricket-player-profile.dto';
@@ -117,11 +117,18 @@ export class CricketPlayersService {
     return profile;
   }
 
-  async getAllPlayers(page: number, limit: number): Promise<{ data: CricketPlayerProfile[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
+  async getAllPlayers(page: number, limit: number, search?: string): Promise<{ data: CricketPlayerProfile[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     const skip = (page - 1) * limit;
 
     const [profiles, total] = await this.cricketPlayerProfileRepository.findAndCount({
-      where: { is_active: true },
+      where: {
+        is_active: true,
+        ...(search ? {
+          user: {
+            name: ILike(`%${search}%`),
+          },
+        } : {}),
+      },
       relations: { user: true },
       order: { created_at: 'DESC' },
       skip,
