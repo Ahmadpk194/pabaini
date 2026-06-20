@@ -3,7 +3,10 @@ import { Announcement, Category } from '../types';
 import { getAll } from '../api/announcements';
 import { queryKeys } from '../constants/queryKeys';
 
-export function useAnnouncements(category?: Category) {
+export function useAnnouncements(
+  category?: Category,
+  options?: { refetchInterval?: number | false }
+) {
   return useQuery({
     queryKey: queryKeys.announcements.list({ category }),
     queryFn: async () => {
@@ -11,5 +14,6 @@ export function useAnnouncements(category?: Category) {
       return response.data;
     },
     staleTime: 1000 * 30, // 30 seconds
+    ...options,
   });
 }

@@ -279,8 +279,8 @@ export default function DeclarePlayingXIScreen() {
                       <Avatar uri={player.avatar_url} size={28} name={player.name} />
                     </View>
 
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={[styles.pickedName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.pickedName, { color: theme.colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
                         {player.name}
                       </Text>
                       {player.guest_name && (
@@ -373,9 +373,11 @@ export default function DeclarePlayingXIScreen() {
                       ]}
                       onPress={() => handleTogglePlayer(member.player)}
                     >
-                      <Avatar uri={member.player.user.avatar_url} size={40} name={member.player.user.name} />
-                      <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={[styles.playerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                      <View style={styles.avatarWrapper}>
+                        <Avatar uri={member.player.user.avatar_url} size={40} name={member.player.user.name} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={[styles.playerName, { color: theme.colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
                           {member.player.user.name}
                         </Text>
                         <Text style={{ color: theme.colors.textSecondary, fontSize: 11, textTransform: 'capitalize' }}>
@@ -501,11 +503,13 @@ const styles = StyleSheet.create({
   pickedListContainer: {
     borderWidth: 1,
   },
+  // Row layout representing a picked player in the lineup checklist
   pickedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
+    gap: 10,
   },
   orderNumber: {
     width: 24,
@@ -513,13 +517,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
+  // Wrapper for player avatar to enforce fixed size and avoid scaling in flex rows
   avatarWrapper: {
-    marginLeft: 8,
+    flexShrink: 0,
+    flexGrow: 0,
   },
   pickedName: {
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
   },
   guestTag: {
     alignSelf: 'flex-start',
@@ -537,13 +545,14 @@ const styles = StyleSheet.create({
   reorderButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
+    flexShrink: 0,
   },
   reorderBtn: {
     padding: 4,
   },
   deleteBtn: {
     padding: 6,
+    flexShrink: 0,
   },
   guestInputRow: {
     flexDirection: 'row',
@@ -560,15 +569,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Row layout representing a registered squad member in the selection checklist
   squadRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
+    gap: 10,
   },
   playerName: {
     fontSize: 14,
     fontWeight: '700',
+    flexShrink: 1,
   },
   checkbox: {
     width: 20,
@@ -577,6 +589,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   footer: {
     padding: 16,

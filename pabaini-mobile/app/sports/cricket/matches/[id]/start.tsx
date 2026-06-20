@@ -9,32 +9,53 @@ import {
   Alert,
   Modal,
   FlatList,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronDown, Check } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, Check, User, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import { useMatchDetail, useLineup, useStartLiveMatch } from '../../../../../src/hooks/useMatches';
+// API client for backend requests
+import client from '../../../../../src/api/client';
+// Avatar component for player profile images
+import { Avatar } from '../../../../../src/components/ui/Avatar';
 
 interface LineupPlayer {
   id: number;
   player_id: number | null;
   guest_name: string | null;
   name: string;
+  avatar_url?: string | null;
+  role?: string | null;
+}
+
+// Interface for system-wide player search results
+interface SearchPlayerResult {
+  id: number;
+  role?: string;
+  user?: {
+    name?: string;
+    avatar_url?: string | null;
+  };
 }
 
 export default function StartMatchScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
+  const insets = useSafeAreaInsets();
 
   // Zustand Store
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
 
   // Queries & Mutations
-  const { data: match, isLoading: isLoadingMatch } = useMatchDetail(matchId);
+  // Fetches match details with refetch support for handling start race conditions.
+  const { data: match, isLoading: isLoadingMatch, refetch } = useMatchDetail(matchId);
   const { data: lineups, isLoading: isLoadingLineup } = useLineup(matchId);
   const startMatchMutation = useStartLiveMatch();
 
@@ -45,6 +66,12 @@ export default function StartMatchScreen() {
   const [nonStrikerKey, setNonStrikerKey] = useState<string | null>(null);
   const [bowlerKey, setBowlerKey] = useState<string | null>(null);
   const [scorerId, setScorerId] = useState<number | null>(null);
+
+  // Scorer custom details & search states
+  const [selectedScorer, setSelectedScorer] = useState<LineupPlayer | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<LineupPlayer[]>([]);
+  const [isSearchingPlayers, setIsSearchingPlayers] = useState(false);
 
   // Modal visibility states
   const [activeModal, setActiveModal] = useState<'striker' | 'nonStriker' | 'bowler' | 'scorer' | null>(null);
@@ -63,6 +90,10 @@ export default function StartMatchScreen() {
       }
 
       if (match.status !== 'scheduled') {
+        // If the start match mutation is pending or succeeded, we are transitioning to live, so skip guard
+        if (startMatchMutation.isPending || startMatchMutation.isSuccess) {
+          return;
+        }
         Alert.alert('Invalid Action', `Match cannot be started because its status is ${match.status}.`);
         router.back();
         return;
@@ -73,7 +104,20 @@ export default function StartMatchScreen() {
         router.back();
       }
     }
-  }, [match, isLoadingMatch, myProfile]);
+  }, [match, isLoadingMatch, myProfile, startMatchMutation.isPending, startMatchMutation.isSuccess]);
+
+  // Pre-populates the designated scorer with the current captain's profile.
+  useEffect(() => {
+    if (myProfile && scorerId === null) {
+      setScorerId(myProfile.id);
+      setSelectedScorer({
+        id: myProfile.id,
+        player_id: myProfile.id,
+        guest_name: null,
+        name: myProfile.user?.name || 'Default (Captain)',
+      });
+    }
+  }, [myProfile, scorerId]);
 
   const isLoading = isLoadingMatch || isLoadingLineup;
 
@@ -134,6 +178,186 @@ export default function StartMatchScreen() {
     return found ? found.name : 'Select player';
   };
 
+  // Fetches registered players from the public API for the neutral scorer search.
+  // Performs name lookup on system-wide registered players and maps their avatars and roles.
+  const fetchPlayersForSearch = async (query = '') => {
+    setIsSearchingPlayers(true);
+    try {
+      const response = await client.get('/sports/cricket/players', {
+        params: { page: 1, limit: 50, search: query || undefined },
+      });
+      const result = response.data?.data;
+      if (result && Array.isArray(result.data)) {
+        const mapped: LineupPlayer[] = result.data.map((p: SearchPlayerResult) => ({
+          id: p.id,
+          player_id: p.id,
+          guest_name: null,
+          name: p.user?.name || 'Unknown Player',
+          avatar_url: p.user?.avatar_url || null,
+          role: p.role || null,
+        }));
+        setSearchResults(mapped);
+      }
+    } catch (error) {
+      console.error('Failed to fetch players for search:', error);
+    } finally {
+      setIsSearchingPlayers(false);
+    }
+  };
+
+  // Debounced search trigger for player searches
+  useEffect(() => {
+    if (activeModal === 'scorer') {
+      const delayDebounceFn = setTimeout(() => {
+        fetchPlayersForSearch(searchQuery);
+      }, 300);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [searchQuery, activeModal]);
+
+  // Helper to extract clean two-letter initials from a player's name
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const cleanName = name.trim();
+    const parts = cleanName.split(/\s+/);
+    if (parts.length >= 2) {
+      const first = parts[0].charAt(0);
+      const last = parts[parts.length - 1].charAt(0);
+      return (first + last).toUpperCase();
+    }
+    return cleanName.slice(0, 2).toUpperCase();
+  };
+
+  // Renders a styled, responsive list item for scorer selection matching reference design.
+  // Uses a 3-zone layout: fixed Avatar/Icon, flex middle container with minWidth: 0, and fixed badge/checkbox.
+  const renderScorerItem = (item: LineupPlayer) => {
+    const isSelected = scorerId === item.player_id;
+    const isGuest = item.player_id === null;
+
+    // Determine subtitle text based on captaincy and role parameters
+    const isTeamACaptain = match?.team_a?.captain?.id === item.player_id;
+    const isTeamBCaptain = match?.team_b?.captain?.id === item.player_id;
+    const isCaptain = isTeamACaptain || isTeamBCaptain;
+    
+    const subtitle = isGuest
+      ? null
+      : isCaptain
+      ? 'Captain'
+      : item.role
+      ? item.role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : 'Registered Player';
+
+    // Renders circular avatar (initials for registered, user icon for guests, or fallback image)
+    const renderAvatar = () => {
+      if (isGuest) {
+        return (
+          <View style={[styles.avatarCircle, { backgroundColor: mode === 'dark' ? '#2A2A2A' : '#ECEFF1' }]}>
+            <User size={18} color={theme.colors.textSecondary} />
+          </View>
+        );
+      }
+
+      if (item.avatar_url) {
+        return (
+          <View style={styles.avatarCircle}>
+            <Avatar uri={item.avatar_url} size={36} name={item.name} />
+          </View>
+        );
+      }
+
+      const avatarBg = mode === 'dark' ? '#1A2F4C' : '#E3F2FD';
+      const initialsColor = mode === 'dark' ? '#64B5F6' : theme.colors.primary;
+
+      return (
+        <View style={[styles.avatarCircle, { backgroundColor: avatarBg }]}>
+          <Text style={[styles.avatarInitials, { color: initialsColor }]}>
+            {getInitials(item.name)}
+          </Text>
+        </View>
+      );
+    };
+
+    // Renders badge tag or select button on the right matching the mockup exactly
+    const renderRightBadge = () => {
+      if (isGuest) {
+        return (
+          <Text style={[styles.guestText, { color: theme.colors.textSecondary }]}>
+            Guest
+          </Text>
+        );
+      }
+
+      return (
+        <View
+          style={[
+            styles.selectBadge,
+            {
+              backgroundColor: isSelected
+                ? (mode === 'dark' ? '#1E1E1E' : '#E0E0E0')
+                : 'transparent',
+              borderColor: isSelected ? 'transparent' : theme.colors.border,
+              borderWidth: isSelected ? 0 : 1,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.selectBadgeText,
+              {
+                color: isSelected ? theme.colors.textPrimary : theme.colors.textSecondary,
+              },
+            ]}
+          >
+            {isSelected ? 'Selected' : 'Select'}
+          </Text>
+        </View>
+      );
+    };
+
+    return (
+      <TouchableOpacity
+        key={`scorer-${item.player_id || item.guest_name}`}
+        style={[
+          styles.scorerRow,
+          {
+            backgroundColor: isSelected
+              ? (mode === 'dark' ? '#1A2F4C' : '#E3F2FD')
+              : theme.colors.surface,
+            borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+          },
+        ]}
+        onPress={() => {
+          setScorerId(item.player_id);
+          setSelectedScorer(item);
+          setActiveModal(null);
+        }}
+      >
+        {/* Zone 1: Avatar (Fixed size, never shrinks/grows) */}
+        {renderAvatar()}
+        
+        {/* Zone 2: Flexible Middle Container (Grows/shrinks, minWidth: 0 overrides default flex child bounds) */}
+        <View style={styles.scorerInfoCol}>
+          <Text style={[styles.playerName, { color: theme.colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
+          {subtitle ? (
+            <Text style={[styles.playerSubtitle, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Zone 3: Badge / Select Indicator (Fixed size, sits far right, never shrinks) */}
+        {renderRightBadge()}
+      </TouchableOpacity>
+    );
+  };
+
+  // Return all search results directly from the server.
+  // Note: squad members are not filtered out so that search query resolves all matching players.
+  const filteredSearchResults = searchResults;
+
   const handleStartMatch = async () => {
     if (!tossWinnerId || !battingFirstId || !strikerKey || !nonStrikerKey || !bowlerKey) {
       Alert.alert('Required Fields', 'Please complete all selections to start the match.');
@@ -180,8 +404,50 @@ export default function StartMatchScreen() {
           onPress: () => router.replace(`/sports/cricket/matches/${matchId}/score`),
         },
       ]);
-    } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to start match');
+    } catch (err) {
+      // Handles match starting exceptions securely, matching any validation and race conditions.
+      const error = err as {
+        response?: {
+          status: number;
+          data?: {
+            message?: string;
+          };
+        };
+        message?: string;
+      };
+      const isAlreadyStarted =
+        error.response?.status === 400 &&
+        (error.response?.data?.message === 'Match is not in scheduled status' ||
+         error.response?.data?.message?.includes('scheduled'));
+
+      if (isAlreadyStarted) {
+        // Handles match start race condition by updating the state 
+        // and routing the captain to Scorer or Live screen accordingly.
+        Alert.alert(
+          'Match Already Started',
+          'This match has already been started.',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                const { data: updatedMatch } = await refetch();
+                if (updatedMatch) {
+                  const isScorer = myProfile && updatedMatch.scorer_id === myProfile.id;
+                  if (isScorer) {
+                    router.replace(`/sports/cricket/matches/${matchId}/score`);
+                  } else {
+                    router.replace(`/sports/cricket/matches/${matchId}/live`);
+                  }
+                } else {
+                  router.replace(`/sports/cricket/matches/${matchId}/live`);
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to start match');
+      }
     }
   };
 
@@ -211,8 +477,11 @@ export default function StartMatchScreen() {
     );
   };
 
+  // Configure SafeAreaView to only protect top, left, and right.
+  // The bottom edge is padded dynamically using insets.bottom inside ScrollView
+  // and the absolute footer component below.
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -222,9 +491,13 @@ export default function StartMatchScreen() {
         <View style={{ width: 36 }} />
       </View>
 
+      {/* Main scrollable body extending beneath the bottom absolute footer container */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom > 0 ? 100 + insets.bottom : 100 }
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Toss Winner Selector */}
@@ -343,11 +616,14 @@ export default function StartMatchScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             style={[styles.pickerButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.sm }]}
-            onPress={() => setActiveModal('scorer')}
+            onPress={() => {
+              setSearchQuery('');
+              setActiveModal('scorer');
+            }}
           >
             <Text style={[styles.pickerButtonText, { color: scorerId ? theme.colors.textPrimary : theme.colors.textSecondary }]}>
               {scorerId
-                ? allRegisteredPlayers.find((p) => p.player_id === scorerId)?.name || 'Selected player'
+                ? selectedScorer?.name || 'Selected player'
                 : 'Default (Captain)'}
             </Text>
             <ChevronDown color={theme.colors.textSecondary} size={20} />
@@ -356,7 +632,15 @@ export default function StartMatchScreen() {
       </ScrollView>
 
       {/* Footer Start Button */}
-      <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.border,
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 16,
+          },
+        ]}>
         <TouchableOpacity
           style={[
             styles.submitButton,
@@ -384,75 +668,136 @@ export default function StartMatchScreen() {
         onRequestClose={() => setActiveModal(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>
-              {activeModal === 'striker' && 'Select Striker'}
-              {activeModal === 'nonStriker' && 'Select Non-Striker'}
-              {activeModal === 'bowler' && 'Select Opening Bowler'}
-              {activeModal === 'scorer' && 'Select Scorer'}
-            </Text>
-
-            <FlatList
-              data={
-                activeModal === 'striker' || activeModal === 'nonStriker'
-                  ? battingPlayers
-                  : activeModal === 'bowler'
-                  ? bowlingPlayers
-                  : allRegisteredPlayers
-              }
-              keyExtractor={(item) => (activeModal === 'scorer' ? `s-${item.player_id}` : getPlayerKey(item))}
-              renderItem={({ item }) => {
-                const key = getPlayerKey(item);
-                const isSelected =
-                  activeModal === 'striker'
-                    ? strikerKey === key
-                    : activeModal === 'nonStriker'
-                    ? nonStrikerKey === key
-                    : activeModal === 'bowler'
-                    ? bowlerKey === key
-                    : scorerId === item.player_id;
-
-                return (
-                  <TouchableOpacity
-                    style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
-                    onPress={() => {
-                      if (activeModal === 'striker') setStrikerKey(key);
-                      else if (activeModal === 'nonStriker') setNonStrikerKey(key);
-                      else if (activeModal === 'bowler') setBowlerKey(key);
-                      else if (activeModal === 'scorer') setScorerId(item.player_id);
-
-                      setActiveModal(null);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>
-                      {item.name}
-                    </Text>
-                    {isSelected && <Check size={18} color={theme.colors.primary} />}
-                  </TouchableOpacity>
-                );
-              }}
-              ListEmptyComponent={
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <Text style={{ color: theme.colors.textSecondary }}>No players available.</Text>
-                </View>
-              }
-            />
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.modalCloseBtn, { borderColor: theme.colors.border, borderWidth: 1 }]}
-              onPress={() => {
-                if (activeModal === 'scorer') {
-                  setScorerId(null);
-                }
-                setActiveModal(null);
-              }}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setActiveModal(null)}
+          />
+          {/* Keyboard avoiding wrapper inside the modal overlays wrapping only the content box */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoidingWrapper}
+          >
+            <View
+              style={[
+                styles.modalContent,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderRadius: theme.radius.md,
+                },
+              ]}
             >
-              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
-                {activeModal === 'scorer' ? 'Clear & Close' : 'Close'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>
+                  {activeModal === 'striker' && 'Select Striker'}
+                  {activeModal === 'nonStriker' && 'Select Non-Striker'}
+                  {activeModal === 'bowler' && 'Select Opening Bowler'}
+                  {activeModal === 'scorer' && 'Select Designated Scorer'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.modalHeaderClose}
+                  onPress={() => setActiveModal(null)}
+                >
+                  <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 14 }}>
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {activeModal === 'scorer' ? (
+                // Custom Scorer Selection UI with Team Grouping & Search option
+                <View style={{ flex: 1 }}>
+                  <View style={[styles.searchContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background, borderRadius: theme.radius.sm }]}>
+                    <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
+                    <TextInput
+                      style={[styles.searchInput, { color: theme.colors.textPrimary }]}
+                      placeholder="Search players..."
+                      placeholderTextColor={theme.colors.textSecondary}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                  </View>
+                  
+                  {isSearchingPlayers ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ margin: 20 }} />
+                  ) : (
+                    <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false}>
+                      {searchQuery.trim() === '' ? (
+                        <>
+                          <Text style={[styles.groupHeader, { color: theme.colors.textSecondary }]}>{match.team_a.name}</Text>
+                          {lineups.team_a.players.map((item) => renderScorerItem(item))}
+                          {lineups.team_a.players.length === 0 && (
+                            <Text style={[styles.emptyGroupText, { color: theme.colors.textSecondary }]}>No registered players</Text>
+                          )}
+                          
+                          <Text style={[styles.groupHeader, { color: theme.colors.textSecondary, marginTop: 20 }]}>{match.team_b.name}</Text>
+                          {lineups.team_b.players.map((item) => renderScorerItem(item))}
+                          {lineups.team_b.players.length === 0 && (
+                            <Text style={[styles.emptyGroupText, { color: theme.colors.textSecondary }]}>No registered players</Text>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text style={[styles.groupHeader, { color: theme.colors.textSecondary }]}>Search Results</Text>
+                          {filteredSearchResults.map((item) => renderScorerItem(item))}
+                          {filteredSearchResults.length === 0 && (
+                            <Text style={[styles.emptyGroupText, { color: theme.colors.textSecondary }]}>No matching players found</Text>
+                          )}
+                        </>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
+              ) : (
+                // Original FlatList for opening batting order and bowler selection
+                <FlatList
+                  data={
+                    activeModal === 'striker' || activeModal === 'nonStriker'
+                      ? battingPlayers
+                      : bowlingPlayers
+                  }
+                  keyExtractor={getPlayerKey}
+                  renderItem={({ item }) => {
+                    const key = getPlayerKey(item);
+                    const isSelected =
+                      activeModal === 'striker'
+                        ? strikerKey === key
+                        : activeModal === 'nonStriker'
+                        ? nonStrikerKey === key
+                        : bowlerKey === key;
+
+                    return (
+                      <TouchableOpacity
+                        style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
+                        onPress={() => {
+                          if (activeModal === 'striker') setStrikerKey(key);
+                          else if (activeModal === 'nonStriker') setNonStrikerKey(key);
+                          else if (activeModal === 'bowler') setBowlerKey(key);
+
+                          setActiveModal(null);
+                        }}
+                      >
+                        {/* Truncate long player names to prevent UI overflow */}
+                        <Text
+                          style={[styles.modalItemText, { color: theme.colors.textPrimary }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.name}
+                        </Text>
+                        {isSelected && <Check size={18} color={theme.colors.primary} />}
+                      </TouchableOpacity>
+                    );
+                  }}
+                  ListEmptyComponent={
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <Text style={{ color: theme.colors.textSecondary }}>No players available.</Text>
+                    </View>
+                  }
+                />
+              )}
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -531,12 +876,12 @@ const styles = StyleSheet.create({
   pickerButtonText: {
     fontSize: 14,
   },
+  // Dynamic footer height derived from contents and safe area padding at bottom
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 72,
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
@@ -550,23 +895,50 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  // Centered modal overlay style (aligns a bit above center)
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 60, // Shifts the modal slightly above the absolute center to offset bottom bars
   },
+  keyboardAvoidingWrapper: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Stable centered modal card style
   modalContent: {
     width: '100%',
-    maxHeight: '80%',
-    padding: 16,
+    height: 520, // Stable height prevents nested ScrollView collapse
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  // Bottom sheet header title container
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    position: 'relative',
   },
   modalTitle: {
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 16,
     textAlign: 'center',
+  },
+  // Absolutely-positioned close/done text button on header right
+  modalHeaderClose: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   modalItem: {
     flexDirection: 'row',
@@ -577,12 +949,102 @@ const styles = StyleSheet.create({
   },
   modalItemText: {
     fontSize: 14,
+    flex: 1,
+    marginRight: 12,
   },
-  modalCloseBtn: {
+  // Style definitions for neutral scorer search layout
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 44,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  groupHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 14,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  emptyGroupText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    paddingLeft: 4,
+    marginBottom: 8,
+  },
+  // Custom scorer search list row styles matching lineup declaration layout
+  scorerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+    gap: 12,
+  },
+  // Fixed size 36x36 circular avatar container for initials or icons
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 4,
-    marginTop: 16,
+    flexShrink: 0,
+    flexGrow: 0,
+    overflow: 'hidden',
+  },
+  avatarInitials: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  scorerInfoCol: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  // Player name text styling inside the scorer row matching lineup screen
+  playerName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  playerSubtitle: {
+    fontSize: 12,
+  },
+  guestText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flexShrink: 0,
+  },
+  selectionIndicator: {
+    flexShrink: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    flexShrink: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

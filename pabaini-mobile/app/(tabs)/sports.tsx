@@ -69,6 +69,8 @@ export default function SportsScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Tracks whether the user's sports profile is currently syncing from the backend
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   // Teams local state & store bindings
   const myTeams = useTeamsStore((state) => state.myTeams);
@@ -129,8 +131,15 @@ export default function SportsScreen() {
   };
 
   // Sync user profile with backend
-  const syncProfile = useCallback(async () => {
-    if (isGuest || !user) return;
+  // Shows a full screen loader on initial sync to prevent UI onboarding flash
+  const syncProfile = useCallback(async (showLoader = false) => {
+    if (isGuest || !user) {
+      setLoadingProfile(false);
+      return;
+    }
+    if (showLoader) {
+      setLoadingProfile(true);
+    }
     try {
       const response = await client.get('/sports/cricket/players/me');
       if (response.data?.data) {
@@ -138,11 +147,16 @@ export default function SportsScreen() {
       } else {
         clearRegistration('cricket');
       }
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { status: number } };
       if (error.response?.status === 404) {
         clearRegistration('cricket');
       } else {
-        console.error('Error syncing profile:', error);
+        console.error('Error syncing profile:', err);
+      }
+    } finally {
+      if (showLoader) {
+        setLoadingProfile(false);
       }
     }
   }, [isGuest, user, setRegistration, clearRegistration]);
@@ -187,14 +201,17 @@ export default function SportsScreen() {
   );
 
   // Initial load
+  // Synchronizes profile from backend on mount, showing full screen loader
   useEffect(() => {
-    syncProfile();
+    syncProfile(true);
     fetchPlayers(1, true);
   }, []);
 
+  // Refresh feed and profile data
+  // Does not trigger full screen profile loader to maintain pull-to-refresh context
   const handleRefresh = async () => {
     setRefreshing(true);
-    await syncProfile();
+    await syncProfile(false);
     await fetchPlayers(1, true);
     setRefreshing(false);
   };
@@ -223,6 +240,15 @@ export default function SportsScreen() {
   const handleJustBrowsing = () => {
     markOptInSeen('cricket');
   };
+
+  // Render loading indicator while profile details are being synchronized from backend
+  if (loadingProfile) {
+    return (
+      <View style={[styles.container, styles.loaderContainer, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   // 1. Render Opt-in Overlay Screen
   if (!seenOptIn && !isRegistered) {
@@ -296,11 +322,16 @@ export default function SportsScreen() {
 
         {/* Section title for other players */}
         {players.length > 0 && (
-          <View style={styles.sectionHeader}>
-            <Users color={theme.colors.primary} size={20} />
-            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-              {isRegistered ? 'Other Registered Players' : 'Registered Players'}
-            </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Users color={theme.colors.primary} size={20} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+                {isRegistered ? 'Other Registered Players' : 'Registered Players'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/sports/cricket/players')}>
+              <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -700,7 +731,9 @@ export default function SportsScreen() {
       )}
 
       {activeTab === 'matches' && (() => {
-        const matches = matchesResponse?.data || [];
+        const matches = Array.isArray(matchesResponse)
+          ? matchesResponse
+          : (matchesResponse?.data || []);
         const liveMatches = matches.filter(m => m.status === 'live');
         const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
         const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');

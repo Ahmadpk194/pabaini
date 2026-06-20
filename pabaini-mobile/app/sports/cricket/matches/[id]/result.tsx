@@ -88,6 +88,7 @@ export default function MatchResultFormScreen() {
   const [teamAScore, setTeamAScore] = useState('');
   const [teamBScore, setTeamBScore] = useState('');
   const [manOfMatchId, setManOfMatchId] = useState<number | null>(null);
+  const [manOfMatchGuestName, setManOfMatchGuestName] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<LocalStatEntry[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -125,7 +126,8 @@ export default function MatchResultFormScreen() {
         setWinnerTeamId(match.winner_team_id);
         setTeamAScore(match.team_a_score || '');
         setTeamBScore(match.team_b_score || '');
-        setManOfMatchId(match.man_of_match_id);
+        setManOfMatchId(match.man_of_match_id || null);
+        setManOfMatchGuestName(match.man_of_match_guest_name || null);
       }
 
       // 2. Roster players setup
@@ -171,9 +173,16 @@ export default function MatchResultFormScreen() {
     }
   }, [match, lineups, isEditMode, isInitialized]);
 
-  // Registered players selection list for Man of the Match picker
-  const registeredPlayers = playerStats.filter((p) => !!p.player_id);
-  const selectedMomPlayer = registeredPlayers.find((p) => p.player_id === manOfMatchId);
+  // Find selected Man of the Match player (could be registered or guest)
+  const selectedMomPlayer = playerStats.find((p) => {
+    if (manOfMatchId) {
+      return p.player_id === manOfMatchId;
+    }
+    if (manOfMatchGuestName) {
+      return p.guest_name === manOfMatchGuestName;
+    }
+    return false;
+  });
 
   // Stats update helper
   const updatePlayerStat = (key: string, field: keyof LocalStatEntry, value: any) => {
@@ -225,6 +234,7 @@ export default function MatchResultFormScreen() {
     const payload = {
       winner_team_id: winnerTeamId!,
       man_of_match_id: manOfMatchId || undefined,
+      man_of_match_guest_name: manOfMatchGuestName || undefined,
       team_a_score: teamAScore.trim(),
       team_b_score: teamBScore.trim(),
       player_stats: playerStats.map((p) => ({
@@ -389,7 +399,11 @@ export default function MatchResultFormScreen() {
               disabled={isPending}
             >
               <Text style={[styles.pickerButtonText, { color: selectedMomPlayer ? theme.colors.textPrimary : theme.colors.textSecondary }]}>
-                {selectedMomPlayer ? selectedMomPlayer.name : 'Select player'}
+                {selectedMomPlayer
+                  ? selectedMomPlayer.player_id
+                    ? selectedMomPlayer.name
+                    : `${selectedMomPlayer.name} (Guest)`
+                  : 'Select player'}
               </Text>
               <ChevronDown color={theme.colors.textSecondary} size={20} />
             </TouchableOpacity>
@@ -785,20 +799,46 @@ export default function MatchResultFormScreen() {
               <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Choose Man of the Match</Text>
               
               <FlatList
-                data={registeredPlayers}
+                data={[
+                  { key: 'none-clear', name: 'None / Clear', player_id: undefined, guest_name: undefined } as any,
+                  ...playerStats
+                ]}
                 keyExtractor={(item) => item.key}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
-                    onPress={() => {
-                      setManOfMatchId(item.player_id || null);
-                      setMomModalVisible(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>{item.name}</Text>
-                    {manOfMatchId === item.player_id && <Check size={18} color={theme.colors.primary} />}
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const isNoneOption = item.key === 'none-clear';
+                  const isSelected = isNoneOption
+                    ? !manOfMatchId && !manOfMatchGuestName
+                    : item.player_id
+                    ? manOfMatchId === item.player_id
+                    : manOfMatchGuestName === item.guest_name;
+                  const displayName = isNoneOption
+                    ? item.name
+                    : item.player_id
+                    ? item.name
+                    : `${item.name} (Guest)`;
+
+                  return (
+                    <TouchableOpacity
+                      style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
+                      onPress={() => {
+                        if (isNoneOption) {
+                          setManOfMatchId(null);
+                          setManOfMatchGuestName(null);
+                        } else if (item.player_id) {
+                          setManOfMatchId(item.player_id);
+                          setManOfMatchGuestName(null);
+                        } else {
+                          setManOfMatchId(null);
+                          setManOfMatchGuestName(item.guest_name || null);
+                        }
+                        setMomModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.modalItemText, { color: isNoneOption ? theme.colors.textSecondary : theme.colors.textPrimary, fontStyle: isNoneOption ? 'italic' : 'normal' }]}>{displayName}</Text>
+                      {isSelected && <Check size={18} color={theme.colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                }}
               />
 
               <TouchableOpacity

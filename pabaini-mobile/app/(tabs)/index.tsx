@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity, Modal, Alert, ActivityIndicator, Share } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,8 +20,21 @@ export default function HomeScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
+  const [isFocused, setIsFocused] = useState(true);
+
   const { data: announcements = [], isLoading, refetch } = useAnnouncements(
-    selectedCategory === 'all' ? undefined : selectedCategory
+    selectedCategory === 'all' ? undefined : selectedCategory,
+    { refetchInterval: isFocused ? 20000 : false }
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      refetch();
+      return () => {
+        setIsFocused(false);
+      };
+    }, [refetch])
   );
 
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);

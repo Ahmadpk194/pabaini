@@ -17,7 +17,28 @@ export async function getAllMatches(params?: {
   limit?: number;
 }): Promise<{ data: CricketMatch[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
   const response = await client.get('/sports/cricket/matches', { params });
-  return response.data.data;
+  const result = response.data?.data;
+
+  if (result && typeof result === 'object' && 'data' in result && Array.isArray(result.data)) {
+    return result as { data: CricketMatch[]; meta: { page: number; limit: number; total: number; totalPages: number } };
+  }
+
+  if (Array.isArray(result)) {
+    return {
+      data: result,
+      meta: {
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+        total: result.length,
+        totalPages: 1,
+      },
+    };
+  }
+
+  return {
+    data: [],
+    meta: { page: 1, limit: 20, total: 0, totalPages: 1 },
+  };
 }
 
 export async function getMatchById(id: number): Promise<CricketMatch> {
@@ -92,6 +113,7 @@ export async function submitMatchResult(
   payload: {
     winner_team_id: number;
     man_of_match_id?: number;
+    man_of_match_guest_name?: string;
     team_a_score: string;
     team_b_score: string;
     player_stats: Array<{
@@ -121,6 +143,7 @@ export async function editMatchResult(
   payload: {
     winner_team_id?: number;
     man_of_match_id?: number;
+    man_of_match_guest_name?: string;
     team_a_score?: string;
     team_b_score?: string;
     player_stats?: Array<{
@@ -184,6 +207,7 @@ export async function changeBowler(
   payload: {
     bowler_id?: number;
     bowler_guest_name?: string;
+    bypass_consecutive_check?: boolean;
   }
 ): Promise<CricketMatch> {
   const response = await client.patch(`/sports/cricket/matches/${id}/bowler`, payload);

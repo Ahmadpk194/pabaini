@@ -63,6 +63,7 @@ export default function ScorerScreen() {
 
   // Bowler change modal states
   const [bowlerModalVisible, setBowlerModalVisible] = useState(false);
+  const [isSelectingBowler, setIsSelectingBowler] = useState(false);
 
   // Innings 2 openers modal states
   const [innings2ModalVisible, setInnings2ModalVisible] = useState(false);
@@ -92,18 +93,63 @@ export default function ScorerScreen() {
 
   // Innings transition & Bowler change triggers
   useEffect(() => {
+    if (match?.status === 'completed') {
+      setBowlerModalVisible(false);
+      setInnings2ModalVisible(false);
+      setWicketModalVisible(false);
+      return;
+    }
+
     if (liveData && match?.status === 'live') {
+      // Parse current score and overs
+      let currentRuns = 0;
+      let currentWickets = 0;
+      if (liveData.score && typeof liveData.score === 'string') {
+        const parts = liveData.score.split('/');
+        currentRuns = parseInt(parts[0], 10) || 0;
+        currentWickets = parseInt(parts[1], 10) || 0;
+      }
+
+      let currentOversCompleted = 0;
+      if (liveData.overs && typeof liveData.overs === 'string') {
+        currentOversCompleted = parseInt(liveData.overs.split('.')[0], 10) || 0;
+      }
+
+      const isFirstInningsEnd = liveData.current_innings === 1 && (currentWickets >= 10 || currentOversCompleted >= match.overs);
+      const isSecondInningsEnd = liveData.current_innings === 2 && (
+        currentWickets >= 10 ||
+        currentOversCompleted >= match.overs ||
+        (liveData.target && currentRuns >= liveData.target)
+      );
+
+      const isMatchEnding = isFirstInningsEnd || isSecondInningsEnd;
+
       // 1. Force Bowler Selection if current bowler is null / cleared (end of over or match start)
-      if (!liveData.bowler && liveData.status === 'live') {
+      if (!liveData.bowler && liveData.status === 'live' && !isMatchEnding) {
         // Only if striker/non-striker are set (so we aren't in innings transition)
         if (liveData.striker && liveData.non_striker) {
           setBowlerModalVisible(true);
         }
       }
 
-      // 2. Force Innings 2 openers selection if current_innings is 2 and striker/non-striker are null
-      if (liveData.current_innings === 2 && !liveData.striker && !liveData.non_striker) {
-        setInnings2ModalVisible(true);
+      // 2. Force Bowler Selection if the current over is completed (6 legal deliveries)
+      if (liveData.this_over && liveData.status === 'live' && !isMatchEnding) {
+        const legalBallsCount = liveData.this_over.filter(
+          (ball: any) => ball.extra_type !== 'wide' && ball.extra_type !== 'no_ball'
+        ).length;
+
+        if (legalBallsCount >= 6) {
+          setBowlerModalVisible(true);
+        }
+      }
+
+      // 3. Force Innings 2 openers selection if current_innings is 2 and striker/non-striker are null
+      if (liveData.current_innings === 2) {
+        if (!liveData.striker && !liveData.non_striker) {
+          setInnings2ModalVisible(true);
+        } else if (liveData.striker && liveData.non_striker) {
+          setInnings2ModalVisible(false);
+        }
       }
     }
   }, [liveData, match]);
@@ -169,8 +215,8 @@ export default function ScorerScreen() {
 
   // Determine current squads
   const battingTeamId = liveData.current_innings === 1
-    ? match.batting_first_team_id
-    : (match.batting_first_team_id === match.team_a_id ? match.team_b_id : match.team_a_id);
+    ? match.innings_1_batting_team_id
+    : (match.innings_1_batting_team_id === match.team_a_id ? match.team_b_id : match.team_a_id);
 
   const bowlingTeamId = battingTeamId === match.team_a_id ? match.team_b_id : match.team_a_id;
 
@@ -187,31 +233,66 @@ export default function ScorerScreen() {
   const nonStrikerKey = liveData.non_striker ? (liveData.non_striker.id ? `p-${liveData.non_striker.id}` : null) : null;
 
   // Remaining batsmen list (exclude striker, non-striker, and dismissed players)
-  const dismissedKeys = new Set(
-    (match.player_stats || [])
+  const dismissedKeys = new Set([
+    ...(liveData.dismissed_players || []),
+    ...(match.player_stats || [])
       .filter((s) => s.team_id === battingTeamId && s.how_out && s.how_out !== 'not_out')
       .map((s) => s.player_id ? `p-${s.player_id}` : `g-${s.guest_name}`)
-  );
+  ]);
 
   const remainingBatsmen = battingPlayers.filter((p) => {
     const key = getPlayerKey(p);
     // Don't show currently batting players or dismissed players
-    if (liveData.striker && (liveData.striker.id === p.player_id || liveData.striker.name === p.guest_name)) return false;
-    if (liveData.non_striker && (liveData.non_striker.id === p.player_id || liveData.non_striker.name === p.guest_name)) return false;
+    if (liveData.striker) {
+      if (p.player_id && liveData.striker.id === p.player_id) return false;
+      if (p.guest_name && liveData.striker.name === p.guest_name) return false;
+    }
+    if (liveData.non_striker) {
+      if (p.player_id && liveData.non_striker.id === p.player_id) return false;
+      if (p.guest_name && liveData.non_striker.name === p.guest_name) return false;
+    }
     return !dismissedKeys.has(key);
   });
 
   // Bowler change submission
-  const handleSelectBowler = async (player: LineupPlayer) => {
+  const handleSelectBowler = async (player: LineupPlayer, bypassCheck = false) => {
+    if (isSelectingBowler || recordBallMutation.isPending || changeBowlerMutation.isPending) {
+      return;
+    }
+
+    const lastBowler = (liveData as any).last_bowler;
+    const isConsecutive = lastBowler && (
+      (lastBowler.id && player.player_id === lastBowler.id) ||
+      (lastBowler.name && player.guest_name === lastBowler.name)
+    );
+
+    if (isConsecutive && !bypassCheck) {
+      Alert.alert(
+        'Consecutive Over',
+        `${player.name} bowled the previous over. Allow them to bowl consecutively?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Allow', onPress: () => handleSelectBowler(player, true) }
+        ]
+      );
+      return;
+    }
+
     const payload = player.player_id
-      ? { bowler_id: player.player_id }
-      : { bowler_guest_name: player.guest_name || undefined };
+      ? { bowler_id: player.player_id, bypass_consecutive_check: bypassCheck }
+      : { bowler_guest_name: player.guest_name || undefined, bypass_consecutive_check: bypassCheck };
+
+    setIsSelectingBowler(true);
+    setBowlerModalVisible(false);
 
     try {
       await changeBowlerMutation.mutateAsync({ id: matchId, payload });
-      setBowlerModalVisible(false);
     } catch (err: any) {
+      // Re-open modal on API failure so scorer can retry or select another player
+      setBowlerModalVisible(true);
       Alert.alert('Bowler Change Error', err.response?.data?.message || err.message);
+    } finally {
+      setIsSelectingBowler(false);
     }
   };
 
@@ -232,12 +313,18 @@ export default function ScorerScreen() {
       is_wicket: isWicket,
     };
 
+    // Reset selection state optimistically
+    const prevRuns = selectedRuns;
+    const prevExtra = selectedExtra;
+    setSelectedRuns(0);
+    setSelectedExtra('none');
+
     try {
       await recordBallMutation.mutateAsync({ id: matchId, payload });
-      // Reset selections
-      setSelectedRuns(0);
-      setSelectedExtra('none');
     } catch (err: any) {
+      // Revert selection on API failure
+      setSelectedRuns(prevRuns);
+      setSelectedExtra(prevExtra);
       Alert.alert('Scoring Error', err.response?.data?.message || err.message);
     }
   };
@@ -272,11 +359,19 @@ export default function ScorerScreen() {
       next_batsman_guest_name,
     };
 
+    // Close modal and reset states optimistically
+    const prevWicketType = wicketType;
+    const prevNextBatsmanKey = nextBatsmanKey;
+    setWicketModalVisible(false);
+    setNextBatsmanKey(null);
+
     try {
       await recordBallMutation.mutateAsync({ id: matchId, payload });
-      setWicketModalVisible(false);
-      setNextBatsmanKey(null);
     } catch (err: any) {
+      // Revert modal state on API failure
+      setWicketModalVisible(true);
+      setWicketType(prevWicketType);
+      setNextBatsmanKey(prevNextBatsmanKey);
       Alert.alert('Wicket Recording Error', err.response?.data?.message || err.message);
     }
   };
@@ -295,8 +390,8 @@ export default function ScorerScreen() {
 
     // Retriving striker, non-striker, and bowler payloads
     // For innings 2, batting team is the opposite of batting first team
-    const inn2Batters = match.batting_first_team_id === match.team_a_id ? lineups.team_b.players : lineups.team_a.players;
-    const inn2Bowlers = match.batting_first_team_id === match.team_a_id ? lineups.team_a.players : lineups.team_b.players;
+    const inn2Batters = match.innings_1_batting_team_id === match.team_a_id ? lineups.team_b.players : lineups.team_a.players;
+    const inn2Bowlers = match.innings_1_batting_team_id === match.team_a_id ? lineups.team_a.players : lineups.team_b.players;
 
     const striker = inn2Batters.find((p) => getPlayerKey(p) === inn2StrikerKey);
     const nonStriker = inn2Batters.find((p) => getPlayerKey(p) === inn2NonStrikerKey);
@@ -311,9 +406,10 @@ export default function ScorerScreen() {
       opening_bowler_guest_name: bowler?.guest_name || undefined,
     };
 
+    setInnings2ModalVisible(false);
+
     try {
       await startSecondInningsMutation.mutateAsync({ id: matchId, payload });
-      setInnings2ModalVisible(false);
     } catch (err: any) {
       Alert.alert('Innings Transition Error', err.response?.data?.message || err.message);
     }
@@ -349,16 +445,23 @@ export default function ScorerScreen() {
 
   const getBallBadgeColor = (ball: any) => {
     if (ball.is_wicket) return '#FFEBEB'; // Wicket red bg
-    if (ball.extra_type) return '#FFF8DC'; // Extra yellow bg
+    if (ball.extra_type) return '#FFF9E6'; // Extra light amber bg
     if (ball.runs === 4 || ball.runs === 6) return '#EBFBEF'; // Boundary green bg
-    return '#F5F5F5';
+    return theme.colors.surface; // Normal ball uses theme surface
   };
 
   const getBallTextColor = (ball: any) => {
     if (ball.is_wicket) return '#D32F2F';
-    if (ball.extra_type) return '#A07800';
-    if (ball.runs === 4 || ball.runs === 6) return '#2E7D32';
-    return '#616161';
+    if (ball.extra_type) return '#B78103';
+    if (ball.runs === 4 || ball.runs === 6) return '#1B5E20';
+    return theme.colors.textPrimary; // Normal text color
+  };
+
+  const getBallBorderColor = (ball: any) => {
+    if (ball.is_wicket) return '#FFCDD2'; // Red border
+    if (ball.extra_type) return '#FFE082'; // Amber border
+    if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9'; // Green border
+    return theme.colors.border; // Theme border color
   };
 
   return (
@@ -436,7 +539,7 @@ export default function ScorerScreen() {
               liveData.this_over.map((ball: any, idx: number) => (
                 <View
                   key={idx}
-                  style={[styles.ballBadge, { backgroundColor: getBallBadgeColor(ball) }]}
+                  style={[styles.ballBadge, { backgroundColor: getBallBadgeColor(ball), borderColor: getBallBorderColor(ball) }]}
                 >
                   <Text style={[styles.ballText, { color: getBallTextColor(ball) }]}>
                     {formatOverBallSymbol(ball)}
@@ -555,38 +658,63 @@ export default function ScorerScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <ShieldAlert color={theme.colors.primary} size={22} />
               <Text style={[styles.modalTitle, { color: theme.colors.textPrimary, marginBottom: 0 }]}>Select Next Bowler</Text>
+              {(recordBallMutation.isPending || changeBowlerMutation.isPending) && (
+                <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginLeft: 6 }} />
+              )}
             </View>
             <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 16 }}>
               Overs bound reached or match initialized. Choose a bowler from the roster (must not be the same bowler consecutively).
             </Text>
 
             <FlatList
-              data={bowlingPlayers.filter((p) => {
-                // Filter out previous bowler if possible
-                if (!liveData.bowler) return true;
-                return p.player_id !== liveData.bowler.id && p.guest_name !== liveData.bowler.name;
-              })}
+              data={bowlingPlayers}
               keyExtractor={(item) => getPlayerKey(item)}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
-                  onPress={() => handleSelectBowler(item)}
-                >
-                  <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const lastBowler = (liveData as any).last_bowler;
+                const isConsecutive = lastBowler && (
+                  (lastBowler.id && item.player_id === lastBowler.id) ||
+                  (lastBowler.name && item.guest_name === lastBowler.name)
+                );
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalItem,
+                      {
+                        borderBottomColor: theme.colors.border,
+                        opacity: (recordBallMutation.isPending || changeBowlerMutation.isPending || isSelectingBowler) ? 0.5 : 1,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }
+                    ]}
+                    onPress={() => handleSelectBowler(item)}
+                    disabled={recordBallMutation.isPending || changeBowlerMutation.isPending || isSelectingBowler}
+                  >
+                    <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>
+                      {item.name}
+                    </Text>
+                    {isConsecutive && (
+                      <View style={{ backgroundColor: '#FFEBEB', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FFCDD2' }}>
+                        <Text style={{ color: '#D32F2F', fontSize: 11, fontWeight: '700' }}>Previous Bowler</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
               ListEmptyComponent={
-                <TouchableOpacity
-                  style={{ padding: 20, alignItems: 'center' }}
-                  onPress={() => {
-                    // Fallback to show all in case of 2 players
-                    Alert.alert('Show all bowlers', 'Overriding consecutive bowler rules.');
-                  }}
-                >
-                  <Text style={{ color: theme.colors.textSecondary }}>No other bowlers available.</Text>
-                </TouchableOpacity>
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: theme.colors.textSecondary }}>No players available in bowling team lineup.</Text>
+                </View>
               }
             />
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.modalCloseBtn, { borderColor: theme.colors.border, borderWidth: 1 }]}
+              onPress={() => setBowlerModalVisible(false)}
+            >
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -717,8 +845,8 @@ export default function ScorerScreen() {
 
           {/* Batting team is opposite of batting first */}
           {(() => {
-            const inn2Batters = match.batting_first_team_id === match.team_a_id ? lineups.team_b.players : lineups.team_a.players;
-            const inn2Bowlers = match.batting_first_team_id === match.team_a_id ? lineups.team_a.players : lineups.team_b.players;
+            const inn2Batters = match.innings_1_batting_team_id === match.team_a_id ? lineups.team_b.players : lineups.team_a.players;
+            const inn2Bowlers = match.innings_1_batting_team_id === match.team_a_id ? lineups.team_a.players : lineups.team_b.players;
 
             return (
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 16 }}>
@@ -994,15 +1122,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   ballBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   ballText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   scoringPanel: {
     padding: 16,

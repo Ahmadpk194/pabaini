@@ -144,6 +144,7 @@ export interface CricketMatch {
   status: MatchStatus;
   winner_team_id: number | null;
   man_of_match_id: number | null;
+  man_of_match_guest_name: string | null;
   team_a_score: string | null;
   team_b_score: string | null;
   team_a_lineup_set: boolean;

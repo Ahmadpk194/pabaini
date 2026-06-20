@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,9 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin, Trophy, Shield, Clock, Award } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { ArrowLeft, Calendar, MapPin, Trophy, Shield, Clock, Award, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import {
@@ -29,17 +29,30 @@ export default function MatchDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
+  const insets = useSafeAreaInsets();
 
   // Get current user registration & profile from Zustand
   const isRegistered = useSportsStore((state) => state.isRegistered('cricket'));
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
 
   // Queries & Mutations
-  const { data: match, isLoading, error } = useMatchDetail(matchId);
+  // Fetches match details with manual refetch support on screen focus.
+  const { data: match, isLoading, error, refetch } = useMatchDetail(matchId);
   const { data: lineups, isLoading: isLoadingLineup } = useLineup(matchId);
   const acceptMutation = useAcceptMatch();
   const declineMutation = useDeclineMatch();
   const cancelMutation = useCancelMatch();
+
+  const [teamAExpanded, setTeamAExpanded] = useState(false);
+  const [teamBExpanded, setTeamBExpanded] = useState(false);
+
+  // Refetches the match details every time the screen comes into focus
+  // to reactively handle status and lineup updates.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const getStatusStyles = (status?: string) => {
     switch (status) {
@@ -414,76 +427,120 @@ export default function MatchDetailScreen() {
     const teamBStats = stats.filter((s) => s.team_id === match.team_b_id);
 
     const winnerName = match.winner_team?.name || (match.winner_team_id === match.team_a_id ? match.team_a.name : match.team_b.name) || 'Unknown';
-    const momName = match.man_of_match?.user?.name || 'Not Declared';
+    const momName = match.man_of_match?.user?.name || 
+      (match.man_of_match_guest_name ? `${match.man_of_match_guest_name} (Guest)` : 'Not Declared');
 
-    const renderTeamStats = (teamName: string, teamStats: typeof stats) => {
+    const renderTeamStats = (
+      teamName: string,
+      teamStats: typeof stats,
+      score: string | null,
+      isExpanded: boolean,
+      toggleExpand: () => void
+    ) => {
       const batters = teamStats.filter((s) => s.runs > 0 || s.balls_faced > 0 || s.how_out || s.is_not_out);
       const bowlers = teamStats.filter((s) => s.overs_bowled > 0);
 
       return (
-        <View style={{ marginBottom: 20 }}>
-          <Text style={[styles.scorecardTeamHeader, { color: theme.colors.primary }]}>{teamName}</Text>
-          
-          {/* Batting Header */}
-          <Text style={[styles.scorecardSubHeader, { color: theme.colors.textSecondary }]}>Batting</Text>
-          {batters.length === 0 ? (
-            <Text style={[styles.emptyStatsText, { color: theme.colors.textSecondary }]}>No batting stats recorded.</Text>
-          ) : (
-            <View style={[styles.statsTable, { borderColor: theme.colors.border }]}>
-              {batters.map((player, idx) => {
-                const displayName = player.name || player.guest_name || 'Guest';
-                const dismissalText = player.is_not_out ? 'not out' : (player.how_out ? player.how_out.replace(/_/g, ' ') : 'out');
-                
-                return (
-                  <View key={player.id || idx} style={[styles.statsRow, { borderBottomWidth: idx === batters.length - 1 ? 0 : 0.5, borderBottomColor: theme.colors.border }]}>
-                    <View style={{ flex: 2 }}>
-                      <Text style={[styles.statsPlayerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{displayName}</Text>
-                      <Text style={[styles.statsDismissal, { color: theme.colors.textSecondary }]} numberOfLines={1}>{dismissalText}</Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                      <Text style={[styles.statsRuns, { color: theme.colors.textPrimary }]}>
-                        {player.runs}
-                        <Text style={{ fontSize: 11, fontWeight: 'normal', color: theme.colors.textSecondary }}> ({player.balls_faced})</Text>
-                      </Text>
-                      <Text style={[styles.statsBoundary, { color: theme.colors.textSecondary }]}>
-                        4s: {player.fours} • 6s: {player.sixes}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
+        <View style={{ marginBottom: 12 }}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingVertical: 12,
+              paddingHorizontal: 12,
+              backgroundColor: theme.colors.border + '15',
+              borderRadius: theme.radius.sm,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+            }}
+            onPress={toggleExpand}
+          >
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.textPrimary }} numberOfLines={1}>
+                {teamName}
+              </Text>
+              {score && (
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 }}>{score}</Text>
+              )}
             </View>
-          )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 12, color: theme.colors.primary, fontWeight: '600' }}>
+                {isExpanded ? 'Hide' : 'Details'}
+              </Text>
+              {isExpanded ? (
+                <ChevronUp size={16} color={theme.colors.primary} />
+              ) : (
+                <ChevronDown size={16} color={theme.colors.primary} />
+              )}
+            </View>
+          </TouchableOpacity>
 
-          {/* Bowling Header */}
-          <Text style={[styles.scorecardSubHeader, { color: theme.colors.textSecondary, marginTop: 12 }]}>Bowling</Text>
-          {bowlers.length === 0 ? (
-            <Text style={[styles.emptyStatsText, { color: theme.colors.textSecondary }]}>No bowling stats recorded.</Text>
-          ) : (
-            <View style={[styles.statsTable, { borderColor: theme.colors.border }]}>
-              {bowlers.map((player, idx) => {
-                const displayName = player.name || player.guest_name || 'Guest';
-                const econ = player.overs_bowled > 0 ? (player.runs_given / player.overs_bowled).toFixed(2) : '0.00';
-                
-                return (
-                  <View key={player.id || idx} style={[styles.statsRow, { borderBottomWidth: idx === bowlers.length - 1 ? 0 : 0.5, borderBottomColor: theme.colors.border }]}>
-                    <View style={{ flex: 2 }}>
-                      <Text style={[styles.statsPlayerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{displayName}</Text>
-                      <Text style={[styles.statsDismissal, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                        Wides: {player.wides} • NB: {player.no_balls}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
-                      <Text style={[styles.statsRuns, { color: theme.colors.textPrimary }]}>
-                        {player.wickets} - {player.runs_given}
-                      </Text>
-                      <Text style={[styles.statsBoundary, { color: theme.colors.textSecondary }]}>
-                        {player.overs_bowled} ov • Econ: {econ}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
+          {isExpanded && (
+            <View style={{ marginTop: 12 }}>
+              {/* Batting Header */}
+              <Text style={[styles.scorecardSubHeader, { color: theme.colors.textSecondary }]}>Batting</Text>
+              {batters.length === 0 ? (
+                <Text style={[styles.emptyStatsText, { color: theme.colors.textSecondary }]}>No batting stats recorded.</Text>
+              ) : (
+                <View style={[styles.statsTable, { borderColor: theme.colors.border }]}>
+                  {batters.map((player, idx) => {
+                    const displayName = player.name || player.guest_name || 'Guest';
+                    const dismissalText = player.is_not_out ? 'not out' : (player.how_out ? player.how_out.replace(/_/g, ' ') : 'out');
+                    
+                    return (
+                      <View key={player.id || idx} style={[styles.statsRow, { borderBottomWidth: idx === batters.length - 1 ? 0 : 0.5, borderBottomColor: theme.colors.border }]}>
+                        <View style={{ flex: 2 }}>
+                          <Text style={[styles.statsPlayerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{displayName}</Text>
+                          <Text style={[styles.statsDismissal, { color: theme.colors.textSecondary }]} numberOfLines={1}>{dismissalText}</Text>
+                        </View>
+                        <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                          <Text style={[styles.statsRuns, { color: theme.colors.textPrimary }]}>
+                            {player.runs}
+                            <Text style={{ fontSize: 11, fontWeight: 'normal', color: theme.colors.textSecondary }}> ({player.balls_faced})</Text>
+                          </Text>
+                          <Text style={[styles.statsBoundary, { color: theme.colors.textSecondary }]}>
+                            4s: {player.fours} • 6s: {player.sixes}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Bowling Header */}
+              <Text style={[styles.scorecardSubHeader, { color: theme.colors.textSecondary, marginTop: 16 }]}>Bowling</Text>
+              {bowlers.length === 0 ? (
+                <Text style={[styles.emptyStatsText, { color: theme.colors.textSecondary }]}>No bowling stats recorded.</Text>
+              ) : (
+                <View style={[styles.statsTable, { borderColor: theme.colors.border }]}>
+                  {bowlers.map((player, idx) => {
+                    const displayName = player.name || player.guest_name || 'Guest';
+                    const econ = player.overs_bowled > 0 ? (player.runs_given / player.overs_bowled).toFixed(2) : '0.00';
+                    
+                    return (
+                      <View key={player.id || idx} style={[styles.statsRow, { borderBottomWidth: idx === bowlers.length - 1 ? 0 : 0.5, borderBottomColor: theme.colors.border }]}>
+                        <View style={{ flex: 2 }}>
+                          <Text style={[styles.statsPlayerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{displayName}</Text>
+                          <Text style={[styles.statsDismissal, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                            Wides: {player.wides} • NB: {player.no_balls}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                          <Text style={[styles.statsRuns, { color: theme.colors.textPrimary }]}>
+                            {player.wickets} - {player.runs_given}
+                          </Text>
+                          <Text style={[styles.statsBoundary, { color: theme.colors.textSecondary }]}>
+                            {player.overs_bowled} ov • Econ: {econ}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -526,16 +583,19 @@ export default function MatchDetailScreen() {
         <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 16 }} />
 
         {/* Team A stats */}
-        {renderTeamStats(match.team_a.name, teamAStats)}
+        {renderTeamStats(match.team_a.name, teamAStats, match.team_a_score, teamAExpanded, () => setTeamAExpanded(!teamAExpanded))}
         
         {/* Team B stats */}
-        {renderTeamStats(match.team_b.name, teamBStats)}
+        {renderTeamStats(match.team_b.name, teamBStats, match.team_b_score, teamBExpanded, () => setTeamBExpanded(!teamBExpanded))}
       </View>
     );
   };
 
+  // Configure SafeAreaView to only protect top, left, and right.
+  // The bottom edge is padded dynamically inside the ScrollView using insets.bottom
+  // to ensure bottom action buttons clear the phone's navigation gesture bar.
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -545,9 +605,13 @@ export default function MatchDetailScreen() {
         <View style={{ width: 36 }} />
       </View>
 
+      {/* Scrollable content extending under the bottom safe area navigation bar */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 40 }
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Status Card Banner */}

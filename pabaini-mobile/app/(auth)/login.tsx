@@ -6,6 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -165,167 +170,186 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       <View style={styles.container}>
-        {step === 'initial' ? (
-          <>
-            <View style={styles.header}>
-              <View
-                style={[
-                  styles.logoBadge,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    shadowColor: '#000',
-                  },
-                ]}
-              >
-                <Text style={[styles.logoText, { color: theme.colors.primary }]}>Pabaini</Text>
-              </View>
-            </View>
-
-            <View style={styles.main}>
-              <Text style={[styles.heading, { color: theme.colors.primary }]}>
-                Connecting the Pabaini Community
-              </Text>
-
-              <Text style={[styles.subtext, { color: theme.colors.textSecondary }]}>
-                Stay updated with official village announcements and community news.
-              </Text>
-
-              <View style={styles.actions}>
-                <Button
-                  title="Continue with Phone Number"
-                  onPress={handlePhoneLogin}
-                  variant="primary"
-                  style={styles.button}
-                  leftIcon={<PhoneIcon color={theme.colors.onPrimary} />}
-                />
-
-                <Button
-                  title="Continue with Google"
-                  onPress={handleGoogleLogin}
-                  variant="secondary"
-                  style={styles.button}
-                  leftIcon={<GoogleIcon />}
-                />
-
-                <View style={styles.dividerContainer}>
-                  <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-                  <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
-                  <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+          {step === 'initial' ? (
+            <>
+              <View style={styles.header}>
+                <View
+                  style={[
+                    styles.logoBadge,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      shadowColor: '#000',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.logoText, { color: theme.colors.primary }]}>Pabaini</Text>
                 </View>
-
-                <TouchableOpacity onPress={handleGuest} style={styles.guestButton}>
-                  <Text style={[styles.guestText, { color: theme.colors.primary }]}>
-                    Continue as Guest
-                  </Text>
-                </TouchableOpacity>
               </View>
-            </View>
 
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
-                By continuing, you agree to Pabaini's{' '}
-                <Text style={[styles.linkText, { color: theme.colors.link }]}>Terms of Service</Text>
-                {' '}and{' '}
-                <Text style={[styles.linkText, { color: theme.colors.link }]}>Privacy Policy</Text>.
-              </Text>
-              <Text style={[styles.copyrightText, { color: theme.colors.textSecondary }]}>
-                © 2026 Pabaini Village Square.
-              </Text>
-            </View>
-          </>
-        ) : step === 'phone' ? (
-          <>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
-            </TouchableOpacity>
+              <View style={styles.main}>
+                <Text style={[styles.heading, { color: theme.colors.primary }]}>
+                  Connecting the Pabaini Community
+                </Text>
 
-            <View style={styles.phoneContainer}>
-              <Text style={[styles.phoneHeading, { color: theme.colors.primary }]}>
-                Enter your phone number
-              </Text>
-              <Text style={[styles.phoneSubtext, { color: theme.colors.textSecondary }]}>
-                We'll send you a verification code
-              </Text>
+                <Text style={[styles.subtext, { color: theme.colors.textSecondary }]}>
+                  Stay updated with official village announcements and community news.
+                </Text>
 
-              <TextInput
-                style={[
-                  styles.phoneInput,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.textPrimary,
-                  },
-                ]}
-                placeholder="+92 3XX XXXXXXX"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={15}
-              />
+                <View style={styles.actions}>
+                  <Button
+                    title="Continue with Phone Number"
+                    onPress={handlePhoneLogin}
+                    variant="primary"
+                    style={styles.button}
+                    leftIcon={<PhoneIcon color={theme.colors.onPrimary} />}
+                  />
 
-              {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
+                  <Button
+                    title="Continue with Google"
+                    onPress={handleGoogleLogin}
+                    variant="secondary"
+                    style={styles.button}
+                    leftIcon={<GoogleIcon />}
+                  />
 
-              <Button
-                title={loading ? 'Sending...' : 'Send Code'}
-                onPress={handleSendOtp}
-                variant="primary"
-                style={styles.phoneButton}
-                disabled={loading || !phoneNumber.trim()}
-              />
-            </View>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
-            </TouchableOpacity>
+                  <View style={styles.dividerContainer}>
+                    <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+                    <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+                  </View>
 
-            <View style={styles.otpContainer}>
-              <Text style={[styles.otpHeading, { color: theme.colors.primary }]}>
-                Enter verification code
-              </Text>
-              <Text style={[styles.otpSubtext, { color: theme.colors.textSecondary }]}>
-                Code sent to {phoneNumber}
-              </Text>
+                  <TouchableOpacity onPress={handleGuest} style={styles.guestButton}>
+                    <Text style={[styles.guestText, { color: theme.colors.primary }]}>
+                      Continue as Guest
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-              <TextInput
-                style={[
-                  styles.otpInput,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.textPrimary,
-                  },
-                ]}
-                placeholder="Enter 6-digit code"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                maxLength={6}
-                textAlign="center"
-              />
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+                  By continuing, you agree to Pabaini's{' '}
+                  <Text style={[styles.linkText, { color: theme.colors.link }]}>Terms of Service</Text>
+                  {' '}and{' '}
+                  <Text style={[styles.linkText, { color: theme.colors.link }]}>Privacy Policy</Text>.
+                </Text>
+                <Text style={[styles.copyrightText, { color: theme.colors.textSecondary }]}>
+                  © 2026 Pabaini Village Square.
+                </Text>
+              </View>
+            </>
+          ) : step === 'phone' ? (
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                  <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
+                </TouchableOpacity>
 
-              {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
+                <ScrollView
+                  contentContainerStyle={{ flexGrow: 1 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.phoneContainer}>
+                    <Text style={[styles.phoneHeading, { color: theme.colors.primary }]}>
+                      Enter your phone number
+                    </Text>
+                    <Text style={[styles.phoneSubtext, { color: theme.colors.textSecondary }]}>
+                      We'll send you a verification code
+                    </Text>
 
-              <Button
-                title={loading ? 'Verifying...' : 'Verify'}
-                onPress={handleVerifyOtp}
-                variant="primary"
-                style={styles.otpButton}
-                disabled={loading || !otp.trim()}
-              />
-            </View>
-          </>
-        )}
-      </View>
+                    <TextInput
+                      style={[
+                        styles.phoneInput,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                          color: theme.colors.textPrimary,
+                        },
+                      ]}
+                      placeholder="+92 3XX XXXXXXX"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      keyboardType="phone-pad"
+                      maxLength={15}
+                    />
+
+                    {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
+
+                    <Button
+                      title={loading ? 'Sending...' : 'Send Code'}
+                      onPress={handleSendOtp}
+                      variant="primary"
+                      style={styles.phoneButton}
+                      disabled={loading || !phoneNumber.trim()}
+                    />
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          ) : (
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                  <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
+                </TouchableOpacity>
+
+                <ScrollView
+                  contentContainerStyle={{ flexGrow: 1 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.otpContainer}>
+                    <Text style={[styles.otpHeading, { color: theme.colors.primary }]}>
+                      Enter verification code
+                    </Text>
+                    <Text style={[styles.otpSubtext, { color: theme.colors.textSecondary }]}>
+                      Code sent to {phoneNumber}
+                    </Text>
+
+                    <TextInput
+                      style={[
+                        styles.otpInput,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                          color: theme.colors.textPrimary,
+                        },
+                      ]}
+                      placeholder="Enter 6-digit code"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      textAlign="center"
+                    />
+
+                    {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
+
+                    <Button
+                      title={loading ? 'Verifying...' : 'Verify'}
+                      onPress={handleVerifyOtp}
+                      variant="primary"
+                      style={styles.otpButton}
+                      disabled={loading || !otp.trim()}
+                    />
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          )}
+        </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+  },
+  keyboardAvoiding: {
     flex: 1,
   },
   container: {
@@ -424,10 +448,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Align form to the top to reduce empty space and keep elements above the keyboard
   phoneContainer: {
     flex: 1,
-    justifyContent: 'center',
-    paddingTop: 48,
+    paddingTop: 20,
   },
   phoneHeading: {
     fontSize: 28,
@@ -453,10 +477,10 @@ const styles = StyleSheet.create({
   phoneButton: {
     width: '100%',
   },
+  // Align form to the top to reduce empty space and keep elements above the keyboard
   otpContainer: {
     flex: 1,
-    justifyContent: 'center',
-    paddingTop: 48,
+    paddingTop: 20,
   },
   otpHeading: {
     fontSize: 28,

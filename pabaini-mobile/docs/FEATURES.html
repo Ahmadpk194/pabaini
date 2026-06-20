@@ -778,6 +778,13 @@
           <li>Pulls the list to execute standard refresh hooks for the latest announcements.</li>
         </ul>
       </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⏱️</span> Automatic Focus-Based Polling</h3>
+        <ul>
+          <li>Background polling (20-second interval) automatically fetches new notices while the Home tab screen is focused. It stops completely when the screen is blurred to save battery/network bandwidth. Entering or returning focus to the Home screen triggers an immediate query refetch.</li>
+        </ul>
+      </div>
     </section>
 
     <!-- ─── 4. Moderation ─────────────────────────────────────────────────── -->
@@ -1440,12 +1447,29 @@ interface MyTeamResponse {  // returned by GET /my
 
       <!-- Match Scheduling & Roster card -->
       <div class="feature-card">
-        <h3><span class="fc-icon">📅</span> Match Requests &amp; List (<code>request.tsx</code>)</h3>
+        <h3><span class="fc-icon">📅</span> Matches Tab &amp; List (<code>sports.tsx</code> / <code>request.tsx</code>)</h3>
         <ul>
-          <li><strong>Initiate Challenge:</strong> Captains of active teams can tap "+ Challenge" to challenge an opponent team.</li>
-          <li><strong>Form Validation:</strong> Proposes overs (1-100), optional venue, scheduled date/time, and choice of scoring mode (Live vs. Simple).</li>
+          <li><strong>Match Feed Lists:</strong> Groups matches into Live Matches (pulses red with live scorecard updates), Upcoming Matches (details venue, time, and roster lineup checklist), and Completed Matches (displays the winner, trophy icon, and final summaries). Renders via <code>MatchCard.tsx</code>.</li>
+          <li><strong>Initiate Challenge:</strong> Captains of active teams can challenge opponents via <code>request.tsx</code>. Fields include team/opponent dropdowns, overs (1-100), optional venue, scheduled date/time helpers, and scoring mode selector (Live vs. Simple).</li>
           <li><strong>Accept/Decline:</strong> Challenged captains view pending match requests on their Match Detail page to Accept or Decline.</li>
-          <li><strong>Matches Feed:</strong> Displays active pulsing "LIVE" badges, upcoming match checklist counts, and completed trophy scorecards. Renders cards via <code>MatchCard.tsx</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Match Detail -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">ℹ&amp;ufe0f;</span> Match Detail (<code>index.tsx</code>)</h3>
+        <ul>
+          <li><strong>Dynamic Scorer Actions:</strong> Renders context-specific button overlays depending on match state (Accept/Decline for challenges, Lineup Declaration, Start Match / Submit Result, Scorer Console, Watch Live, or Completed Scorecard).</li>
+          <li><strong>Collapsible Scorecards:</strong> For completed matches, displays full read-only scorecard summaries and individual player stats grouped into clean, collapsible sections for each team's batting and bowling performance cards, reducing UI clutter.</li>
+        </ul>
+      </div>
+
+      <!-- Searchable Player Directory -->
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔍</span> Searchable Player Directory (<code>players/index.tsx</code>)</h3>
+        <ul>
+          <li><strong>See All Players:</strong> Dedicated index view for all registered resident players, accessible via the "See All" button on the Sports tab dashboard.</li>
+          <li><strong>Search &amp; Pagination:</strong> Features a sticky search bar to filter players by name dynamically, clean skeleton loading screens, pull-to-refresh, and infinite scroll pagination (10 players per page).</li>
         </ul>
       </div>
 
@@ -1454,7 +1478,7 @@ interface MyTeamResponse {  // returned by GET /my
         <h3><span class="fc-icon">👥</span> Declaring the Playing XI (<code>lineup.tsx</code>)</h3>
         <ul>
           <li><strong>11/11 Roster:</strong> Requires exactly 11 players to be selected from the active team squad before scoring can start.</li>
-          <li><strong>Guest Players:</strong> Allows captains to manually add temporary guest players by name if they are not app users.</li>
+          <li><strong>Guest Players:</strong> Allows captains to manually add temporary guest players by name if they are not registered app users.</li>
           <li><strong>Batting Order:</strong> Captains assign batting slots (1 to 11) using reorder arrow controls.</li>
           <li><strong>Roster Badges:</strong> Detail pages display green/yellow "Declared" badges for both teams as client-side gates.</li>
         </ul>
@@ -1462,9 +1486,10 @@ interface MyTeamResponse {  // returned by GET /my
 
       <!-- Simple Result entry -->
       <div class="feature-card">
-        <h3><span class="fc-icon">📝</span> Simple Scorecard Submission (<code>result.tsx</code>)</h3>
+        <h3><span class="fc-icon">📝</span> Simple Scorecard Submission &amp; MoM (<code>result.tsx</code>)</h3>
         <ul>
           <li><strong>Winner &amp; Scores:</strong> Form to choose winning team, final scores (e.g. <code>120/5 (20)</code>), and Man of the Match.</li>
+          <li><strong>Man of the Match picker:</strong> Lists both registered players and guest players (distinguished with a <code>(Guest)</code> label), and includes a "None / Clear" option at the top of the picker. Matches detail pages correctly display guest player MoM names.</li>
           <li><strong>Player Stats:</strong> Collapsible accordion cards for each player to input individual runs, balls, boundaries, wickets, overs, and extras.</li>
           <li><strong>24-Hour Edit Lock:</strong> Results remain editable for 24 hours post-submission, after which the form is permanently locked and a lock padlock is shown.</li>
         </ul>
@@ -1477,8 +1502,10 @@ interface MyTeamResponse {  // returned by GET /my
           <li><strong>Toss &amp; Openers:</strong> Initialize Match wizard to record toss winner, batting first team, opening batsmen, opening bowler, and assigned scorer.</li>
           <li><strong>Exclusive Console:</strong> Designated scorer gets exclusive write access to enter runs, wickets, and extras. Others are redirected to the public Live Viewer.</li>
           <li><strong>Automated Logic:</strong> Legal ball counters, strike rotation on runs/overs, target updates, and auto-completion.</li>
-          <li><strong>Wickets Modal:</strong> Input box for dismissal types (caught, bowled, run-out) and choosing the next incoming batsman.</li>
-          <li><strong>Bowler Rotation:</strong> Blocks consecutive over bowls, prompting scorer for the next bowler at over boundaries.</li>
+          <li><strong>Double-Tap Locks:</strong> Prevents duplicate API requests during bowler and batsman selections.</li>
+          <li><strong>Wickets Modal:</strong> Input box for dismissal types (caught, bowled, run-out) and choosing the next incoming batsman. The selection list filters dynamically to exclude already-dismissed players.</li>
+          <li><strong>Bowler Rotation:</strong> Blocks consecutive over bowls, prompting scorer for the next bowler at over boundaries. The previous bowler has a red <code>Previous Bowler</code> badge, and selecting them prompts a confirmation dialog to bypass consecutive over restrictions.</li>
+          <li><strong>Match Auto-Completion:</strong> Automatically completes the match when the target is reached or all overs/wickets are exhausted, auto-dismissing active console modals to prevent errors on final-ball inputs.</li>
           <li><strong>Innings Break Wizard:</strong> Sets openers and bowling details for Innings 2.</li>
           <li><strong>One-Ball Undo:</strong> Reverts the single most recently entered delivery.</li>
         </ul>
