@@ -16,11 +16,20 @@ export class DbUserGuard implements CanActivate {
     // authUser should be set by FirebaseAuthGuard
     const authUser = request.authUser;
     if (!authUser || !authUser.uid) {
+      if (request.method === 'GET') {
+        return true;
+      }
       throw new UnauthorizedException('Authentication required');
     }
 
     // Fetch full user from database
     const dbUser = await this.usersService.findByFirebaseUid(authUser.uid);
+    if (!dbUser) {
+      if (request.method === 'GET') {
+        return true;
+      }
+      throw new UnauthorizedException('User not found in database');
+    }
 
     // Attach full DB user to request
     request.dbUser = dbUser;

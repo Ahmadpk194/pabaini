@@ -14,6 +14,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useAuthPromptStore } from '../../src/store/authPromptStore';
 import { useSportsStore } from '../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../src/store/sports/teamsStore';
 import { useNotificationsStore } from '../../src/store/notificationsStore';
@@ -36,7 +37,7 @@ const TABS = [
   { id: 'players', name: 'Players', icon: Users },
   { id: 'teams', name: 'Teams', icon: Shield },
   { id: 'matches', name: 'Matches', icon: Calendar },
-  { id: 'leaderboard', name: 'Leaderboard', icon: Trophy },
+  { id: 'leaderboard', name: 'Leaders', icon: Trophy },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -93,13 +94,14 @@ export default function SportsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (isGuest) return;
       fetchUnreadCount();
       const interval = setInterval(() => {
         fetchUnreadCount();
       }, 35000); // light poll every ~35s, only while Sports tab is focused
 
       return () => clearInterval(interval);
-    }, [fetchUnreadCount])
+    }, [fetchUnreadCount, isGuest])
   );
 
   const fetchTeamsData = useCallback(async (showLoader = true) => {
@@ -178,20 +180,21 @@ export default function SportsScreen() {
         }
 
         const response = await client.get('/sports/cricket/players', {
-          params: { page: targetPage, limit: 10 },
+          params: { page: targetPage, limit: 15 },
         });
 
         const result = response.data?.data;
         if (result) {
-          const fetchedPlayers = result.data || [];
-          const meta = result.meta || { page: 1, totalPages: 1 };
-
-          setPlayers((prev) => (isRefresh ? fetchedPlayers : [...prev, ...fetchedPlayers]));
-          setPage(meta.page);
-          setTotalPages(meta.totalPages);
+          if (isRefresh) {
+            setPlayers(result.data || []);
+          } else {
+            setPlayers((prev) => [...prev, ...(result.data || [])]);
+          }
+          setTotalPages(result.lastPage || 1);
+          setPage(targetPage);
         }
-      } catch (error) {
-        console.error('Error fetching players list:', error);
+      } catch (err) {
+        console.error('Error fetching players list:', err);
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -203,9 +206,13 @@ export default function SportsScreen() {
   // Initial load
   // Synchronizes profile from backend on mount, showing full screen loader
   useEffect(() => {
+    if (isGuest) {
+      setLoadingProfile(false);
+      return;
+    }
     syncProfile(true);
     fetchPlayers(1, true);
-  }, []);
+  }, [isGuest]);
 
   // Refresh feed and profile data
   // Does not trigger full screen profile loader to maintain pull-to-refresh context
@@ -224,14 +231,10 @@ export default function SportsScreen() {
 
   const handleRegisterPress = () => {
     if (isGuest) {
-      Alert.alert(
-        'Login Required',
-        'You must log in to register as a cricket player and join matches.',
-        [
-          { text: 'Log In', onPress: () => router.replace('/(auth)/login') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Player Setup Required',
+        description: 'You must log in to register as a cricket player, manage teams, and declare lineups.',
+      });
       return;
     }
     router.push('/sports/cricket/onboarding/role');
@@ -251,7 +254,7 @@ export default function SportsScreen() {
   }
 
   // 1. Render Opt-in Overlay Screen
-  if (!seenOptIn && !isRegistered) {
+  if (!seenOptIn && !isRegistered && !isGuest) {
     return (
       <SportsOptIn
         onRegisterCricket={handleRegisterPress}
@@ -377,6 +380,7 @@ export default function SportsScreen() {
         style={[
           styles.appBar,
           {
+            backgroundColor: theme.colors.surface,
             borderBottomColor: theme.colors.border,
             flexDirection: 'row',
             justifyContent: 'space-between',
@@ -384,20 +388,26 @@ export default function SportsScreen() {
           },
         ]}
       >
-        <Text style={[styles.appBarTitle, { color: theme.colors.textPrimary }]}>Pabaini Sports</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Text 
+          style={[styles.appBarTitle, { color: theme.colors.textPrimary, flex: 1, marginRight: 10 }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          Pabaini Sports
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {activeTab === 'teams' && isRegistered && (
             <TouchableOpacity
               disabled={isAtCaptainLimit}
               onPress={() => router.push('/sports/cricket/teams/create')}
               style={{
                 backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                paddingHorizontal: 12,
+                paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 16,
               }}
             >
-              <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+              <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
                 + Create Team
               </Text>
             </TouchableOpacity>
@@ -407,12 +417,12 @@ export default function SportsScreen() {
               onPress={() => router.push('/sports/cricket/matches/request')}
               style={{
                 backgroundColor: theme.colors.primary,
-                paddingHorizontal: 12,
+                paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 16,
               }}
             >
-              <Text style={{ color: theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+              <Text style={{ color: theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
                 + Challenge
               </Text>
             </TouchableOpacity>
@@ -422,43 +432,120 @@ export default function SportsScreen() {
       </View>
 
       {/* Tabs Selector */}
-      <View style={[styles.tabsWrapper, { borderBottomColor: theme.colors.border }]}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const TabIcon = tab.icon;
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              onPress={() => setActiveTab(tab.id)}
-              style={[
-                styles.tabButton,
-                isActive && {
-                  borderBottomColor: theme.colors.primary,
-                  borderBottomWidth: 3,
-                },
-              ]}
-              activeOpacity={0.8}
-            >
-              <TabIcon color={isActive ? theme.colors.primary : theme.colors.textSecondary} size={18} />
-              <Text
+      {!isGuest && (
+        <View style={[styles.tabsContainer, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.tabsWrapper, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+            {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const TabIcon = tab.icon;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id)}
                 style={[
-                  styles.tabText,
-                  {
-                    color: isActive ? theme.colors.primary : theme.colors.textSecondary,
-                    fontWeight: isActive ? '700' : '500',
+                  styles.tabButton,
+                  isActive && {
+                    backgroundColor: theme.colors.primary,
+                    shadowColor: theme.colors.primary,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 3,
+                    elevation: 2,
                   },
                 ]}
+                activeOpacity={0.8}
               >
-                {tab.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <TabIcon 
+                  color={isActive ? theme.colors.onPrimary : theme.colors.textSecondary} 
+                  size={14} 
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: isActive ? theme.colors.onPrimary : theme.colors.textSecondary,
+                      fontWeight: isActive ? '700' : '600',
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+          </View>
+        </View>
+      )}
 
       {/* Main Tab Views */}
-      {activeTab === 'players' && (
-        <FlatList
+      {isGuest ? (
+        (() => {
+          const matches = Array.isArray(matchesResponse)
+            ? matchesResponse
+            : (matchesResponse?.data || []);
+          const liveMatches = matches.filter(m => m.status === 'live');
+          const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
+          const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
+
+          return (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefetchingMatches}
+                  onRefresh={refetchMatches}
+                  colors={[theme.colors.primary]}
+                  tintColor={theme.colors.primary}
+                />
+              }
+            >
+              {/* Setup Banner prompting profile setup */}
+              <View style={{ marginTop: 8 }}>
+                <SetupBanner onPress={handleRegisterPress} />
+              </View>
+
+              <View style={{ gap: 20, paddingTop: 10 }}>
+                {liveMatches.length > 0 && (
+                  <View style={{ gap: 10 }}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
+                    {liveMatches.map(m => (
+                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                    ))}
+                  </View>
+                )}
+
+                <View style={{ gap: 10 }}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
+                  {upcomingMatches.length === 0 ? (
+                    <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No upcoming matches scheduled.</Text>
+                  ) : (
+                    upcomingMatches.map(m => (
+                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                    ))
+                  )}
+                </View>
+
+                <View style={{ gap: 10 }}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
+                  {completedMatches.length === 0 ? (
+                    <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No completed matches found.</Text>
+                  ) : (
+                    completedMatches.map(m => (
+                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                    ))
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          );
+        })()
+      ) : (
+        <>
+          {activeTab === 'players' && (
+            <FlatList
           data={players}
           renderItem={renderPlayerItem}
           keyExtractor={(item) => item.id.toString()}
@@ -850,6 +937,8 @@ export default function SportsScreen() {
           icon={<Trophy color={theme.colors.primary} size={36} />}
         />
       )}
+        </>
+      )}
     </View>
   );
 }
@@ -863,28 +952,34 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    backgroundColor: '#FFFFFF',
   },
   appBarTitle: {
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
+  tabsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   tabsWrapper: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderRadius: 24,
+    padding: 4,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
   },
   listContent: {
     paddingHorizontal: 20,

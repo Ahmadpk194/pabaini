@@ -34,6 +34,8 @@ import {
   useEditResult,
 } from '../../../../../src/hooks/useMatches';
 import { Avatar } from '../../../../../src/components/ui/Avatar';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 
 interface LocalStatEntry {
   key: string; // "player-ID" or "guest-NAME"
@@ -71,6 +73,7 @@ export default function MatchResultFormScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
+  const { isGuest } = useAuth();
 
   // Zustand Store
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
@@ -100,6 +103,7 @@ export default function MatchResultFormScreen() {
 
   // Auth Guard & Redirects
   useEffect(() => {
+    if (isGuest) return;
     if (match && !isLoadingMatch) {
       const isTeamACaptain = myProfile && match.team_a.captain?.id === myProfile.id;
       const isTeamBCaptain = myProfile && match.team_b.captain?.id === myProfile.id;
@@ -116,7 +120,7 @@ export default function MatchResultFormScreen() {
         router.back();
       }
     }
-  }, [match, isLoadingMatch, isEditMode, myProfile]);
+  }, [match, isLoadingMatch, isEditMode, myProfile, isGuest]);
 
   // Initializing state with lineups
   useEffect(() => {
@@ -270,7 +274,7 @@ export default function MatchResultFormScreen() {
   };
 
   const isPending = submitResultMutation.isPending || editResultMutation.isPending;
-  const isLoading = isLoadingMatch || isLoadingLineup || !isInitialized;
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || !isInitialized);
 
   if (isLoading) {
     return (
@@ -301,6 +305,13 @@ export default function MatchResultFormScreen() {
           </Text>
           <View style={{ width: 36 }} />
         </View>
+
+        {isGuest ? (
+          <View style={styles.centerContainer}>
+            <LoginRequiredGate fullscreen={false} />
+          </View>
+        ) : (
+          <>
 
         <ScrollView
           style={{ flex: 1 }}
@@ -906,6 +917,8 @@ export default function MatchResultFormScreen() {
             </View>
           </View>
         </Modal>
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

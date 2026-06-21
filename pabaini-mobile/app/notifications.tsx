@@ -13,6 +13,8 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../src/context/ThemeContext';
 import { useNotificationsStore } from '../src/store/notificationsStore';
+import { useAuth } from '../src/hooks/useAuth';
+import { LoginRequiredGate } from '../src/components/ui/LoginRequiredGate';
 import {
   getNotifications,
   markAsRead,
@@ -25,6 +27,7 @@ import { NotificationEmptyState } from '../src/components/notifications/Notifica
 export default function NotificationsScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { isGuest } = useAuth();
 
   // Store actions
   const decrementUnreadCount = useNotificationsStore((state) => state.decrementUnreadCount);
@@ -41,6 +44,7 @@ export default function NotificationsScreen() {
 
   const loadNotifications = useCallback(
     async (pageNum: number, refreshing = false) => {
+      if (isGuest) return;
       try {
         if (pageNum === 1 && !refreshing) {
           setIsLoading(true);
@@ -62,20 +66,26 @@ export default function NotificationsScreen() {
         setIsRefreshing(false);
       }
     },
-    []
+    [isGuest]
   );
 
   useEffect(() => {
+    if (isGuest) {
+      setIsLoading(false);
+      return;
+    }
     loadNotifications(1);
-  }, [loadNotifications]);
+  }, [loadNotifications, isGuest]);
 
   const handleRefresh = async () => {
+    if (isGuest) return;
     setIsRefreshing(true);
     setPage(1);
     await Promise.all([loadNotifications(1, true), fetchUnreadCount()]);
   };
 
   const handleLoadMore = () => {
+    if (isGuest) return;
     if (hasMore && !isLoading && !isLoadingMore) {
       setIsLoadingMore(true);
       const nextPage = page + 1;
@@ -85,6 +95,7 @@ export default function NotificationsScreen() {
   };
 
   const handlePressRow = async (notification: AppNotification) => {
+    if (isGuest) return;
     if (!notification.is_read) {
       // Optimistic state updates
       setNotifications((prev) =>
@@ -106,6 +117,7 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAllRead = async () => {
+    if (isGuest) return;
     // Optimistic state updates
     setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
     clearUnreadCount();
@@ -116,7 +128,7 @@ export default function NotificationsScreen() {
     });
   };
 
-  const hasUnread = notifications.some((n) => !n.is_read);
+  const hasUnread = !isGuest && notifications.some((n) => !n.is_read);
 
   // Group notifications into Today, Yesterday, Earlier sections
   const groupNotifications = () => {
@@ -190,7 +202,9 @@ export default function NotificationsScreen() {
       </View>
 
       {/* Main List content */}
-      {isLoading ? (
+      {isGuest ? (
+        <LoginRequiredGate fullscreen={true} />
+      ) : isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>

@@ -17,6 +17,8 @@ import { getCricketPlayers } from '../../../../../src/api/sports';
 import { getTeamById, inviteToTeam } from '../../../../../src/services/sports/cricketTeamsApi';
 import { CricketPlayerProfile, TeamFull } from '../../../../../src/types/sports.types';
 import { Avatar } from '../../../../../src/components/ui/Avatar';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 
 const ROLE_LABELS: Record<string, string> = {
   batsman: 'Batsman',
@@ -29,6 +31,7 @@ export default function InvitePlayerScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { isGuest } = useAuth();
   const teamId = typeof id === 'string' ? parseInt(id, 10) : parseInt(id?.[0] || '0', 10);
 
   // States
@@ -41,6 +44,7 @@ export default function InvitePlayerScreen() {
   const [inviteStatus, setInviteStatus] = useState<Record<number, 'idle' | 'sending' | 'sent'>>({});
 
   const loadData = async () => {
+    if (isGuest) return;
     setLoading(true);
     try {
       const [teamData, playersData] = await Promise.all([
@@ -59,10 +63,14 @@ export default function InvitePlayerScreen() {
   };
 
   useEffect(() => {
+    if (isGuest) {
+      setLoading(false);
+      return;
+    }
     if (teamId) {
       loadData();
     }
-  }, [teamId]);
+  }, [teamId, isGuest]);
 
   // Filter out players who are already members or have pending requests/invites
   const getEligiblePlayers = () => {
@@ -81,6 +89,7 @@ export default function InvitePlayerScreen() {
   };
 
   const handleInvite = async (player: CricketPlayerProfile) => {
+    if (isGuest) return;
     // Optimistic UI update: Set to sending state
     setInviteStatus((prev) => ({ ...prev, [player.id]: 'sending' }));
 
@@ -182,35 +191,43 @@ export default function InvitePlayerScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* Sticky Search bar */}
-      <View style={[styles.searchSection, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-        <View style={[styles.searchWrapper, { backgroundColor: theme.colors.background }]}>
-          <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.colors.textPrimary }]}
-            placeholder="Search players by name..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-          />
-        </View>
-      </View>
-
-      {/* Players list */}
-      {loading ? (
+      {isGuest ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <LoginRequiredGate fullscreen={false} />
         </View>
       ) : (
-        <FlatList
-          data={filteredPlayers}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderPlayerRow}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          {/* Sticky Search bar */}
+          <View style={[styles.searchSection, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <View style={[styles.searchWrapper, { backgroundColor: theme.colors.background }]}>
+              <Search size={18} color={theme.colors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.colors.textPrimary }]}
+                placeholder="Search players by name..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* Players list */}
+          {loading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={filteredPlayers}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderPlayerRow}
+              ListEmptyComponent={renderEmpty}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </>
       )}
     </SafeAreaView>
   );

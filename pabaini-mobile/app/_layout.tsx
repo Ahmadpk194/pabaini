@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { AuthProvider } from '../src/context/AuthContext';
+import { LoginPromptModal } from '../src/components/ui/LoginPromptModal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="announcement/create" options={{ headerShown: false }} />
             <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
           </Stack>
+          <LoginPromptModal />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

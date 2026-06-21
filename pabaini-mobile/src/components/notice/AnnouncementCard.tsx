@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Announcement, Category } from '../../types';
 import { useLikeMutation } from '../../hooks/useLikeMutation';
 import { useAuth } from '../../hooks/useAuth';
+import { useAuthPromptStore } from '../../store/authPromptStore';
 
 interface AnnouncementCardProps {
   announcement: Announcement;
@@ -18,7 +19,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
   const { theme } = useTheme();
   const router = useRouter();
   const likeMutation = useLikeMutation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   const showSettings = user?.role === 'admin' || user?.role === 'moderator' || user?.id === announcement.author_id;
 
@@ -79,6 +80,13 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
   const categoryLabel = getCategoryLabel(announcement.category);
 
   const handleLikePress = async () => {
+    if (isGuest) {
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Log In to Like',
+        description: 'Please sign in to like announcements and interact with the community.',
+      });
+      return;
+    }
     // Trigger bounce animation
     triggerBounceAnimation();
     
@@ -99,6 +107,13 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
             activeOpacity={0.7}
             onPress={(e) => {
               e.stopPropagation();
+              if (isGuest) {
+                useAuthPromptStore.getState().showPrompt({
+                  title: 'Log In to View Profiles',
+                  description: 'Please sign in to view player profiles and interact with the community.',
+                });
+                return;
+              }
               router.push(`/profile/${announcement.author.id}`);
             }}
             style={styles.authorClickable}

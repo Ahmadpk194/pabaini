@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import client from '../../../../src/api/client';
+import { useAuth } from '../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../src/components/ui/LoginRequiredGate';
 import { CricketPlayerProfile } from '../../../../src/types/sports.types';
 import { CricketPlayerCard } from '../../../../src/components/sports/cricket/CricketPlayerCard';
 import { PlayerCardSkeleton } from '../../../../src/components/skeletons';
@@ -22,6 +24,7 @@ import { PlayerCardSkeleton } from '../../../../src/components/skeletons';
 export default function DiscoverPlayersScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { isGuest } = useAuth();
 
   // Local state
   const [players, setPlayers] = useState<CricketPlayerProfile[]>([]);
@@ -72,8 +75,10 @@ export default function DiscoverPlayersScreen() {
   );
 
   useEffect(() => {
-    fetchPlayers(1, searchQuery, true);
-  }, []);
+    if (!isGuest) {
+      fetchPlayers(1, searchQuery, true);
+    }
+  }, [isGuest, fetchPlayers, searchQuery]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -90,8 +95,26 @@ export default function DiscoverPlayersScreen() {
   // Immediate search on text change
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
-    fetchPlayers(1, text, true);
+    if (!isGuest) {
+      fetchPlayers(1, text, true);
+    }
   };
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Discover Players</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <LoginRequiredGate title="Discover Players" description="Please log in to browse cricket players and view their profiles." fullscreen={false} />
+      </SafeAreaView>
+    );
+  }
 
   const renderEmpty = () => {
     if (loading) return null;

@@ -10,6 +10,7 @@
 > * **Notice Board (Announcements)**: CRUD operations on the announcements feed with focus-based automatic background polling (20-second interval) that automatically stops when the screen is blurred. Admins and moderators can post, pin, and edit notices. Categories like `urgent` and `jirga_decision` trigger global push notifications via Firebase Cloud Messaging (FCM).
 > * **Sports Hub (Cricket)**: Features player registration, searchable player discover directory (name search, pull-to-refresh, infinite scroll), team squad management (invites/requests), match scheduling request lifecycle, Playing XI declarations, and two scoring modes: Simple (retroactive scorecards with a 24-hour edit lock, collapsible team scorecard stats, guest player "Man of the Match" support, and real-time player statistics calculation) and Live (real-time ball-by-ball scoring console with bowler consecutive over validation, confirmation overrides, selection double-tap locks, strike rotation, innings transition, dismissed batsmen dropdown filtering, auto-closing console modals on match completion, undo features, and optimized pre-computed polling views).
 > * **State Management & Caching**: TanStack React Query manages mobile data caches, while Zustand stores manage transient/persisted UI state (auth session, sports registrations, unread notification badges).
+> * **Guest Mode & Authentication Gating**: Unauthenticated guests are allowed read-only access to notices and matches feeds. All active write paths (liking, commenting, scheduling, scoring) and user details screens are gated by a reusable `LoginRequiredGate` or global `LoginPromptModal` interceptor. Backend route guards conditionally bypass Firebase claims for public GET requests, and the frontend client stops token retrieval for guest states, resolving 401 exceptions. Logouts and guest transitions flush all Zustand and TanStack Query caches.
 
 ---
 
@@ -1464,7 +1465,11 @@ flowchart TD
 
 ## 17. RECENT DEVELOPMENT HISTORY
 
-*   **Recently Implemented**: Completed **Stage 4 (Live Scoring & Live Viewer UI)** on mobile: Start match setup, Scorer ball-by-ball console, batsman/bowler selectors, innings transitions, undo ball utility, and spectator 5-second polling Live Match Viewer, completing all 4 phases of the Cricket feature.
+*   **Recently Implemented**:
+    *   **Live Scoring & Live Viewer UI (Stage 4)**: Start match setup, Scorer ball-by-ball console, batsman/bowler selectors, innings transitions, undo ball utility, and spectator 5-second polling Live Match Viewer.
+    *   **Guest Mode & Authentication Gating**: Restricted guest (unauthenticated) sessions to read-only Announcements feed and Sports match listings. Implemented reusable `LoginRequiredGate` and modal prompt interceptors. Bypassed Firebase token fetches for guest states in the mobile API client and enabled conditional auth validations for backend public GET routes. Cleared Zustand stores and React Query caches dynamically on guest transitions/logout.
+    *   **Tab Layout & Responsive Design**: Refined bottom tabs to dynamically adjust height and padding based on Android system navigation bar/safe area bottom insets. Tightened padding, margins, and gaps in the Sports header to resolve spacing and text crush issues on narrow mobile displays.
+    *   **Dynamic Team Stats**: Replaced static placeholders on the Team Profile screen with dynamically aggregated statistics (wins, losses, match counts, and win rates) computed on-the-fly from the team's matches array. Categorized matches into Live, Scheduled, and Completed lists.
 *   **Next Priorities**: Standings leaderboards, MVP ranking metrics, and the blood donors registry database structure.
 
 ---

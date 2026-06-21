@@ -16,6 +16,8 @@ import { ArrowLeft, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../../../src/store/sports/teamsStore';
+import { useAuth } from '../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../src/components/ui/LoginRequiredGate';
 import { getAllTeams } from '../../../../src/services/sports/cricketTeamsApi';
 import { TeamSummary } from '../../../../src/types/sports.types';
 import { TeamCard } from '../../../../src/components/sports/teams/TeamCard';
@@ -23,6 +25,7 @@ import { TeamCard } from '../../../../src/components/sports/teams/TeamCard';
 export default function DiscoverTeamsScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { isGuest } = useAuth();
   
   // Get registration status from Zustand
   const isRegistered = useSportsStore((state) => state.isRegistered('cricket'));
@@ -52,8 +55,10 @@ export default function DiscoverTeamsScreen() {
   };
 
   useEffect(() => {
-    loadTeams();
-  }, []);
+    if (!isGuest) {
+      loadTeams();
+    }
+  }, [isGuest]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -65,6 +70,22 @@ export default function DiscoverTeamsScreen() {
   const filteredTeams = teams.filter((team) =>
     team.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <LoginRequiredGate title="Discover Teams" description="Please log in to browse village teams and view team profiles." fullscreen={false} />
+      </SafeAreaView>
+    );
+  }
 
   const renderEmpty = () => {
     if (loading) return null;

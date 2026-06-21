@@ -13,6 +13,10 @@ import { User } from '../types';
 import { login as loginApi } from '../api/auth';
 import { getMe, updateMe as updateMeApi, uploadAvatar as uploadAvatarApi, registerDeviceToken as registerDeviceTokenApi, removeDeviceToken as removeDeviceTokenApi } from '../api/users';
 import { firebaseAuthService } from '../api/firebaseAuth';
+import { useSportsStore } from '../store/sports/sportsStore';
+import { useTeamsStore } from '../store/sports/teamsStore';
+import { useCricketOnboardingStore } from '../store/sports/cricketOnboardingStore';
+import { useNotificationsStore } from '../store/notificationsStore';
 
 interface AuthContextType {
   user: User | null;
@@ -135,6 +139,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const clearSessionData = () => {
+    try {
+      // 1. Reset Zustand Stores
+      useSportsStore.getState().reset();
+      useTeamsStore.getState().clearMyTeams();
+      useCricketOnboardingStore.getState().reset();
+      useNotificationsStore.getState().clearUnreadCount();
+      
+      // 2. Clear QueryClient Cache
+      queryClient.clear();
+    } catch (err) {
+      console.error('Error clearing session data:', err);
+    }
+  };
+
   async function logout() {
     try {
       try {
@@ -149,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await firebaseAuthService.signOut();
       await SecureStore.deleteItemAsync('firebase_id_token');
       await SecureStore.deleteItemAsync('is_guest');
+      clearSessionData();
       setUser(null);
       setIsGuest(false);
     } catch (error) {
@@ -159,7 +179,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function setGuest() {
     try {
+      try {
+        await firebaseAuthService.signOut();
+      } catch (err) {
+        console.error('Firebase signout error on setGuest:', err);
+      }
+      await SecureStore.deleteItemAsync('firebase_id_token');
       await SecureStore.setItemAsync('is_guest', 'true');
+      clearSessionData();
       setIsGuest(true);
       setUser(null);
     } catch (error) {

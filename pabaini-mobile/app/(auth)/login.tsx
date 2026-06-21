@@ -129,9 +129,13 @@ export default function LoginScreen() {
     }
   };
    
-  const handleGuest = () => {
-    setGuest();
-    router.replace('/(tabs)');
+  const handleGuest = async () => {
+    try {
+      await setGuest();
+      router.replace('/(tabs)');
+    } catch (err) {
+      console.error('Error starting guest session:', err);
+    }
   };
 
   const handleBack = () => {

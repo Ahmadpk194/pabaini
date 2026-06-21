@@ -627,6 +627,7 @@
       <a href="#create"><span class="nav-icon">📝</span> Create Post</a>
       <a href="#share"><span class="nav-icon">📤</span> Share Sheet</a>
       <a href="#profile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="#guest-gating"><span class="nav-icon">🔐</span> Guest Gating</a>
     </nav>
 
     <div class="sidebar-section-label">Sports</div>
@@ -931,10 +932,10 @@
       <div class="feature-card">
         <h3><span class="fc-icon">📋</span> Sub-Tabs Directory</h3>
         <ul>
-          <li>Horizontal tab selector bar: <strong>Players</strong>, <strong>Teams</strong>, <strong>Matches</strong>, <strong>Leaderboard</strong>.</li>
+          <li>Elegant segmented horizontal tab selector bar: <strong>Players</strong>, <strong>Teams</strong>, <strong>Matches</strong>, <strong>Leaders</strong>.</li>
           <li><strong>Players Tab:</strong> Displays the user's personal player card at the top (if registered), followed by an infinite-scroll list of other community players (<code>GET /sports/cricket/players?page=N&amp;limit=10</code>).</li>
           <li><strong>Teams Tab:</strong> Fully live — see Phase 2 below.</li>
-          <li><strong>Matches, Leaderboard:</strong> Render <code>ComingSoonState</code> placeholders.</li>
+          <li><strong>Matches, Leaders:</strong> Renders challenge match fixtures and leaderboards.</li>
         </ul>
       </div>
 
@@ -1703,6 +1704,46 @@ interface MyTeamResponse {  // returned by GET /my
           <text x="110" y="145" class="fc-text-small">Requests → /teams/:id/manage</text>
           <text x="110" y="165" class="fc-text-small">Announce → /announcement/:id</text>
         </svg>
+      </div>
+    </section>
+
+    <!-- ─── Guest Mode & Authentication Gating ──────────────────────────── -->
+    <section class="section" id="guest-gating">
+      <div class="section-header">
+        <div class="section-number">🔐</div>
+        <h2>Guest Mode &amp; Authentication Gating</h2>
+        <span class="section-tag tag-done">Security</span>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔐</span> Restricted Navigation Zone</h3>
+        <ul>
+          <li>Guests are strictly limited to two screens: <strong>Announcements Feed</strong> (Home) and the <strong>Matches tab</strong> under Sports.</li>
+          <li>The top tabs for <em>Players</em>, <em>Teams</em>, and <em>Leaders</em> on the Sports hub are hidden entirely for guests, rendering only the Matches ScrollView.</li>
+          <li>Visiting gated routes directly (e.g., <em>Roster</em>, <em>Create Team</em>, <em>Match setup</em>, <em>Scoring</em>, <em>Notifications</em>, <em>Resident profiles</em>) redirects to the custom <code>LoginRequiredGate</code> component.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⚡</span> Action Intercepting Overlay</h3>
+        <ul>
+          <li>Interactive write triggers (such as <em>Liking</em> a notice, <em>Commenting</em>, <em>Registering</em> as a player, or <em>Joining</em> a team squad) are intercepted by the global <code>LoginPromptModal</code> which requests user authentication.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔄</span> Auth State &amp; Cache Clearing</h3>
+        <ul>
+          <li>Logouts and guest transitions flush all Zustand persistent stores (<code>sportsStore</code>, <code>teamsStore</code>, <code>notificationsStore</code>) and trigger a full TanStack Query client clear (<code>queryClient.clear()</code>) to prevent data leaking.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🛠</span> Bypassing Auth Headers</h3>
+        <ul>
+          <li>On the frontend, the Axios request interceptor checks <code>is_guest</code> in <code>SecureStore</code> and skips Firebase token acquisition.</li>
+          <li>On the backend, <code>FirebaseAuthGuard</code> and <code>DbUserGuard</code> are configured as optional for <code>GET</code> requests, enabling public notice board and matches list requests to return data successfully instead of throwing a <code>401 Unauthorized</code> exception.</li>
+        </ul>
       </div>
     </section>
 

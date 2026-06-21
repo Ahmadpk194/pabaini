@@ -5,11 +5,14 @@ import { User } from 'src/modules/users/entities/user.entity';
 // Use @DbUser() when you need role, id, etc. from the database
 // Use @CurrentUser() when you only need the Firebase decoded token (uid)
 export const DbUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): User => {
+  (data: unknown, ctx: ExecutionContext): User | undefined => {
     const request = ctx.switchToHttp().getRequest();
     const dbUser = request.dbUser;
 
     if (!dbUser) {
+      if (request.method === 'GET') {
+        return undefined;
+      }
       throw new UnauthorizedException('User not loaded in request context');
     }
 

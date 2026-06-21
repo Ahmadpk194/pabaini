@@ -25,6 +25,8 @@ import {
   useMatchDetail,
 } from '../../../../src/hooks/useMatches';
 import { MatchScoringMode, RequestMatchPayload } from '../../../../src/types/sports.types';
+import { useAuth } from '../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../src/components/ui/LoginRequiredGate';
 
 // Helper to format ISO to YYYY-MM-DD HH:MM
 const formatISOToInput = (isoString?: string | null): string => {
@@ -70,6 +72,7 @@ export default function MatchRequestScreen() {
   const router = useRouter();
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const isEditMode = !!matchId;
+  const { isGuest } = useAuth();
 
   // Store data
   const myTeams = useTeamsStore((state) => state.myTeams);
@@ -171,6 +174,7 @@ export default function MatchRequestScreen() {
   };
 
   const handleSubmit = async () => {
+    if (isGuest) return;
     if (!validate()) return;
     setSubmitError(null);
 
@@ -266,7 +270,13 @@ export default function MatchRequestScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Scroll Content */}
+        {isGuest ? (
+          <View style={styles.centerContainer}>
+            <LoginRequiredGate fullscreen={false} />
+          </View>
+        ) : (
+          <>
+            {/* Scroll Content */}
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.scrollContent}
@@ -581,6 +591,8 @@ export default function MatchRequestScreen() {
             </SafeAreaView>
           </View>
         </Modal>
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

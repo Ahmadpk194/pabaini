@@ -12,8 +12,10 @@ import { Badge } from '../../src/components/ui/Badge';
 import { getCategoryConfig } from '../../src/constants/categories';
 import { AnnouncementDetailSkeleton } from '../../src/components/skeletons';
 import { ImageViewer } from '../../src/components/ui/ImageViewer';
+import { Avatar } from '../../src/components/ui/Avatar';
 import { useLikeMutation } from '../../src/hooks/useLikeMutation';
 import { queryKeys } from '../../src/constants/queryKeys';
+import { useAuthPromptStore } from '../../src/store/authPromptStore';
 
 export default function AnnouncementDetailScreen() {
   const { theme } = useTheme();
@@ -75,7 +77,10 @@ export default function AnnouncementDetailScreen() {
 
   async function handleLike() {
     if (isGuest) {
-      // TODO: Show login prompt
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Log In to Like',
+        description: 'Please sign in to like announcements and interact with the community.',
+      });
       return;
     }
     if (!announcement) return;
@@ -284,11 +289,23 @@ export default function AnnouncementDetailScreen() {
             paddingBottom: insets.bottom > 0 ? insets.bottom : 12
           }
         ]}>
+          {isGuest && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                useAuthPromptStore.getState().showPrompt({
+                  title: 'Log In to Comment',
+                  description: 'Please sign in to comment on announcements and interact with the community.',
+                })
+              }
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.4)', zIndex: 10 }]}
+            />
+          )}
           {user?.avatar_url ? (
             <Image source={{ uri: user.avatar_url }} style={styles.myAvatar} />
           ) : (
             <View style={[styles.myAvatar, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.myAvatarInitials}>{getInitials(user?.name || 'User')}</Text>
+              <Text style={styles.myAvatarInitials}>{getInitials(user?.name || 'Guest')}</Text>
             </View>
           )}
           <View style={styles.inputContainer}>

@@ -4,9 +4,10 @@ import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { firebaseAuthService } from "./firebaseAuth";
 
-const BASE_URL =
-  Constants?.expoConfig?.extra?.apiUrl ??
-  "https://pabaini-production.up.railway.app/api/v1";
+// const BASE_URL =
+//   Constants?.expoConfig?.extra?.apiUrl ??
+//   "https://pabaini-production.up.railway.app/api/v1";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;   // development
 
 console.log("API URL:", BASE_URL);
 
@@ -24,15 +25,27 @@ const client = axios.create({
 client.interceptors.request.use(
   async (config) => {
     try {
+      // Check if guest session is active
+      const isGuest = await SecureStore.getItemAsync("is_guest");
+      if (isGuest === "true") {
+        return config;
+      }
+
       let token: string | null = null;
 
-      try {
-        token = await firebaseAuthService.getIdToken();
-      } catch {
+      if (firebaseAuthService.getCurrentUser()) {
+        try {
+          token = await firebaseAuthService.getIdToken();
+        } catch (error) {
+          console.warn('Failed to fetch Firebase ID token:', error);
+        }
+      }
+
+      if (!token) {
         token = await SecureStore.getItemAsync("firebase_id_token");
       }
 
-      if (token) {
+      if (token && token !== "null" && token !== "undefined") {
         config.headers = config.headers ?? {};
         (config.headers as any).Authorization = `Bearer ${token}`;
       }

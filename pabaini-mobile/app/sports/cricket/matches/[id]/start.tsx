@@ -23,6 +23,8 @@ import { useMatchDetail, useLineup, useStartLiveMatch } from '../../../../../src
 import client from '../../../../../src/api/client';
 // Avatar component for player profile images
 import { Avatar } from '../../../../../src/components/ui/Avatar';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 
 interface LineupPlayer {
   id: number;
@@ -49,6 +51,7 @@ export default function StartMatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
   const insets = useSafeAreaInsets();
+  const { isGuest } = useAuth();
 
   // Zustand Store
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
@@ -78,6 +81,7 @@ export default function StartMatchScreen() {
 
   // Auth & Status Guard
   useEffect(() => {
+    if (isGuest) return;
     if (match && !isLoadingMatch) {
       const isTeamACaptain = myProfile && match.team_a.captain?.id === myProfile.id;
       const isTeamBCaptain = myProfile && match.team_b.captain?.id === myProfile.id;
@@ -104,7 +108,7 @@ export default function StartMatchScreen() {
         router.back();
       }
     }
-  }, [match, isLoadingMatch, myProfile, startMatchMutation.isPending, startMatchMutation.isSuccess]);
+  }, [match, isLoadingMatch, myProfile, startMatchMutation.isPending, startMatchMutation.isSuccess, isGuest]);
 
   // Pre-populates the designated scorer with the current captain's profile.
   useEffect(() => {
@@ -119,13 +123,31 @@ export default function StartMatchScreen() {
     }
   }, [myProfile, scorerId]);
 
-  const isLoading = isLoadingMatch || isLoadingLineup;
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup);
 
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Initialize Match</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
     );

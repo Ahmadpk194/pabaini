@@ -18,6 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../../../../src/store/sports/teamsStore';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 import {
   getTeamById,
   getPendingMembers,
@@ -41,6 +43,7 @@ export default function CaptainManageScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { isGuest } = useAuth();
   const teamId = typeof id === 'string' ? parseInt(id, 10) : parseInt(id?.[0] || '0', 10);
   const fetchMyTeams = useTeamsStore((state) => state.fetchMyTeams);
 
@@ -66,6 +69,7 @@ export default function CaptainManageScreen() {
 
   // Fetch full details
   const loadManageData = useCallback(async (showLoader = true) => {
+    if (isGuest) return;
     if (showLoader) setLoading(true);
     try {
       const teamData = await getTeamById(teamId);
@@ -94,13 +98,17 @@ export default function CaptainManageScreen() {
     } finally {
       setLoading(false);
     }
-  }, [teamId, myProfile]);
+  }, [teamId, myProfile, isGuest]);
 
   useEffect(() => {
+    if (isGuest) {
+      setLoading(false);
+      return;
+    }
     if (teamId) {
       loadManageData();
     }
-  }, [teamId]);
+  }, [teamId, isGuest]);
 
   // Action: Accept request
   const handleAcceptRequest = async (member: TeamMember) => {
@@ -297,6 +305,26 @@ export default function CaptainManageScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Manage Team</Text>
+          </View>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
     );

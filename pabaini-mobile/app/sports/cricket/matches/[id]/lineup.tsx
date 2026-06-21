@@ -33,6 +33,8 @@ import {
   useDeclareLineup,
 } from '../../../../../src/hooks/useMatches';
 import { Avatar } from '../../../../../src/components/ui/Avatar';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 
 interface LocalLineupEntry {
   key: string;
@@ -47,6 +49,7 @@ export default function DeclarePlayingXIScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
+  const { isGuest } = useAuth();
 
   // Zustand Store
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
@@ -72,11 +75,12 @@ export default function DeclarePlayingXIScreen() {
 
   // Auth Guard
   useEffect(() => {
+    if (isGuest) return;
     if (match && !isLoadingMatch && !isEitherCaptain) {
       Alert.alert('Access Denied', 'Only the captain of either team can declare lineups.');
       router.back();
     }
-  }, [match, isLoadingMatch, isEitherCaptain]);
+  }, [match, isLoadingMatch, isEitherCaptain, isGuest]);
 
   // Pre-fill lineups if edit mode / already set
   const captainLineup = isTeamACaptain ? currentLineups?.team_a : currentLineups?.team_b;
@@ -169,6 +173,7 @@ export default function DeclarePlayingXIScreen() {
 
   // Form submission
   const handleSubmit = async () => {
+    if (isGuest) return;
     if (pickedPlayers.length !== 11) {
       Alert.alert('Lineup Error', 'Playing XI must have exactly 11 players.');
       return;
@@ -195,7 +200,7 @@ export default function DeclarePlayingXIScreen() {
     }
   };
 
-  const isLoading = isLoadingMatch || isLoadingLineups || isLoadingTeam;
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineups || isLoadingTeam);
 
   if (isLoading) {
     return (
@@ -224,17 +229,23 @@ export default function DeclarePlayingXIScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {submitError && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{submitError}</Text>
-            </View>
-          )}
+        {isGuest ? (
+          <View style={styles.centerContainer}>
+            <LoginRequiredGate fullscreen={false} />
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {submitError && (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>{submitError}</Text>
+                </View>
+              )}
 
           {/* Running Selected Count & Progress Banner */}
           <View style={[styles.counterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.md }]}>
@@ -425,6 +436,8 @@ export default function DeclarePlayingXIScreen() {
             )}
           </TouchableOpacity>
         </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

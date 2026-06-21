@@ -18,10 +18,13 @@ import { createTeam } from '../../../../src/services/sports/cricketTeamsApi';
 import { CreateTeamPayload } from '../../../../src/types/sports.types';
 import { TeamFormFields } from '../../../../src/components/sports/teams/TeamFormFields';
 import { useTeamsStore } from '../../../../src/store/sports/teamsStore';
+import { useAuth } from '../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../src/components/ui/LoginRequiredGate';
 
 export default function CreateTeamScreen() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { isGuest } = useAuth();
   const myTeams = useTeamsStore((state) => state.myTeams);
   const fetchMyTeams = useTeamsStore((state) => state.fetchMyTeams);
   
@@ -126,59 +129,67 @@ export default function CreateTeamScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Form Body */}
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {submitError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{submitError}</Text>
+        {isGuest ? (
+          <View style={styles.gateWrapper}>
+            <LoginRequiredGate fullscreen={false} />
+          </View>
+        ) : (
+          <>
+            {/* Form Body */}
+            <ScrollView
+              style={styles.body}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {submitError && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{submitError}</Text>
+                </View>
+              )}
+
+              <TeamFormFields
+                values={formValues}
+                onChange={handleFieldChange}
+                errors={errors}
+                disabled={isSubmitting}
+              />
+            </ScrollView>
+
+            {/* Fixed Submit Footer */}
+            <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+              {isAtCaptainLimit && (
+                <Text style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: 12,
+                  textAlign: 'center',
+                  marginBottom: 12,
+                }}>
+                  You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                </Text>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  {
+                    backgroundColor: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                    borderRadius: theme.radius.sm,
+                  },
+                ]}
+                onPress={handleSubmit}
+                disabled={isNameEmpty || isSubmitting || isAtCaptainLimit}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                ) : (
+                  <Text style={[styles.submitBtnText, { color: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
+                    Create Team
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
-          )}
-
-          <TeamFormFields
-            values={formValues}
-            onChange={handleFieldChange}
-            errors={errors}
-            disabled={isSubmitting}
-          />
-        </ScrollView>
-
-        {/* Fixed Submit Footer */}
-        <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          {isAtCaptainLimit && (
-            <Text style={{
-              color: theme.colors.textSecondary,
-              fontSize: 12,
-              textAlign: 'center',
-              marginBottom: 12,
-            }}>
-              You're already captaining 2 teams. Transfer or dissolve one to create a new team.
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              {
-                backgroundColor: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                borderRadius: theme.radius.sm,
-              },
-            ]}
-            onPress={handleSubmit}
-            disabled={isNameEmpty || isSubmitting || isAtCaptainLimit}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-            ) : (
-              <Text style={[styles.submitBtnText, { color: isNameEmpty || isSubmitting || isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
-                Create Team
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -239,5 +250,10 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  gateWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

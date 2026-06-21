@@ -24,6 +24,8 @@ import {
   useStartSecondInnings,
   useUndoLastBall,
 } from '../../../../../src/hooks/useMatches';
+import { useAuth } from '../../../../../src/hooks/useAuth';
+import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 
 interface LineupPlayer {
   id: number;
@@ -37,6 +39,7 @@ export default function ScorerScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
+  const { isGuest } = useAuth();
 
   // Zustand Store Profile
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
@@ -79,6 +82,7 @@ export default function ScorerScreen() {
 
   // Scorer Auth Check & Redirect
   useEffect(() => {
+    if (isGuest) return;
     if (match && !isLoadingMatch) {
       const isScorer = myProfile && match.scorer_id === myProfile.id;
       if (!isScorer) {
@@ -89,7 +93,7 @@ export default function ScorerScreen() {
         router.replace(`/sports/cricket/matches/${matchId}/live`);
       }
     }
-  }, [match, isLoadingMatch, myProfile]);
+  }, [match, isLoadingMatch, myProfile, isGuest]);
 
   // Innings transition & Bowler change triggers
   useEffect(() => {
@@ -154,13 +158,31 @@ export default function ScorerScreen() {
     }
   }, [liveData, match]);
 
-  const isLoading = isLoadingMatch || isLoadingLineup || isLoadingLive;
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || isLoadingLive);
 
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scorer Console</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
     );

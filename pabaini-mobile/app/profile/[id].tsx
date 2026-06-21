@@ -6,13 +6,37 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { UserProfileView } from '../../src/components/profile';
+import { LoginRequiredGate } from '../../src/components/ui/LoginRequiredGate';
 
 export default function ProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme } = useTheme();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isGuest } = useAuth();
   const userId = Number(id);
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+        <Stack.Screen options={{ headerShown: false }} />
+        
+        {/* Custom Back Navigation Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ArrowLeft size={22} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Resident Profile</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <LoginRequiredGate title="Resident Profile" description="Please log in to view resident profiles." fullscreen={false} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>

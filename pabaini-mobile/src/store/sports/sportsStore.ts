@@ -11,6 +11,7 @@ interface SportsStore {
   clearRegistration: (sportId: string) => void;
   isRegistered: (sportId: string) => boolean;
   hasSeenOptIn: (sportId: string) => boolean;
+  reset: () => void;
 }
 
 const memoryStore: Record<string, string> = {};
@@ -72,6 +73,11 @@ export const useSportsStore = create<SportsStore>()(
       hasSeenOptIn: (sportId) => {
         return !!get().seenOptIn[sportId];
       },
+      reset: () =>
+        set({
+          seenOptIn: {},
+          registrations: {},
+        }),
     }),
     {
       name: 'sports-storage',

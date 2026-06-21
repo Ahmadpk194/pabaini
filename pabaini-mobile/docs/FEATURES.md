@@ -119,9 +119,9 @@ This document provides a comprehensive overview of all features implemented in t
 *   **Premium Player Card (`CricketPlayerCard.tsx`)**:
     *   Features a dark green linear gradient, radial glow highlights, a cricket watermark bat emoji, user avatar, specialized role badges, style summaries, and a grid displaying statistics.
 *   **Sub-Tabs Directory**:
-    *   Includes a horizontal tab selector bar (Players, Teams, Matches, Leaderboard) styled in Swabi green.
+    *   Includes an elegant segmented horizontal tab selector bar (Players, Teams, Matches, Leaders) styled in Swabi green.
     *   **Players Tab**: Displays the user's personal player card at the top (if registered), followed by a list of other players in the community.
-    *   **Teams, Matches, Leaderboard**: Renders custom `ComingSoonState` placeholders.
+    *   **Teams, Matches, Leaders**: Renders team directories, challenge fixtures, and leaderboards.
 *   **Paginated Player Feed**:
     *   Fetches community players via infinite-scroll pagination (`GET /sports/cricket/players?page=N&limit=10`), appending items as the user scrolls.
     *   Implements `RefreshControl` (pull-to-refresh) to sync the latest players and recheck the user's registration status.
@@ -273,6 +273,23 @@ graph TD
         Route --> Dest[Redirect e.g. /teams/:id/manage or /teams/:id]
     end
 ```
+
+---
+
+## 🔐 12. Guest Mode & Authentication Gating
+**Objective**: Allow guest (unauthenticated) users to browse announcements and sports matches while restricting access to gated pages and action triggers to avoid client and server errors.
+
+*   **Restricted Navigation Zone**:
+    *   Guests are limited to two screens: **Announcements Feed** (Home) and the **Matches tab** under Sports.
+    *   The top tabs for *Players*, *Teams*, and *Leaders* on the Sports hub are hidden entirely for guests, rendering only the Matches ScrollView.
+    *   Visiting gated routes directly (e.g., *Roster*, *Create Team*, *Match setup*, *Scoring*, *Notifications*, *Resident profiles*) redirects to the custom `LoginRequiredGate` component.
+*   **Action Intercepting Overlay**:
+    *   Interactive write triggers (such as *Liking* a notice, *Commenting*, *Registering* as a player, or *Joining* a team squad) are intercepted by the global `LoginPromptModal` which requests user authentication.
+*   **Auth State & Cache Clearing**:
+    *   Logouts and guest transitions flush all Zustand persistent stores (`sportsStore`, `teamsStore`, `notificationsStore`) and trigger a full TanStack Query client clear (`queryClient.clear()`) to prevent data leaking.
+*   **Bypassing Auth Headers**:
+    *   On the frontend, the Axios request interceptor checks `is_guest` in `SecureStore` and skips Firebase token acquisition.
+    *   On the backend, `FirebaseAuthGuard` and `DbUserGuard` are configured as optional for `GET` requests, enabling public notice board and matches list requests to return data successfully instead of throwing a `401 Unauthorized` exception.
 
 ---
 

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { ColorValue } from 'react-native';
+import { ColorValue, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Trophy, Heart, User } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -18,6 +18,23 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.border,
+            borderTopWidth: 0.5,
+            height: Platform.OS === 'ios'
+              ? 50 + insets.bottom
+              : 62 + (insets.bottom > 0 ? insets.bottom : 8),
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+            paddingTop: 6,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -3 },
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '700',
+            marginTop: 2,
+            marginBottom: Platform.OS === 'ios' ? 0 : 2,
           },
         }}
       >

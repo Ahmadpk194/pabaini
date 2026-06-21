@@ -16,12 +16,18 @@ export class FirebaseAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
+      if (request.method === 'GET') {
+        return true;
+      }
       throw new UnauthorizedException('No authorization header');
     }
 
     const token = authHeader.split(' ')[1];
 
     if (!token) {
+      if (request.method === 'GET') {
+        return true;
+      }
       throw new UnauthorizedException('No token provided');
     }
 
@@ -33,6 +39,9 @@ export class FirebaseAuthGuard implements CanActivate {
 
       return true;
     } catch (err) {
+      if (request.method === 'GET') {
+        return true;
+      }
       throw new UnauthorizedException('Invalid Firebase token');
     }
   }
