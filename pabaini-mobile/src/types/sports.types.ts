@@ -127,6 +127,7 @@ export interface MatchPlayerStat {
   wickets: number;
   wides: number;
   no_balls: number;
+  maidens?: number | null;
 }
 
 export interface CricketMatch {
@@ -198,6 +199,17 @@ export interface CricketMatch {
   requester?: { id: number; user: { id: number; name: string; avatar_url: string | null } } | null;
   player_stats?: MatchPlayerStat[];
   is_result_editable?: boolean;
+  innings_1_byes?: number | null;
+  innings_1_leg_byes?: number | null;
+  innings_2_byes?: number | null;
+  innings_2_leg_byes?: number | null;
+  fall_of_wickets?: Array<{
+    player_name: string;
+    wicket_type: string;
+    over: string;
+    score_at_wicket: number;
+    innings: number;
+  }> | null;
 }
 
 export interface RequestMatchPayload {

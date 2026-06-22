@@ -271,15 +271,18 @@ export function useRecordBall() {
       };
     }) => recordBall(id, payload),
     onMutate: async ({ id, payload }) => {
+      const numericId = Number(id);
       // 1. Cancel outgoing query refetches to prevent overwriting optimistic cache updates
-      await queryClient.cancelQueries({ queryKey: ['matches', 'live', id] });
+      await queryClient.cancelQueries({ queryKey: ['matches', 'live', numericId] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.matches.detail(numericId) });
 
-      // 2. Snapshot the current live data cache
-      const previousLive = queryClient.getQueryData(['matches', 'live', id]);
+      // 2. Snapshot the current cache states
+      const previousLive = queryClient.getQueryData(['matches', 'live', numericId]);
+      const previousMatch = queryClient.getQueryData(queryKeys.matches.detail(numericId));
 
       // 3. Perform the optimistic calculation and update the query cache
       if (previousLive) {
-        queryClient.setQueryData(['matches', 'live', id], (old: any) => {
+        queryClient.setQueryData(['matches', 'live', numericId], (old: any) => {
           if (!old) return old;
 
           const newBall = {
@@ -413,12 +416,27 @@ export function useRecordBall() {
         });
       }
 
+      // 4. Optimistically set placeholder last ball ID on the match detail so Undo enables immediately
+      if (previousMatch) {
+        queryClient.setQueryData(queryKeys.matches.detail(numericId), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            last_ball_event_id: 999999, // placeholder ID to satisfy !!last_ball_event_id
+          };
+        });
+      }
+
       // Return previous context state to revert on failure
-      return { previousLive };
+      return { previousLive, previousMatch };
     },
     onError: (err, variables, context) => {
+      const numericId = Number(variables.id);
       if (context?.previousLive) {
-        queryClient.setQueryData(['matches', 'live', variables.id], context.previousLive);
+        queryClient.setQueryData(['matches', 'live', numericId], context.previousLive);
+      }
+      if (context?.previousMatch) {
+        queryClient.setQueryData(queryKeys.matches.detail(numericId), context.previousMatch);
       }
     },
     onSettled: (data, error, variables) => {
@@ -553,9 +571,184 @@ export function useUndoLastBall() {
 
   return useMutation({
     mutationFn: (id: number) => undoLastBall(id),
-    onSuccess: (data, id) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(id) });
-      queryClient.invalidateQueries({ queryKey: ['matches', 'live', id] });
+    onMutate: async (id) => {
+      const numericId = Number(id);
+      console.log('[useUndoLastBall] onMutate triggered for match ID:', numericId, 'typeof id:', typeof id);
+      
+      const allKeys = queryClient.getQueryCache().getAll().map(q => q.queryKey);
+      console.log('[useUndoLastBall] All active query cache keys:', JSON.stringify(allKeys));
+
+      // 1. Cancel outgoing queries
+      await queryClient.cancelQueries({ queryKey: ['matches', 'live', numericId] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.matches.detail(numericId) });
+
+      // 2. Snapshot current caches
+      const previousLive = queryClient.getQueryData(['matches', 'live', numericId]);
+      const previousMatch = queryClient.getQueryData(queryKeys.matches.detail(numericId));
+      console.log('[useUndoLastBall] previousLive cached data exists:', !!previousLive);
+
+      // 3. Optimistic update of live state
+      if (previousLive) {
+        queryClient.setQueryData(['matches', 'live', numericId], (old: any) => {
+          console.log('[useUndoLastBall] setQueryData old state:', old);
+          if (!old) {
+            console.log('[useUndoLastBall] old state is null/undefined');
+            return old;
+          }
+          if (!old.this_over) {
+            console.log('[useUndoLastBall] old.this_over is null/undefined');
+            return old;
+          }
+          if (old.this_over.length === 0) {
+            console.log('[useUndoLastBall] old.this_over is empty array');
+            return old;
+          }
+
+          const lastBallIndex = old.this_over.length - 1;
+          const lastBall = old.this_over[lastBallIndex];
+          const updatedThisOver = old.this_over.slice(0, lastBallIndex);
+          console.log('[useUndoLastBall] Popped ball:', lastBall);
+
+          let runs = 0;
+          let wickets = 0;
+          if (old.score && typeof old.score === 'string') {
+            const parts = old.score.split('/');
+            runs = parseInt(parts[0], 10) || 0;
+            wickets = parseInt(parts[1], 10) || 0;
+          }
+
+          let overs = 0;
+          let balls = 0;
+          if (old.overs && typeof old.overs === 'string') {
+            const parts = old.overs.split('.');
+            overs = parseInt(parts[0], 10) || 0;
+            balls = parseInt(parts[1], 10) || 0;
+          }
+
+          // Deduct runs
+          let runsSubtracted = lastBall.runs || 0;
+          if (lastBall.extra_type === 'wide' || lastBall.extra_type === 'no_ball') {
+            runsSubtracted += 1;
+          }
+          runs = Math.max(0, runs - runsSubtracted);
+
+          // Deduct wickets
+          if (lastBall.is_wicket) {
+            wickets = Math.max(0, wickets - 1);
+          }
+
+          // Deduct balls/overs
+          const isLegalDelivery = lastBall.extra_type !== 'wide' && lastBall.extra_type !== 'no_ball';
+          if (isLegalDelivery) {
+            if (balls === 0) {
+              if (overs > 0) {
+                overs -= 1;
+                balls = 5;
+              }
+            } else {
+              balls -= 1;
+            }
+          }
+
+          // Striker / Non-Striker stats
+          let updatedStriker = old.striker ? { ...old.striker } : null;
+          let updatedNonStriker = old.non_striker ? { ...old.non_striker } : null;
+
+          // Swap strike back on odd runs (if batsman is active and not a wicket)
+          if ((lastBall.runs || 0) % 2 === 1 && !lastBall.is_wicket) {
+            const temp = updatedStriker;
+            updatedStriker = updatedNonStriker;
+            updatedNonStriker = temp;
+          }
+
+          // Deduct from batsman stats
+          if (updatedStriker) {
+            if (isLegalDelivery) {
+              updatedStriker.balls = Math.max(0, (updatedStriker.balls || 0) - 1);
+              if (lastBall.extra_type !== 'bye' && lastBall.extra_type !== 'leg_bye') {
+                updatedStriker.runs = Math.max(0, (updatedStriker.runs || 0) - (lastBall.runs || 0));
+              }
+            } else if (lastBall.extra_type === 'no_ball') {
+              updatedStriker.balls = Math.max(0, (updatedStriker.balls || 0) - 1);
+              updatedStriker.runs = Math.max(0, (updatedStriker.runs || 0) - (lastBall.runs || 0));
+            }
+          }
+
+          // Bowler stats
+          let updatedBowler = old.bowler ? { ...old.bowler } : null;
+          if (updatedBowler) {
+            if (lastBall.is_wicket) {
+              updatedBowler.wickets = Math.max(0, (updatedBowler.wickets || 0) - 1);
+            }
+
+            if (lastBall.extra_type !== 'bye' && lastBall.extra_type !== 'leg_bye') {
+              let bowlerRunsDeducted = lastBall.runs || 0;
+              if (lastBall.extra_type === 'wide' || lastBall.extra_type === 'no_ball') {
+                bowlerRunsDeducted += 1;
+              }
+              updatedBowler.runs_given = Math.max(0, (updatedBowler.runs_given || 0) - bowlerRunsDeducted);
+            }
+
+            if (isLegalDelivery) {
+              let bowlerBalls = 0;
+              let bowlerOvers = 0;
+              if (updatedBowler.overs && typeof updatedBowler.overs === 'string') {
+                const parts = updatedBowler.overs.split('.');
+                bowlerOvers = parseInt(parts[0], 10) || 0;
+                bowlerBalls = parseInt(parts[1], 10) || 0;
+              }
+              if (bowlerBalls === 0) {
+                if (bowlerOvers > 0) {
+                  bowlerOvers -= 1;
+                  bowlerBalls = 5;
+                }
+              } else {
+                bowlerBalls -= 1;
+              }
+              updatedBowler.overs = `${bowlerOvers}.${bowlerBalls}`;
+            }
+          }
+
+          const newState = {
+            ...old,
+            score: `${runs}/${wickets}`,
+            overs: `${overs}.${balls}`,
+            this_over: updatedThisOver,
+            striker: updatedStriker,
+            non_striker: updatedNonStriker,
+            bowler: updatedBowler,
+          };
+          console.log('[useUndoLastBall] optimistic newState:', newState);
+          return newState;
+        });
+      }
+
+      // 4. Optimistically clear last ball ID on match detail to disable button immediately
+      if (previousMatch) {
+        queryClient.setQueryData(queryKeys.matches.detail(numericId), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            last_ball_event_id: undefined, // Clear to disable Undo button
+          };
+        });
+      }
+
+      return { previousLive, previousMatch };
+    },
+    onError: (err, id, context) => {
+      const numericId = Number(id);
+      if (context?.previousLive) {
+        queryClient.setQueryData(['matches', 'live', numericId], context.previousLive);
+      }
+      if (context?.previousMatch) {
+        queryClient.setQueryData(queryKeys.matches.detail(numericId), context.previousMatch);
+      }
+    },
+    onSettled: (data, error, id) => {
+      const numericId = Number(id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(numericId) });
+      queryClient.invalidateQueries({ queryKey: ['matches', 'live', numericId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.all });
     },
   });

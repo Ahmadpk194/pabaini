@@ -647,6 +647,25 @@ export default function ScorerScreen() {
           </View>
 
           <View style={styles.mainActionsRow}>
+            {/* Undo Last Ball Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.actionBtn,
+                styles.undoBtn,
+                {
+                  borderRadius: theme.radius.sm,
+                  opacity: (!match.last_ball_event_id || undoLastBallMutation.isPending) ? 0.4 : 1,
+                  flexDirection: 'row',
+                }
+              ]}
+              onPress={handleUndo}
+              disabled={!match.last_ball_event_id || undoLastBallMutation.isPending}
+            >
+              <RotateCcw size={14} color={!match.last_ball_event_id ? '#999999' : '#666666'} style={{ marginRight: 4 }} />
+              <Text style={[styles.undoBtnText, !match.last_ball_event_id && { color: '#999999' }]}>Undo</Text>
+            </TouchableOpacity>
+
             {/* Record Wicket Button */}
             <TouchableOpacity
               activeOpacity={0.7}
@@ -1217,6 +1236,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#D32F2F',
+  },
+  undoBtn: {
+    borderColor: '#666666',
+    borderWidth: 1,
+  },
+  undoBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#666666',
   },
   confirmBtn: {
     flex: 1.5,

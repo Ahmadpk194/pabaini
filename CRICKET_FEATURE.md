@@ -812,7 +812,14 @@ flowchart TD
     3.  **Man of the Match**: A custom modal list showing only the registered players in the declared Playing XI.
     4.  **Roster Player Stats Accordions**: Renders collapsible player rows for both squads. Expanding a player row reveals input fields for batting (runs, balls, fours, sixes, dismissal type, and "not out" switch) and bowling (overs, runs conceded, wickets, wides, and no-balls).
 *   **24-Hour Edit Window**: Tapping "Edit Result" reloads the result form with previously saved parameters. As per backend Rule 44, the edit button is only visible to captains on the Match Detail screen for 24 hours post-submission (indicated by the "Editable (24h)" badge). After 24 hours, the scorecard lock triggers, the edit button disappears, and a lock emoji icon is rendered next to the scorecard header.
-*   **Scorecard Display**: The resulting scorecard on the Match Detail page renders summary cards for the winner and Man of the Match, followed by separate tables for each team detailing bat and ball statistics.
+*   **Premium Scorecard Display**: The resulting scorecard on the Match Detail page is rendered using the premium, tabbed `MatchScorecard.tsx` component. It features:
+    *   *Dynamic Winner Banner*: Displays the winning team and margin of victory (by runs, wickets, or a tie/draw) inside a styled visual alert card.
+    *   *Innings Tabs*: Elegant tabbed navigation to swap views between 1st Innings and 2nd Innings scorecards.
+    *   *Batting Performance Table*: Lists batsman name/guest indicator, dismissal status, runs, balls faced, boundary counts (fours/sixes), and strike rate (calculated as `runs / balls * 100`).
+    *   *Bowling Performance Table*: Lists bowler name, overs bowled, maidens (overs with zero runs conceded on legal deliveries), runs given, wickets taken, and economy rate.
+    *   *Extras Breakdown*: Shows opponent extras totals alongside the precise breakdown of wides, no-balls, byes, and leg-byes.
+    *   *Fall of Wickets Timeline*: Displays a chronological fall-of-wickets (FoW) list showing the dismissed batsman, dismissal type, over of dismissal, and team score at that point (available for live matches).
+    *   *Collapsible sections*: Renders team cards inside collapsible sections that can be toggled by the user.
 
 ### 8. Live Scoring — The Full Experience
 
@@ -968,7 +975,7 @@ This checklist provides a step-by-step walkthrough to manually test the Cricket 
 - [ ] **Select Man of the Match**: Open the Man of the Match picker modal. Verify it lists only the registered players who were declared in the Playing XI lineups. Select a player.
 - [ ] **Verify Invalid Stats Submission**: Modify the stats payload to submit bowling metrics for a player who is not in the declared lineups. Verify that the API returns `BadRequestException` ("Player [id] is not in the declared Playing XI lineup for team [id]").
 - [ ] **Complete Scorecard & Submit**: Expand the accordion rows for all 11 players on each team. Input valid batting runs, balls faced, boundaries, wickets, and overs bowled, then tap "Submit Scorecard". Verify the match status transitions to "Completed" (green) on both devices.
-- [ ] **Verify Scorecard Rendering**: On the Match Detail page, verify that the scorecard section displays the winner, Man of the Match, and full batting/bowling statistics tables for both teams.
+- [ ] **Verify Scorecard Rendering**: On the Match Detail page, verify that the scorecard section displays the dynamic winner banner (with correct calculated winning margin or tie text), the innings tabs, the batting table (with calculated strike rates), the bowling table (with maidens and calculated economy rates), the opponent extras breakdown (byes, leg-byes, wides, no-balls), and the fall of wickets chronological timeline.
 - [ ] **Verify Career Stats Aggregation**: Navigate to the player profile of one of the registered players who scored runs in this match. Verify that their career metrics (Matches, Runs, Highest Score) have updated to aggregate the values from the scorecard.
 - [ ] **Edit Scorecard (Lock Window)**: On Account A, tap "Edit Result" (confirm the "Editable (24h)" badge is visible). Change one player's runs, save, and verify that the career stats on their player profile re-aggregate correctly with the new value.
 - [ ] **Verify Edit Lock Timeout**: On the backend, temporarily modify the lock interval in [matches.service.ts](file:///c:/dev/pabaini/pabaini-backend/src/modules/sports/cricket/matches/matches.service.ts) to set `result_locked_at` to 10 seconds in the future. Re-submit a result, wait 10 seconds, and refresh the Match Detail screen on mobile. Verify that the "Edit Result" button is replaced by a padlock icon, and direct API updates to `/matches/:id/result` throw `BadRequestException` ("Match results are locked and can no longer be edited"). Revert the backend lock interval change to 24 hours.

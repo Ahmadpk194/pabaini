@@ -139,7 +139,7 @@ export default function MatchResultFormScreen() {
 
       const setupRoster = (players: typeof lineups.team_a.players, teamId: number) => {
         players.forEach((p) => {
-          const key = p.player_id ? `player-${p.player_id}` : `guest-${p.guest_name}`;
+          const key = String(p.id);
           
           // If editing, try to find existing player stats
           const existingStat = isEditMode

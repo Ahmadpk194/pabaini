@@ -72,6 +72,10 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
   const isCompleted = match.status === 'completed';
   const showScore = isLive || isCompleted;
 
+  const winnerName = match.winner_team?.name || 
+    (match.winner_team_id === match.team_a_id ? match.team_a.name : 
+     match.winner_team_id === match.team_b_id ? match.team_b.name : null);
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -148,6 +152,28 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
           ) : null}
         </View>
       </View>
+
+      {isCompleted && (
+        <View
+          style={[
+            styles.winnerRow,
+            {
+              backgroundColor: theme.colors.primary + '08',
+              borderColor: theme.colors.primary + '20',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.winnerText,
+              { color: theme.colors.primary },
+            ]}
+            numberOfLines={1}
+          >
+            🏆 {winnerName ? `${winnerName} won` : match.is_tie ? 'Match Tied' : 'Completed'}
+          </Text>
+        </View>
+      )}
 
       <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
@@ -280,5 +306,19 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
+  },
+  winnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  winnerText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

@@ -151,14 +151,21 @@ This document provides a comprehensive overview of all features implemented in t
 *   **Matches Tab & List ([sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx))**: Lists challenges in three groups:
     *   *Live Matches*: Pulses red and displays real-time score summaries.
     *   *Upcoming Matches*: Displays date, venue, and a lineup declaration counter.
-    *   *Completed Matches*: Displays the winning team, trophy icon, and final scores. These cards are rendered by [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
+    *   *Completed Matches*: Displays the winning team, trophy icon, final scores, and a styled dynamic victory badge displaying the winning margin (e.g., "Team A won by 15 runs", "Team B won by 4 wickets", or "Match Tied" / "Match Drawn"). These cards are rendered by [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
 *   **Send Match Request ([request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx))**: Form for captains to challenge opponent teams. Fields: team dropdown, opponent dropdown, overs (1-100), optional venue, optional schedule (with helpers), and scoring mode (Live/Simple).
 *   **Match Detail ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx))**: Detailed page rendering teams, scheduled time, venue, lineups declaration status badges, and dynamic action buttons:
     *   *Challenge Pending*: Opponent captain can accept or decline.
     *   *Scheduled*: Captains can declare lineups or cancel the match.
     *   *Lineups Ready*: Shows "Start Match" (live mode) or "Submit Result" (simple mode) buttons.
     *   *Live / Scoring*: Designated scorer can "Continue Scoring"; spectators see "Watch Live".
-    *   *Completed*: Displays read-only scorecard summaries and statistics, grouped into collapsible sections for each team's batting and bowling performance cards.
+    *   *Completed*: Displays a premium scorecard interface (`MatchScorecard.tsx`) featuring:
+        *   **Dynamic Winner Banner**: Styled notification detailing the winner and margin of victory.
+        *   **Innings Tabs**: Tabbed navigation between the 1st Innings and 2nd Innings scorecards.
+        *   **Batting Performance Table**: Shows batsman name/guest indicator, dismissal status, runs, balls, fours, sixes, and right-aligned strike rate.
+        *   **Bowling Performance Table**: Displays bowler name/guest, overs bowled, maidens, runs given, wickets, and calculated economy rate.
+        *   **Extras Breakdown**: Detailed section listing total extras conceded alongside individual splits for wides, no-balls, byes, and leg-byes.
+        *   **Fall of Wickets Timeline**: A chronological list of wickets showing the batsman name, dismissal type, over of dismissal, and team score at the time the wicket fell.
+        *   **Collapsible sections**: Sections can be collapsed/expanded individually for cleaner reading.
 *   **Searchable Player Directory ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/players/index.tsx))**: A dedicated directory for resident players, accessible via the "See All" button on the Sports tab dashboard next to the registered players list. Includes a sticky search bar to query names, skeleton loading views, pull-to-refresh, and infinite scroll pagination.
 *   **Declare Playing XI ([lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx))**: Roster picking tool requiring exactly 11 players. Captains can select registered squad members or add guest players (name only), and must assign unique batting orders (1-11).
 *   **Simple Result Entry ([result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx))**: Retroactive form to log completed matches: winner selection card, final score inputs, Man of the Match, and per-player statistics accordions (batting and bowling metrics).
