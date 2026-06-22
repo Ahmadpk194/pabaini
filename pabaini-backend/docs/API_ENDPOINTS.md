@@ -2062,7 +2062,7 @@ curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&page=
 
 ### #42 · GET `/sports/cricket/matches/:id`
 
-Retrieves full match details.
+Retrieves full match details. For completed matches, this response includes dynamically aggregated batsman strike rates, bowler economy rates, bowler maidens count, innings-specific byes/leg-byes, and chronological fall of wickets timeline.
 
 | | |
 |---|---|
@@ -2075,6 +2075,138 @@ Retrieves full match details.
 
 ```bash
 curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1
+```
+
+**Response `200 OK` (Completed Live Match)**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 1,
+    "series_id": null,
+    "tournament_id": null,
+    "team_a_id": 1,
+    "team_b_id": 2,
+    "requested_by": 5,
+    "overs": 20,
+    "venue": "Pabaini Main Ground",
+    "scheduled_at": "2026-06-22T14:00:00.000Z",
+    "scoring_mode": "live",
+    "scorer_id": 5,
+    "status": "completed",
+    "winner_team_id": 1,
+    "man_of_match_id": 12,
+    "team_a_score": "154/8 (20.0)",
+    "team_b_score": "142/10 (19.4)",
+    "team_a_lineup_set": true,
+    "team_b_lineup_set": true,
+    "current_innings": 2,
+    "current_over": 19,
+    "current_ball": 4,
+    "current_batting_team_id": 2,
+    "striker_id": null,
+    "striker_guest_name": null,
+    "non_striker_id": null,
+    "non_striker_guest_name": null,
+    "current_bowler_id": null,
+    "current_bowler_guest_name": null,
+    "innings_1_score": 154,
+    "innings_1_wickets": 8,
+    "innings_1_overs": "20.0",
+    "innings_1_batting_team_id": 1,
+    "innings_2_score": 142,
+    "innings_2_wickets": 10,
+    "innings_2_overs": "19.4",
+    "innings_2_batting_team_id": 2,
+    "target": 155,
+    "is_tie": false,
+    "result_submitted_at": "2026-06-22T17:45:00.000Z",
+    "result_locked_at": "2026-06-23T17:45:00.000Z",
+    "created_at": "2026-06-22T12:00:00.000Z",
+    "updated_at": "2026-06-22T17:45:00.000Z",
+    "team_a": {
+      "id": 1,
+      "name": "Pabaini XI",
+      "logo_url": "https://..."
+    },
+    "team_b": {
+      "id": 2,
+      "name": "Nataar Eleven",
+      "logo_url": "https://..."
+    },
+    "player_stats": [
+      {
+        "id": 41,
+        "match_id": 1,
+        "team_id": 1,
+        "player_id": 12,
+        "guest_name": null,
+        "name": "Ahmad khan",
+        "avatar_url": "https://...",
+        "runs": 45,
+        "balls_faced": 30,
+        "fours": 4,
+        "sixes": 2,
+        "how_out": "caught",
+        "is_not_out": false,
+        "overs_bowled": "4.0",
+        "runs_given": 24,
+        "wickets": 3,
+        "wides": 2,
+        "no_balls": 0,
+        "maidens": 0,
+        "created_at": "2026-06-22T17:45:00.000Z",
+        "updated_at": "2026-06-22T17:45:00.000Z"
+      },
+      {
+        "id": 42,
+        "match_id": 1,
+        "team_id": 1,
+        "player_id": null,
+        "guest_name": "Hamza Guest",
+        "name": "Hamza Guest",
+        "avatar_url": null,
+        "runs": 0,
+        "balls_faced": 0,
+        "fours": 0,
+        "sixes": 0,
+        "how_out": null,
+        "is_not_out": false,
+        "overs_bowled": "3.0",
+        "runs_given": 12,
+        "wickets": 1,
+        "wides": 0,
+        "no_balls": 1,
+        "maidens": 1,
+        "created_at": "2026-06-22T17:45:00.000Z",
+        "updated_at": "2026-06-22T17:45:00.000Z"
+      }
+    ],
+    "is_result_editable": true,
+    "innings_1_byes": 2,
+    "innings_1_leg_byes": 1,
+    "innings_2_byes": 0,
+    "innings_2_leg_byes": 4,
+    "fall_of_wickets": [
+      {
+        "player_name": "Ahmad khan",
+        "wicket_type": "caught",
+        "over": "8.3",
+        "score_at_wicket": 65,
+        "innings": 1
+      },
+      {
+        "player_name": "Hamza Guest",
+        "wicket_type": "bowled",
+        "over": "19.4",
+        "score_at_wicket": 142,
+        "innings": 2
+      }
+    ]
+  }
+}
 ```
 
 ---

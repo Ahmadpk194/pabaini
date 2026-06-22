@@ -375,33 +375,149 @@ export class MatchesService {
       match.result_locked_at &&
       new Date(match.result_locked_at) > now;
 
-    const formattedStats = playerStats.map((s) => ({
-      id: s.id,
-      match_id: s.match_id,
-      team_id: s.team_id,
-      player_id: s.player_id || null,
-      guest_name: s.guest_name || null,
-      name: s.player?.user?.name || s.guest_name,
-      avatar_url: s.player?.user?.avatar_url || null,
-      runs: s.runs,
-      balls_faced: s.balls_faced,
-      fours: s.fours,
-      sixes: s.sixes,
-      how_out: s.how_out || null,
-      is_not_out: s.is_not_out,
-      overs_bowled: s.overs_bowled,
-      runs_given: s.runs_given,
-      wickets: s.wickets,
-      wides: s.wides,
-      no_balls: s.no_balls,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
-    }));
+    let ballEvents: CricketBallEvent[] = [];
+    const bowlerMaidenCounts: Record<string, number> = {};
+    let innings_1_byes: number | null = null;
+    let innings_1_leg_byes: number | null = null;
+    let innings_2_byes: number | null = null;
+    let innings_2_leg_byes: number | null = null;
+    let fall_of_wickets: any[] | null = null;
+
+    if (match.status === MatchStatus.COMPLETED) {
+      if (match.scoring_mode === MatchScoringMode.LIVE) {
+        ballEvents = await this.ballEventRepo.find({
+          where: { match_id: matchId },
+          relations: { batsman: { user: true } },
+          order: { innings: 'ASC', over_number: 'ASC', ball_number: 'ASC' },
+        });
+
+        // 1. Group events by bowler and over to calculate maidens
+        const overEvents: Record<string, CricketBallEvent[]> = {};
+        for (const event of ballEvents) {
+          const bowlerKey = event.bowler_id ? `id_${event.bowler_id}` : `guest_${event.bowler_guest_name}`;
+          const overKey = `${bowlerKey}::${event.innings}::${event.over_number}`;
+          if (!overEvents[overKey]) {
+            overEvents[overKey] = [];
+          }
+          overEvents[overKey].push(event);
+        }
+
+        for (const [overKey, events] of Object.entries(overEvents)) {
+          const [bowlerKey] = overKey.split('::');
+          // Filter out wides and no-balls
+          const legalDeliveries = events.filter(
+            (e) => e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL
+          );
+          // Sum runs + extra_runs for legal deliveries
+          const totalRuns = legalDeliveries.reduce((sum, e) => sum + (e.runs || 0) + (e.extra_runs || 0), 0);
+          if (totalRuns === 0) {
+            bowlerMaidenCounts[bowlerKey] = (bowlerMaidenCounts[bowlerKey] || 0) + 1;
+          }
+        }
+
+        // 2. Sum byes and leg-byes per innings
+        innings_1_byes = 0;
+        innings_1_leg_byes = 0;
+        innings_2_byes = 0;
+        innings_2_leg_byes = 0;
+        for (const event of ballEvents) {
+          if (event.innings === 1) {
+            if (event.extra_type === BallExtraType.BYE) {
+              innings_1_byes += event.extra_runs || 0;
+            } else if (event.extra_type === BallExtraType.LEG_BYE) {
+              innings_1_leg_byes += event.extra_runs || 0;
+            }
+          } else if (event.innings === 2) {
+            if (event.extra_type === BallExtraType.BYE) {
+              innings_2_byes += event.extra_runs || 0;
+            } else if (event.extra_type === BallExtraType.LEG_BYE) {
+              innings_2_leg_byes += event.extra_runs || 0;
+            }
+          }
+        }
+
+        // 3. Fall of wickets
+        let innings1Score = 0;
+        let innings2Score = 0;
+        fall_of_wickets = [];
+        for (const event of ballEvents) {
+          const runsConceded = (event.runs || 0) + (event.extra_runs || 0);
+          if (event.innings === 1) {
+            innings1Score += runsConceded;
+          } else if (event.innings === 2) {
+            innings2Score += runsConceded;
+          }
+
+          if (event.is_wicket) {
+            const playerName = event.batsman_guest_name || event.batsman?.user?.name || 'Guest';
+            const wicketType = event.wicket_type || 'out';
+            const overStr = `${event.over_number}.${event.ball_number}`;
+            const scoreAtWicket = event.innings === 1 ? innings1Score : innings2Score;
+
+            fall_of_wickets.push({
+              player_name: playerName,
+              wicket_type: wicketType,
+              over: overStr,
+              score_at_wicket: scoreAtWicket,
+              innings: event.innings,
+            });
+          }
+        }
+      } else {
+        // Completed but simple mode matches
+        innings_1_byes = 0;
+        innings_1_leg_byes = 0;
+        innings_2_byes = 0;
+        innings_2_leg_byes = 0;
+        fall_of_wickets = [];
+      }
+    }
+
+    const formattedStats = playerStats.map((s) => {
+      let maidens: number | null = null;
+      if (match.status === MatchStatus.COMPLETED) {
+        if (match.scoring_mode === MatchScoringMode.LIVE) {
+          const key = s.player_id ? `id_${s.player_id}` : `guest_${s.guest_name}`;
+          maidens = bowlerMaidenCounts[key] || 0;
+        } else {
+          maidens = 0;
+        }
+      }
+
+      return {
+        id: s.id,
+        match_id: s.match_id,
+        team_id: s.team_id,
+        player_id: s.player_id || null,
+        guest_name: s.guest_name || null,
+        name: s.player?.user?.name || s.guest_name,
+        avatar_url: s.player?.user?.avatar_url || null,
+        runs: s.runs,
+        balls_faced: s.balls_faced,
+        fours: s.fours,
+        sixes: s.sixes,
+        how_out: s.how_out || null,
+        is_not_out: s.is_not_out,
+        overs_bowled: s.overs_bowled,
+        runs_given: s.runs_given,
+        wickets: s.wickets,
+        wides: s.wides,
+        no_balls: s.no_balls,
+        maidens,
+        created_at: s.created_at,
+        updated_at: s.updated_at,
+      };
+    });
 
     return {
       ...match,
       player_stats: formattedStats,
       is_result_editable: !!is_result_editable,
+      innings_1_byes,
+      innings_1_leg_byes,
+      innings_2_byes,
+      innings_2_leg_byes,
+      fall_of_wickets,
     };
   }
 
