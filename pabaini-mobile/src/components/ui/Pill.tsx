@@ -14,11 +14,11 @@ export function Pill({ label, selected = false, onPress }: PillProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
+      activeOpacity={0.8}
       style={[
         styles.container,
         {
-          backgroundColor: selected ? theme.colors.primary : theme.colors.surface,
-          borderColor: selected ? theme.colors.primary : theme.colors.border,
+          backgroundColor: selected ? theme.colors.primary : theme.colors.elevated,
         },
       ]}
     >
@@ -26,7 +26,8 @@ export function Pill({ label, selected = false, onPress }: PillProps) {
         style={[
           styles.text,
           {
-            color: selected ? theme.colors.onPrimary : theme.colors.textPrimary,
+            color: selected ? theme.colors.onPrimary : theme.colors.textSecondary,
+            fontWeight: selected ? '500' : 'normal',
           },
         ]}
       >
@@ -38,13 +39,12 @@ export function Pill({ label, selected = false, onPress }: PillProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 0,
   },
   text: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
   },
 });

@@ -1,6 +1,7 @@
+import React, { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import { ColorValue, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, Animated, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Trophy, Heart, User } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 
@@ -9,7 +10,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: insets.top }} edges={[]}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -20,21 +21,24 @@ export default function TabsLayout() {
             borderTopColor: theme.colors.border,
             borderTopWidth: 0.5,
             height: Platform.OS === 'ios'
-              ? 50 + insets.bottom
-              : 62 + (insets.bottom > 0 ? insets.bottom : 8),
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-            paddingTop: 6,
-            elevation: 8,
+              ? 46 + insets.bottom
+              : 50 + (insets.bottom > 0 ? insets.bottom : 0),
+            paddingBottom: Platform.OS === 'ios'
+              ? (insets.bottom > 0 ? insets.bottom - 4 : 4)
+              : 4 + (insets.bottom > 0 ? insets.bottom : 0),
+            paddingTop: 2,
+            elevation: 4,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: -3 },
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 12,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '700',
-            marginTop: 2,
+            fontSize: 10,
+            fontWeight: '600',
+            marginTop: 1,
             marginBottom: Platform.OS === 'ios' ? 0 : 2,
+            letterSpacing: 0.2,
           },
         }}
       >
@@ -42,41 +46,69 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            tabBarIcon: ({ color, focused }) => <TabBarIcon name="home" color={color} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="sports"
           options={{
             title: 'Sports',
-            tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+            tabBarIcon: ({ color, focused }) => <TabBarIcon name="trophy" color={color} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="donors"
           options={{
             title: 'Donors',
-            tabBarIcon: ({ color }) => <TabBarIcon name="heart" color={color} />,
+            tabBarIcon: ({ color, focused }) => <TabBarIcon name="heart" color={color} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+            tabBarIcon: ({ color, focused }) => <TabBarIcon name="user" color={color} focused={focused} />,
           }}
         />
       </Tabs>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function TabBarIcon({ name, color }: { name: string; color: ColorValue }) {
-  switch (name) {
-    case 'home': return <Home size={24} color={color as string} />;
-    case 'trophy': return <Trophy size={24} color={color as string} />;
-    case 'heart': return <Heart size={24} color={color as string} />;
-    case 'user': return <User size={24} color={color as string} />;
-    default: return null;
-  }
+interface TabBarIconProps {
+  name: string;
+  color: any;
+  focused: boolean;
+}
+
+function TabBarIcon({ name, color, focused }: TabBarIconProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: focused ? 1.06 : 1,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  }, [focused]);
+
+  const fillValue = focused ? color : 'none';
+  const strokeWidth = focused ? 2.2 : 1.8;
+
+  const renderIcon = () => {
+    switch (name) {
+      case 'home': return <Home size={22} color={color} fill={fillValue} strokeWidth={strokeWidth} />;
+      case 'trophy': return <Trophy size={22} color={color} fill={fillValue} strokeWidth={strokeWidth} />;
+      case 'heart': return <Heart size={22} color={color} fill={fillValue} strokeWidth={strokeWidth} />;
+      case 'user': return <User size={22} color={color} fill={fillValue} strokeWidth={strokeWidth} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      {renderIcon()}
+    </Animated.View>
+  );
 }

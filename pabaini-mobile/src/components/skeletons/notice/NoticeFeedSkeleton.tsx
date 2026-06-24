@@ -15,7 +15,7 @@ export default function NoticeFeedSkeleton() {
       </View>
 
       {/* Announcement Cards Skeleton */}
-      {[0, 1, 2, 3].map((index) => (
+      {[0, 1, 2].map((index) => (
         <AnnouncementCardSkeleton key={index} index={index} />
       ))}
     </ScrollView>

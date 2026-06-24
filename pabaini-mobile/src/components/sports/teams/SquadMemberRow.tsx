@@ -9,6 +9,7 @@ import { Star, Award } from 'lucide-react-native';
 interface SquadMemberRowProps {
   member: TeamMember;
   rightContent?: React.ReactNode;
+  borderless?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -18,7 +19,7 @@ const ROLE_LABELS: Record<string, string> = {
   keeper: 'Wicket-keeper',
 };
 
-export function SquadMemberRow({ member, rightContent }: SquadMemberRowProps) {
+export function SquadMemberRow({ member, rightContent, borderless = false }: SquadMemberRowProps) {
   const { theme } = useTheme();
   const { role, player } = member;
 
@@ -39,11 +40,21 @@ export function SquadMemberRow({ member, rightContent }: SquadMemberRowProps) {
     <View
       style={[
         styles.container,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radius.md,
-        },
+        borderless
+          ? {
+              backgroundColor: 'transparent',
+              borderWidth: 0,
+              marginBottom: 0,
+              paddingVertical: 12,
+              paddingHorizontal: 12,
+              elevation: 0,
+              shadowOpacity: 0,
+            }
+          : {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.md,
+            },
       ]}
     >
       <TouchableOpacity

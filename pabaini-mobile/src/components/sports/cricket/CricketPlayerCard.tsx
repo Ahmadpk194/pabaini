@@ -23,7 +23,7 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
 
   // Format styles nicely
   const battingText = `${batting_hand === 'right' ? 'Right' : 'Left'}-hand bat`;
-  
+
   let bowlingText = 'No Bowling';
   if (bowling_arm && bowling_arm !== 'none' && bowling_type && bowling_type !== 'none') {
     const arm = bowling_arm === 'right' ? 'Right-arm' : 'Left-arm';
@@ -88,7 +88,7 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
       {/* Card Header: Avatar & Info */}
       <View style={styles.header}>
         <Avatar uri={user.avatar_url} size={70} name={user.name} />
-        
+
         <View style={styles.headerTextContainer}>
           <Text style={styles.name} numberOfLines={1}>
             {user.name}
@@ -117,7 +117,6 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
         </View>
       </View>
 
-      {/* Stats Table */}
       <View style={styles.statsContainer}>
         {stats.map((stat, index) => (
           <View key={stat.label} style={styles.statBox}>

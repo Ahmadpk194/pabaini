@@ -206,6 +206,7 @@ export class UsersService {
                 avatar_url: true,
                 village: true,
                 is_diaspora: true,
+                role: true,
                 created_at: true,
             },
         });

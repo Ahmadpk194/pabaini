@@ -1,69 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  StatusBar,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  ImageBackground,
+  Dimensions,
+  Platform,
+  KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { firebaseAuthService } from '../../src/api/firebaseAuth';
-import { Button } from '../../src/components/ui/Button';
-import { PhoneIcon } from '../../src/components/ui/PhoneIcon';
 import { GoogleIcon } from '../../src/components/ui/GoogleIcon';
-import { getIdToken } from '@react-native-firebase/auth';
+import { PabainiLogo } from '../../src/components/ui/PabainiLogo';
+import { getIdToken, FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const TOP_SECTION_HEIGHT = SCREEN_HEIGHT * 0.42;
+
+// Light-mode top section uses a deep forest-green tint.
+// When a real village photo is added, pass it as source= to ImageBackground
+// and keep this overlay. Nothing else in the layout needs to change.
+const LIGHT_TOP_BG = '#052E16';
 
 export default function LoginScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const { setGuest, login } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<'initial' | 'phone' | 'otp'>('initial');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<any>(null);
+  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
 
-  const handlePhoneLogin = () => {
-    setStep('phone');
+  const [resendTimer, setResendTimer] = useState(60);
+  const otpInputRef = useRef<TextInput>(null);
+  const [isOtpFocused, setIsOtpFocused] = useState(false);
+
+  // Countdown timer for Resend OTP
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (step === 'otp' && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, resendTimer]);
+
+  const handleOtpBoxPress = () => {
+    otpInputRef.current?.focus();
   };
 
-  const handleSendOtp = async () => {
-    
-    if (!phoneNumber.trim()) {
-      return;
+  // ─── Auth logic (unchanged) ───────────────────────────────────────────────
+
+  function formatPhoneNumber(raw: string): string {
+    // 1. Remove all spaces, dashes, parentheses, etc. Keep digits and plus sign.
+    let cleaned = raw.replace(/[^\d+]/g, '');
+
+    // 2. If it starts with +92 or 92, strip the prefix temporarily
+    if (cleaned.startsWith('+92')) {
+      cleaned = cleaned.substring(3);
+    } else if (cleaned.startsWith('92')) {
+      cleaned = cleaned.substring(2);
     }
 
+    // 3. Remove leading 0 if present (e.g. 03001234567 -> 3001234567)
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+
+    // 4. Return formatted number with standard +92 prefix
+    return '+92' + cleaned;
+  }
+
+  const handleSendOtp = async () => {
+    if (!phoneNumber.trim()) return;
     try {
       setLoading(true);
       setError(null);
-      
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-      
-      // Validate phone number format (Pakistan: +92 followed by 10 digits starting with 3)
-      if (!formattedPhone.match(/^\+92[3-9]\d{9}$/)) {
+      const formatted = formatPhoneNumber(phoneNumber);
+      if (!formatted.match(/^\+92[3-9]\d{9}$/)) {
         throw new Error('Invalid Pakistan phone number. Format: +92 3XX XXXXXXX');
       }
-      
-      const confirmationResult = await firebaseAuthService.sendOtp(formattedPhone);
-      
+      const confirmationResult = await firebaseAuthService.sendOtp(formatted);
       setConfirmation(confirmationResult);
       setStep('otp');
+      setResendTimer(60); // reset countdown timer on send
     } catch (err: any) {
-      console.error('Error sending OTP - Full error:', err);
-      console.error('Error message:', err.message);
-      console.error('Error code:', err.code);
-      console.error('Error stack:', err.stack);
       setError(err.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
@@ -71,440 +110,645 @@ export default function LoginScreen() {
   };
 
   const handleVerifyOtp = async () => {
-    
-    if (!confirmation || !otp.trim()) {
-      return;
-    }
-
+    if (!confirmation || !otp.trim()) return;
     try {
       setLoading(true);
       setError(null);
-      
       const userCredential = await firebaseAuthService.confirmOtp(confirmation, otp);
-      
       const idToken = await getIdToken(userCredential.user);
-      
       const dbUser = await login(idToken);
-      
       if (!dbUser?.name || dbUser.name.trim() === '') {
         router.replace('/(onboarding)/profile-setup');
       } else {
         router.replace('/(tabs)');
       }
     } catch (err: any) {
-      const serverMessage = err.response?.data?.message || err.message || 'Invalid OTP';
-      setError(serverMessage);
+      setError(err.response?.data?.message || err.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    
     try {
       setLoading(true);
       setError(null);
-      
       const userCredential = await firebaseAuthService.signInWithGoogle();
-      
       const idToken = await getIdToken(userCredential.user);
-      
       const dbUser = await login(idToken);
-      
       if (!dbUser?.name || dbUser.name.trim() === '') {
         router.replace('/(onboarding)/profile-setup');
       } else {
         router.replace('/(tabs)');
       }
     } catch (err: any) {
-      console.error('Error signing in with Google - Full error:', err);
-      console.error('Error message:', err.message);
-      console.error('Error code:', err.code);
-      console.error('Error stack:', err.stack);
-      const serverMessage = err.response?.data?.message || err.message || 'Google Sign-In failed';
-      setError(serverMessage);
-      Alert.alert('Error', serverMessage);
+      const msg = err.response?.data?.message || err.message || 'Google Sign-In failed';
+      setError(msg);
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
   };
-   
+
   const handleGuest = async () => {
     try {
       await setGuest();
       router.replace('/(tabs)');
-    } catch (err) {
-      console.error('Error starting guest session:', err);
+    } catch {
+      /* noop */
     }
   };
 
   const handleBack = () => {
-    setStep('initial');
-    setPhoneNumber('');
-    setOtp('');
-    setConfirmation(null);
-    setError(null);
+    if (step === 'otp') {
+      setStep('phone');
+      setOtp('');
+      setError(null);
+    } else {
+      setStep('initial');
+      setPhoneNumber('');
+      setOtp('');
+      setConfirmation(null);
+      setError(null);
+    }
   };
 
-  function formatPhoneNumber(phoneNumber: string): string {
-    
-    // Remove all non-digit characters except +
-    let cleaned = phoneNumber.replace(/[^\d+]/g, '');
-    
-    // If already has +92 at start, just clean it
-    if (cleaned.startsWith('+92')) {
-      return cleaned;
-    }
-    
-    // If starts with + but not +92, assume it's wrong and remove +
-    if (cleaned.startsWith('+')) {
-      cleaned = cleaned.substring(1);
-    }
-    
-    // Remove leading 0
-    if (cleaned.startsWith('0')) {
-      cleaned = cleaned.substring(1);
-    }
-    
-    // Add Pakistan country code
-    const formatted = '+92' + cleaned;
-    return formatted;
-  }
+  // ─── Derived styles (theme-aware) ────────────────────────────────────────
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.container}>
-          {step === 'initial' ? (
-            <>
-              <View style={styles.header}>
+  const c = theme.colors;
+  const topBg = mode === 'dark' ? c.background : LIGHT_TOP_BG;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  if (step === 'phone' || step === 'otp') {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: c.background }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView
+              contentContainerStyle={[
+                styles.subStepScroll,
+                { paddingBottom: insets.bottom + 40 },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Back */}
+              <TouchableOpacity onPress={handleBack} style={styles.backRow} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={20} color={c.primary} />
+                <Text style={[styles.backText, { color: c.primary }]}>Back</Text>
+              </TouchableOpacity>
+
+              {/* Heading */}
+              <Text style={[styles.subStepHeading, { color: c.textPrimary }]}>
+                {step === 'phone' ? 'Enter your number' : 'Enter the code'}
+              </Text>
+              
+              <View style={styles.subStepSubRow}>
+                <Text style={[styles.subStepSub, { color: c.textSecondary }]}>
+                  {step === 'phone'
+                    ? "We'll send you a one-time code"
+                    : `Code sent to ${phoneNumber}`}
+                </Text>
+                {step === 'otp' && (
+                  <TouchableOpacity onPress={() => setStep('phone')} activeOpacity={0.7}>
+                    <Text style={[styles.editLink, { color: c.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Input */}
+              {step === 'phone' ? (
                 <View
                   style={[
-                    styles.logoBadge,
+                    styles.phoneInputWrapper,
                     {
-                      backgroundColor: theme.colors.surface,
-                      shadowColor: '#000',
+                      backgroundColor: c.input ?? c.surface,
+                      borderColor: error ? c.danger : c.borderStrong ?? c.border,
                     },
                   ]}
                 >
-                  <Text style={[styles.logoText, { color: theme.colors.primary }]}>Pabaini</Text>
-                </View>
-              </View>
-
-              <View style={styles.main}>
-                <Text style={[styles.heading, { color: theme.colors.primary }]}>
-                  Connecting the Pabaini Community
-                </Text>
-
-                <Text style={[styles.subtext, { color: theme.colors.textSecondary }]}>
-                  Stay updated with official village announcements and community news.
-                </Text>
-
-                <View style={styles.actions}>
-                  <Button
-                    title="Continue with Phone Number"
-                    onPress={handlePhoneLogin}
-                    variant="primary"
-                    style={styles.button}
-                    leftIcon={<PhoneIcon color={theme.colors.onPrimary} />}
-                  />
-
-                  <Button
-                    title="Continue with Google"
-                    onPress={handleGoogleLogin}
-                    variant="secondary"
-                    style={styles.button}
-                    leftIcon={<GoogleIcon />}
-                  />
-
-                  <View style={styles.dividerContainer}>
-                    <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-                    <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
-                    <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+                  <View style={styles.prefixContainer}>
+                    <Text style={[styles.prefixText, { color: c.textPrimary }]}>🇵🇰 +92</Text>
+                    <View style={[styles.prefixDivider, { backgroundColor: c.border }]} />
                   </View>
+                  <TextInput
+                    style={[styles.phoneInput, { color: c.textPrimary }]}
+                    placeholder="3XX XXXXXXX"
+                    placeholderTextColor={c.textTertiary ?? c.textSecondary}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                    autoFocus
+                  />
+                </View>
+              ) : (
+                <View style={styles.otpOuterContainer}>
+                  {/* Hidden TextInput for full keyboard and copy-paste support */}
+                  <TextInput
+                    ref={otpInputRef}
+                    style={styles.hiddenInput}
+                    value={otp}
+                    onChangeText={(val) => setOtp(val.replace(/\D/g, ''))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    onFocus={() => setIsOtpFocused(true)}
+                    onBlur={() => setIsOtpFocused(false)}
+                    autoFocus
+                  />
 
-                  <TouchableOpacity onPress={handleGuest} style={styles.guestButton}>
-                    <Text style={[styles.guestText, { color: theme.colors.primary }]}>
-                      Continue as Guest
-                    </Text>
+                  {/* Split box displays */}
+                  <TouchableOpacity
+                    style={styles.otpBoxesRow}
+                    activeOpacity={1}
+                    onPress={handleOtpBoxPress}
+                  >
+                    {Array.from({ length: 6 }).map((_, index) => {
+                      const char = otp[index] || '';
+                      const isFocused = isOtpFocused && index === otp.length;
+
+                      return (
+                        <View
+                          key={index}
+                          style={[
+                            styles.otpBox,
+                            {
+                              backgroundColor: c.input ?? c.surface,
+                              borderColor: isFocused
+                                ? c.primary
+                                : error
+                                ? c.danger
+                                : c.borderStrong ?? c.border,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.otpChar, { color: c.textPrimary }]}>
+                            {char}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </TouchableOpacity>
                 </View>
-              </View>
+              )}
 
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
-                  By continuing, you agree to Pabaini's{' '}
-                  <Text style={[styles.linkText, { color: theme.colors.link }]}>Terms of Service</Text>
-                  {' '}and{' '}
-                  <Text style={[styles.linkText, { color: theme.colors.link }]}>Privacy Policy</Text>.
-                </Text>
-                <Text style={[styles.copyrightText, { color: theme.colors.textSecondary }]}>
-                  © 2026 Pabaini Village Square.
-                </Text>
-              </View>
-            </>
-          ) : step === 'phone' ? (
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                  <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
-                </TouchableOpacity>
+              {error ? (
+                <Text style={[styles.errorMsg, { color: c.danger ?? '#EF4444' }]}>{error}</Text>
+              ) : null}
 
-                <ScrollView
-                  contentContainerStyle={{ flexGrow: 1 }}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.phoneContainer}>
-                    <Text style={[styles.phoneHeading, { color: theme.colors.primary }]}>
-                      Enter your phone number
+              {/* Resend Countdown under OTP boxes */}
+              {step === 'otp' && (
+                <View style={styles.resendContainer}>
+                  {resendTimer > 0 ? (
+                    <Text style={[styles.resendText, { color: c.textSecondary }]}>
+                      Resend code in <Text style={{ color: c.primary, fontWeight: '600' }}>{resendTimer}s</Text>
                     </Text>
-                    <Text style={[styles.phoneSubtext, { color: theme.colors.textSecondary }]}>
-                      We'll send you a verification code
-                    </Text>
+                  ) : (
+                    <TouchableOpacity onPress={handleSendOtp} disabled={loading} activeOpacity={0.7}>
+                      <Text style={[styles.resendLink, { color: c.primary }]}>
+                        Resend Code
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
 
-                    <TextInput
-                      style={[
-                        styles.phoneInput,
-                        {
-                          backgroundColor: theme.colors.surface,
-                          borderColor: theme.colors.border,
-                          color: theme.colors.textPrimary,
-                        },
-                      ]}
-                      placeholder="+92 3XX XXXXXXX"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                      keyboardType="phone-pad"
-                      maxLength={15}
-                    />
+              {/* CTA */}
+              <TouchableOpacity
+                style={[
+                  styles.ctaBtn,
+                  {
+                    backgroundColor:
+                      loading ||
+                      (step === 'phone' ? !phoneNumber.trim() : otp.length !== 6)
+                        ? (c.borderStrong ?? c.border)
+                        : c.primary,
+                  },
+                ]}
+                onPress={step === 'phone' ? handleSendOtp : handleVerifyOtp}
+                disabled={
+                  loading ||
+                  (step === 'phone' ? !phoneNumber.trim() : otp.length !== 6)
+                }
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.ctaBtnText}>
+                    {step === 'phone' ? 'Send Code' : 'Verify'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    );
+  }
 
-                    {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
+  // ─── INITIAL / WELCOME STEP ───────────────────────────────────────────────
+  return (
+    <View style={styles.root}>
+      {/* Translucent status bar — icons show white over the dark top section */}
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-                    <Button
-                      title={loading ? 'Sending...' : 'Send Code'}
-                      onPress={handleSendOtp}
-                      variant="primary"
-                      style={styles.phoneButton}
-                      disabled={loading || !phoneNumber.trim()}
-                    />
-                  </View>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          ) : (
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                  <Text style={[styles.backText, { color: theme.colors.primary }]}>← Back</Text>
-                </TouchableOpacity>
+      {/* ── TOP HERO SECTION ── */}
+      {/*
+        Structured as ImageBackground so adding a real photo later is one prop change.
+        For now the solid-colour backgroundColor provides the visual.
+      */}
+      <ImageBackground
+        source={undefined}          // ← swap to require('./village.jpg') or a URI later
+        style={[styles.topSection, { backgroundColor: topBg, height: TOP_SECTION_HEIGHT }]}
+        resizeMode="cover"
+      >
+        {/* Modern LinearGradient overlay to give deep rich colors and keep any future background image readable */}
+        <LinearGradient
+          colors={
+            mode === 'dark'
+              ? ['rgba(22, 163, 74, 0.15)', 'rgba(15, 15, 15, 0.95)'] // Subtle emerald-tinted dark gradient
+              : ['rgba(22, 163, 74, 0.25)', 'rgba(5, 46, 22, 0.95)'] // Vibrant deep green gradient
+          }
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
 
-                <ScrollView
-                  contentContainerStyle={{ flexGrow: 1 }}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.otpContainer}>
-                    <Text style={[styles.otpHeading, { color: theme.colors.primary }]}>
-                      Enter verification code
-                    </Text>
-                    <Text style={[styles.otpSubtext, { color: theme.colors.textSecondary }]}>
-                      Code sent to {phoneNumber}
-                    </Text>
-
-                    <TextInput
-                      style={[
-                        styles.otpInput,
-                        {
-                          backgroundColor: theme.colors.surface,
-                          borderColor: theme.colors.border,
-                          color: theme.colors.textPrimary,
-                        },
-                      ]}
-                      placeholder="Enter 6-digit code"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={otp}
-                      onChangeText={setOtp}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      textAlign="center"
-                    />
-
-                    {error && <Text style={[styles.errorText, { color: '#D32F2F' }]}>{error}</Text>}
-
-                    <Button
-                      title={loading ? 'Verifying...' : 'Verify'}
-                      onPress={handleVerifyOtp}
-                      variant="primary"
-                      style={styles.otpButton}
-                      disabled={loading || !otp.trim()}
-                    />
-                  </View>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          )}
+        {/* Centred logo mark + wordmark */}
+        <View style={styles.heroContent}>
+          <View style={styles.logoContainer}>
+            <PabainiLogo size={64} color="#FFFFFF" />
+          </View>
+          <Text style={styles.wordmark}>Pabaini</Text>
         </View>
-    </SafeAreaView>
+      </ImageBackground>
+
+      {/* ── BOTTOM SHEET ── */}
+      <View
+        style={[
+          styles.sheet,
+          {
+            backgroundColor: c.surface,
+            // Sheet extends to screen bottom — paddingBottom accounts for home-bar
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 32,
+          },
+        ]}
+      >
+        {/* Bottom sheet slide handle/indicator */}
+        <View style={[styles.sheetHandle, { backgroundColor: c.borderStrong ?? c.border }]} />
+
+        {/* Tagline / Welcome Section */}
+        <View style={styles.taglineSection}>
+          <Text style={[styles.taglineTitle, { color: c.textPrimary }]}>
+            Connecting Pabaini
+          </Text>
+          <Text style={[styles.taglineSub, { color: c.textSecondary }]}>
+            Together as one community
+          </Text>
+        </View>
+
+        {/* Phone button */}
+        <TouchableOpacity
+          style={[styles.authBtn, styles.authBtnPrimary, { backgroundColor: c.primary }]}
+          onPress={() => setStep('phone')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.btnIcon}>
+            <Ionicons name="call" size={18} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.authBtnText, { color: '#FFFFFF' }]}>
+            Continue with Phone
+          </Text>
+        </TouchableOpacity>
+
+        {/* Google button */}
+        <TouchableOpacity
+          style={[
+            styles.authBtn,
+            styles.authBtnGoogle,
+            {
+              backgroundColor: c.surface,
+              borderColor: c.borderStrong ?? c.border,
+              marginTop: 12,
+            },
+          ]}
+          onPress={handleGoogleLogin}
+          activeOpacity={0.85}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={c.primary} style={styles.btnIcon} />
+          ) : (
+            <View style={styles.btnIcon}>
+              <GoogleIcon size={18} />
+            </View>
+          )}
+          <Text style={[styles.authBtnText, { color: c.textPrimary }]}>
+            Continue with Google
+          </Text>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+          <Text style={[styles.dividerText, { color: c.textTertiary ?? c.textSecondary }]}>
+            or
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+        </View>
+
+        {/* Guest */}
+        <TouchableOpacity
+          style={styles.guestBtn}
+          onPress={handleGuest}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.guestText, { color: c.primary }]}>
+            Continue as guest
+          </Text>
+        </TouchableOpacity>
+
+        {/* Footer — pushed to bottom with flex spacer */}
+        <View style={styles.footerSpacer} />
+        <Text style={[styles.footer, { color: c.textTertiary ?? c.textSecondary }]}>
+          By continuing you agree to our{' '}
+          <Text style={{ fontWeight: '600' }}>Terms & Privacy Policy</Text>
+        </Text>
+      </View>
+    </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
   },
-  keyboardAvoiding: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 28,
-    paddingBottom: 24,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 40,
-  },
-  logoBadge: {
-    paddingHorizontal: 36,
-    paddingVertical: 14,
-    borderRadius: 999,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  logoText: {
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  main: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 36,
-  },
-  subtext: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 24,
-    maxWidth: 320,
-  },
-  actions: {
+
+  // ── Top hero ──
+  topSection: {
     width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 48,
   },
-  button: {
-    width: '100%',
-    marginBottom: 14,
+  logoContainer: {
+    padding: 16,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
-  dividerContainer: {
+  heroContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  wordmark: {
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginTop: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.25)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+
+  // ── Bottom sheet ──
+  sheet: {
+    flex: 1,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -20,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  taglineSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  taglineTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  taglineSub: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // Buttons
+  authBtn: {
+    height: 52,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     width: '100%',
-    marginTop: 8,
-    marginBottom: 24,
+  },
+  authBtnPrimary: {
+    // shadow for the primary CTA
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  authBtnGoogle: {
+    borderWidth: 1.25,
+  },
+  btnIcon: {
+    marginRight: 8,
+  },
+  authBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  // Divider
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
-    height: 1,
+    height: StyleSheet.hairlineWidth,
   },
   dividerText: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     fontSize: 13,
     fontWeight: '500',
   },
-  guestButton: {
+
+  // Guest
+  guestBtn: {
+    height: 48,
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
   guestText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+  },
+
+  // Footer
+  footerSpacer: {
+    flex: 1,
   },
   footer: {
-    alignItems: 'center',
-    paddingTop: 16,
-  },
-  footerText: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  linkText: {
-    fontWeight: '600',
-  },
-  copyrightText: {
     fontSize: 11,
     textAlign: 'center',
+    lineHeight: 18,
+    paddingBottom: 4,
   },
-  backButton: {
+
+  // ── Phone / OTP sub-steps ──
+  subStepScroll: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 16,
+    gap: 2,
   },
   backText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  // Align form to the top to reduce empty space and keep elements above the keyboard
-  phoneContainer: {
-    flex: 1,
-    paddingTop: 20,
-  },
-  phoneHeading: {
-    fontSize: 28,
+  subStepHeading: {
+    fontSize: 26,
     fontWeight: '700',
+    marginBottom: 8,
+    marginTop: 12,
+    letterSpacing: -0.3,
+  },
+  subStepSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  subStepSub: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  editLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  phoneInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
     marginBottom: 12,
   },
-  phoneSubtext: {
+  prefixContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prefixText: {
     fontSize: 16,
-    marginBottom: 32,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  prefixDivider: {
+    width: 1,
+    height: 20,
+    marginRight: 12,
   },
   phoneInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 18,
-    marginBottom: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  phoneButton: {
-    width: '100%',
-  },
-  // Align form to the top to reduce empty space and keep elements above the keyboard
-  otpContainer: {
     flex: 1,
-    paddingTop: 20,
+    fontSize: 17,
+    height: '100%',
+    paddingVertical: 0,
   },
-  otpHeading: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  otpSubtext: {
-    fontSize: 16,
-    marginBottom: 32,
-  },
-  otpInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 24,
-    marginBottom: 16,
-    letterSpacing: 8,
-  },
-  otpButton: {
+  otpOuterContainer: {
     width: '100%',
+    marginVertical: 12,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  otpBox: {
+    width: 44,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpChar: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  resendContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  resendText: {
+    fontSize: 14,
+  },
+  resendLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  errorMsg: {
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  ctaBtn: {
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  ctaBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

@@ -95,7 +95,8 @@ The following fields exist on the player profile entity (`CricketPlayerProfile`)
 ### Searchable Player Directory
 The mobile client provides a dedicated discover page (`players/index.tsx`) where users can search all registered players in the village. It features:
 *   **Sticky Name Search Bar**: Filters players dynamically by name on the backend.
-*   **Skeletons & Infinite Scroll**: Paginated list fetching 10 players at a time with smooth infinite scroll and placeholder skeleton loading states.
+*   **Skeletons & Infinite Scroll**: Paginated list fetching 10 players at a time with smooth infinite scroll. The loading state is initialized to `true` by default so skeletons are shown immediately upon entry, and utilizes concurrent fetch locking (`isFetchingRef`) along with cached list state checks (`playersRef`) to completely prevent visual flickering of the "No players found" state during search text entries or mounting.
+*   **Premium Player Card Skeletons**: The `PlayerCardSkeleton` matches the exact visual appearance, sizes, dark green gradient styling, divider structure, styles columns, and stats grid of the real `CricketPlayerCard` component for high-fidelity loading transitions.
 *   **Pull-to-refresh**: Enables dragging down the player feed to refresh registered profiles.
 *   **See All CTA**: Accessible from the Sports Tab dashboard as a redirect next to the "Other Registered Players" section.
 

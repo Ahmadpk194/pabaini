@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity, Modal, Alert, ActivityIndicator, Share } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity, Modal, Alert, ActivityIndicator, Share, Animated, Easing } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,14 +14,54 @@ import { NoticeFeedSkeleton } from '../../src/components/skeletons';
 import { Category, Announcement } from '../../src/types';
 import { queryKeys } from '../../src/constants/queryKeys';
 import { update, softDelete } from '../../src/api/announcements';
+import { PabainiLogo } from '../../src/components/ui/PabainiLogo';
+import { useNotificationsStore } from '../../src/store/notificationsStore';
+import { useAuthPromptStore } from '../../src/store/authPromptStore';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
   const { user, isGuest } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [isFocused, setIsFocused] = useState(true);
+
+  const chipsVisible = useRef(true);
+  const animValue = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+
+  // Notifications unread count
+  const unreadCount = useNotificationsStore((state) => state.unreadCount);
+  const fetchUnreadCount = useNotificationsStore((state) => state.fetchUnreadCount);
+
+  const toggleChips = useCallback((visible: boolean) => {
+    if (visible === chipsVisible.current) return;
+    chipsVisible.current = visible;
+    Animated.timing(animValue, {
+      toValue: visible ? 1 : 0,
+      duration: 180,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1), // smooth standard ease-out curve
+      useNativeDriver: false,
+    }).start();
+  }, [animValue]);
+
+  const handleScroll = useCallback((event: any) => {
+    const currentOffset = event.nativeEvent.contentOffset.y;
+    const diff = currentOffset - lastScrollY.current;
+
+    if (Math.abs(diff) > 15) {
+      if (currentOffset <= 0) {
+        toggleChips(true);
+      } else if (diff > 0) {
+        toggleChips(false);
+      } else {
+        toggleChips(true);
+      }
+    }
+    // Always update lastScrollY on every frame to ensure smooth scroll differential tracking
+    lastScrollY.current = currentOffset;
+  }, [toggleChips]);
 
   const { data: announcements = [], isLoading, refetch } = useAnnouncements(
     selectedCategory === 'all' ? undefined : selectedCategory,
@@ -31,10 +72,20 @@ export default function HomeScreen() {
     useCallback(() => {
       setIsFocused(true);
       refetch();
+      if (!isGuest) {
+        fetchUnreadCount();
+        const interval = setInterval(() => {
+          fetchUnreadCount();
+        }, 35000);
+        return () => {
+          setIsFocused(false);
+          clearInterval(interval);
+        };
+      }
       return () => {
         setIsFocused(false);
       };
-    }, [refetch])
+    }, [refetch, isGuest, fetchUnreadCount])
   );
 
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -57,10 +108,10 @@ export default function HomeScreen() {
     try {
       setActiveAction('pin');
       await update(selectedAnnouncement.id, { is_pinned: !selectedAnnouncement.is_pinned });
-      
+
       // Invalidate queries to refresh feed
       await queryClient.invalidateQueries({ queryKey: queryKeys.announcements.all });
-      
+
       setMenuVisible(false);
       setSelectedAnnouncement(null);
     } catch (error) {
@@ -73,23 +124,23 @@ export default function HomeScreen() {
 
   const handleDeleteAnnouncement = () => {
     if (!selectedAnnouncement) return;
-    
+
     Alert.alert(
       'Delete Announcement',
       'Are you sure you want to delete this announcement? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
               setActiveAction('delete');
               await softDelete(selectedAnnouncement.id);
-              
+
               // Invalidate queries to refresh feed
               await queryClient.invalidateQueries({ queryKey: queryKeys.announcements.all });
-              
+
               setMenuVisible(false);
               setSelectedAnnouncement(null);
             } catch (error) {
@@ -104,19 +155,28 @@ export default function HomeScreen() {
     );
   };
 
-  const handleAnnouncementPress = (id: number) => {
-    router.push(`/announcement/${id}`);
-  };
-
   const handleCreatePress = () => {
     if (isGuest) {
-      // TODO: Show login prompt
-      console.log('Guest mode - login required');
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Post Setup Required',
+        description: 'You must log in to post announcements.',
+      });
       return;
     }
     if (user?.role === 'admin' || user?.role === 'moderator') {
       router.push('/announcement/create');
     }
+  };
+
+  const handleBellPress = () => {
+    if (isGuest) {
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Notifications Required',
+        description: 'You must log in to view notifications.',
+      });
+      return;
+    }
+    router.push('/notifications');
   };
 
   const handleShare = async (announcement: Announcement) => {
@@ -131,55 +191,133 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
-      <CategoryFilterBar
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-      />
+    <SafeAreaView style={[styles.content, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
+      {/* Sticky Header */}
+      <View style={[
+        styles.header,
+        {
+          backgroundColor: theme.colors.surface,
+          borderBottomWidth: 0.5,
+          borderBottomColor: theme.colors.border,
+        }
+      ]}>
+        <View style={styles.headerLeft}>
+          {/* <PabainiLogo size={28} /> */}
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>
+            Pabaini
+          </Text>
+        </View>
 
-      {isLoading ? (
-        <NoticeFeedSkeleton />
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={() => refetch()}
-              tintColor={theme.colors.primary}
-            />
-          }
-        >
-          {announcements.map((announcement: Announcement) => (
-            <AnnouncementCard
-              key={announcement.id}
-              announcement={announcement}
-              onShare={handleShare}
-              onSettingsPress={handleSettingsPress}
-            />
-          ))}
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.searchButton, { backgroundColor: theme.colors.elevated }]}
+            onPress={() => router.push('/search')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
 
-          {announcements.length === 0 && !isLoading && (
-            <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              No announcements yet
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={[styles.bellButton, { backgroundColor: theme.colors.elevated }]}
+            onPress={handleBellPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={20} color={theme.colors.textSecondary} />
+            {unreadCount > 0 && (
+              <View style={[
+                styles.bellBadge,
+                {
+                  backgroundColor: theme.colors.danger,
+                  borderColor: theme.colors.onPrimary,
+                }
+              ]} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <Animated.View style={{
+          height: animValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 54],
+          }),
+          opacity: animValue,
+          overflow: 'hidden',
+        }}>
+          <CategoryFilterBar
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+        </Animated.View>
+
+        {isLoading ? (
+          <NoticeFeedSkeleton />
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading}
+                onRefresh={() => refetch()}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
+          >
+            {announcements.map((announcement: Announcement) => (
+              <AnnouncementCard
+                key={announcement.id}
+                announcement={announcement}
+                onShare={handleShare}
+                onSettingsPress={handleSettingsPress}
+              />
+            ))}
+
+            {announcements.length === 0 && !isLoading && (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="megaphone-outline" size={48} color={theme.colors.primaryLight} />
+                <Text style={[styles.emptyTitle, { color: theme.colors.textSecondary }]}>
+                  No announcements yet
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textTertiary }]}>
+                  Check back soon
+                </Text>
+              </View>
+            )}
+          </ScrollView>
         )}
-      </ScrollView>
-      )}
 
-      {/* FAB for creating announcements (admin/mod only) */}
-      {(user?.role === 'admin' || user?.role === 'moderator') && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: '#1F4A2E' }]}
-          onPress={handleCreatePress}
-          activeOpacity={0.8}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      )}
+        {/* FAB for creating announcements (admin/mod only) */}
+        {(user?.role === 'admin' || user?.role === 'moderator') && (
+          <Animated.View
+            style={[
+              styles.fabContainer,
+              {
+                opacity: animValue,
+                transform: [{
+                  translateY: animValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [80, 0],
+                  })
+                }],
+              }
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: '#1F4A2E' }]}
+              onPress={handleCreatePress}
+              activeOpacity={0.8}
+            >
+              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.fabText}>Post</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+      </View>
 
       {/* Post Settings Bottom Sheet Drawer */}
       <Modal
@@ -188,20 +326,20 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={handleCloseMenu}
       >
-        <TouchableOpacity 
-          style={styles.modalBackdrop} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
           onPress={handleCloseMenu}
         >
           <View style={[styles.drawerContainer, { backgroundColor: theme.colors.surface }]}>
             {/* Grab Handle */}
             <View style={styles.dragHandle} />
-            
+
             {/* Title */}
             <Text style={[styles.drawerTitle, { color: theme.colors.textPrimary }]}>
               Post Settings
             </Text>
-            
+
             <View style={[styles.drawerDivider, { backgroundColor: theme.colors.border }]} />
 
             {/* Actions list */}
@@ -214,10 +352,10 @@ export default function HomeScreen() {
                     onPress={handleTogglePin}
                     disabled={activeAction !== null}
                   >
-                    <Ionicons 
-                      name={selectedAnnouncement.is_pinned ? "pin-outline" : "pin"} 
-                      size={22} 
-                      color={theme.colors.textPrimary} 
+                    <Ionicons
+                      name={selectedAnnouncement.is_pinned ? "pin-outline" : "pin"}
+                      size={22}
+                      color={theme.colors.textPrimary}
                     />
                     <Text style={[styles.drawerActionText, { color: theme.colors.textPrimary }]}>
                       {selectedAnnouncement.is_pinned ? "Unpin Announcement" : "Pin Announcement"}
@@ -233,10 +371,10 @@ export default function HomeScreen() {
                     onPress={handleDeleteAnnouncement}
                     disabled={activeAction !== null}
                   >
-                    <Ionicons 
-                      name="trash-outline" 
-                      size={22} 
-                      color="#DC2626" 
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color="#DC2626"
                     />
                     <Text style={[styles.drawerActionText, { color: '#DC2626' }]}>
                       Delete Announcement
@@ -248,57 +386,122 @@ export default function HomeScreen() {
             )}
 
             {/* Cancel Button */}
-            <TouchableOpacity 
-              style={[styles.cancelButton, { backgroundColor: theme.colors.background }]} 
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: theme.colors.background }]}
               onPress={handleCloseMenu}
               disabled={activeAction !== null}
             >
-              <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.cancelButtonText, { color: theme.colors.textPrimary }]}>
                 Cancel
               </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
-
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   content: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 16,
+    paddingRight: 16,
+    paddingVertical: 4,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // gap: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   emptyContainer: {
-    paddingVertical: 48,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 64,
   },
-  emptyText: {
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 16,
+    textAlign: 'center',
   },
-  fab: {
+  emptySubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  fabContainer: {
     position: 'absolute',
     bottom: 16,
     right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
+    zIndex: 99,
+  },
+  fab: {
+    height: 48,
+    borderRadius: 24,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    gap: 6,
+  },
+  fabText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   modalBackdrop: {
     flex: 1,

@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Shield, Trophy, Calendar, Users } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
@@ -29,6 +30,7 @@ import { useAuthPromptStore } from '../../../../../src/store/authPromptStore';
 import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
 import { useMatches } from '../../../../../src/hooks/useMatches';
 import { MatchCard } from '../../../../../src/components/sports/matches/MatchCard';
+import { TeamProfileSkeleton } from '../../../../../src/components/skeletons';
 
 type ProfileTab = 'squad' | 'stats' | 'matches';
 
@@ -39,6 +41,7 @@ export default function TeamProfileScreen() {
   const teamId = typeof id === 'string' ? parseInt(id, 10) : parseInt(id?.[0] || '0', 10);
   const fetchMyTeams = useTeamsStore((state) => state.fetchMyTeams);
   const { isGuest } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // Get current user registration & profile from Zustand
   const isRegistered = useSportsStore((state) => state.isRegistered('cricket'));
@@ -182,7 +185,7 @@ export default function TeamProfileScreen() {
         return (
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: 24 }]}
               onPress={() => {
                 if (isGuest) {
                   useAuthPromptStore.getState().showPrompt({
@@ -205,7 +208,7 @@ export default function TeamProfileScreen() {
         return (
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: 24 }]}
               onPress={() => router.push(`/sports/cricket/teams/${teamId}/manage`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>
@@ -219,10 +222,18 @@ export default function TeamProfileScreen() {
         return (
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#FCEBEB', borderColor: '#F7C5C5', borderWidth: 1, borderRadius: theme.radius.sm }]}
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: theme.colors.urgentBg,
+                  borderColor: theme.colors.border,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderRadius: 24,
+                },
+              ]}
               onPress={handleLeaveTeam}
             >
-              <Text style={[styles.actionBtnText, { color: '#791F1F' }]}>
+              <Text style={[styles.actionBtnText, { color: theme.colors.urgentText }]}>
                 Leave Team
               </Text>
             </TouchableOpacity>
@@ -232,7 +243,7 @@ export default function TeamProfileScreen() {
       case 'pending_request':
         return (
           <View style={styles.actionContainer}>
-            <View style={[styles.disabledBtn, { backgroundColor: theme.colors.border, borderRadius: theme.radius.sm }]}>
+            <View style={[styles.disabledBtn, { backgroundColor: theme.colors.border, borderRadius: 24 }]}>
               <Text style={[styles.disabledBtnText, { color: theme.colors.textSecondary }]}>
                 Join Request Pending
               </Text>
@@ -244,16 +255,25 @@ export default function TeamProfileScreen() {
         return (
           <View style={[styles.actionContainer, styles.rowButtons]}>
             <TouchableOpacity
-              style={[styles.halfBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+              style={[styles.actionBtn, styles.halfBtn, { backgroundColor: theme.colors.primary, borderRadius: 24 }]}
               onPress={handleAcceptInvite}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Accept</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.halfBtn, { backgroundColor: '#FCEBEB', borderColor: '#F7C5C5', borderWidth: 1, borderRadius: theme.radius.sm }]}
+              style={[
+                styles.actionBtn,
+                styles.halfBtn,
+                {
+                  backgroundColor: theme.colors.urgentBg,
+                  borderColor: theme.colors.border,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderRadius: 24,
+                },
+              ]}
               onPress={handleDeclineInvite}
             >
-              <Text style={[styles.actionBtnText, { color: '#791F1F' }]}>Decline</Text>
+              <Text style={[styles.actionBtnText, { color: theme.colors.urgentText }]}>Decline</Text>
             </TouchableOpacity>
           </View>
         );
@@ -262,7 +282,7 @@ export default function TeamProfileScreen() {
         return (
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: 24 }]}
               onPress={handleRequestToJoin}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>
@@ -294,13 +314,7 @@ export default function TeamProfileScreen() {
   }
 
   if (loading) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
+    return <TeamProfileSkeleton />;
   }
 
   if (!team) {
@@ -313,19 +327,39 @@ export default function TeamProfileScreen() {
     );
   }
 
+
+
+  const getTabButtonStyle = (tab: ProfileTab) => {
+    const isActive = activeTab === tab;
+    return [
+      styles.tabButton,
+      isActive ? {
+        backgroundColor: theme.colors.surface,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 1.5,
+      } : {
+        backgroundColor: theme.colors.border,
+      },
+    ];
+  };
+
+  const getTabIconColor = (tab: ProfileTab) => {
+    return activeTab === tab ? theme.colors.primary : theme.colors.textSecondary;
+  };
+
+  const getTabTextColor = (tab: ProfileTab) => {
+    return activeTab === tab ? theme.colors.textPrimary : theme.colors.textSecondary;
+  };
+
   // Active squad list filtering
   const activeMembers = team.members.filter((m) => m.status === 'active');
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      {/* Header Bar */}
-      <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft color={theme.colors.textPrimary} size={24} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Team Profile</Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom }]}>
+      <StatusBar style="light" />
 
       <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
         {/* Team Hero Header */}
@@ -333,8 +367,9 @@ export default function TeamProfileScreen() {
 
         {/* Team Description */}
         {team.description && (
-          <View style={[styles.descriptionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Text style={[styles.descriptionText, { color: theme.colors.textPrimary }]}>
+          <View style={styles.descriptionSection}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>About the Team</Text>
+            <Text style={[styles.descriptionText, { color: theme.colors.textSecondary }]}>
               {team.description}
             </Text>
           </View>
@@ -343,49 +378,37 @@ export default function TeamProfileScreen() {
         {/* Action Button Area */}
         {renderActionArea()}
 
-        {/* Tab Pills */}
-        <View style={styles.tabsContainer}>
+        {/* Tab Pills (Segmented Control) */}
+        <View style={[styles.tabsContainer, { backgroundColor: theme.colors.elevated }]}>
           <TouchableOpacity
-            style={[
-              styles.tabPill,
-              activeTab === 'squad'
-                ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                : { borderColor: theme.colors.border },
-            ]}
+            style={getTabButtonStyle('squad')}
             onPress={() => setActiveTab('squad')}
+            activeOpacity={0.8}
           >
-            <Users size={16} color={activeTab === 'squad' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text style={[styles.tabText, { color: activeTab === 'squad' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+            <Users size={15} color={getTabIconColor('squad')} />
+            <Text style={[styles.tabText, { color: getTabTextColor('squad') }]}>
               Squad
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.tabPill,
-              activeTab === 'stats'
-                ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                : { borderColor: theme.colors.border },
-            ]}
+            style={getTabButtonStyle('stats')}
             onPress={() => setActiveTab('stats')}
+            activeOpacity={0.8}
           >
-            <Trophy size={16} color={activeTab === 'stats' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text style={[styles.tabText, { color: activeTab === 'stats' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+            <Trophy size={15} color={getTabIconColor('stats')} />
+            <Text style={[styles.tabText, { color: getTabTextColor('stats') }]}>
               Stats
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.tabPill,
-              activeTab === 'matches'
-                ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                : { borderColor: theme.colors.border },
-            ]}
+            style={getTabButtonStyle('matches')}
             onPress={() => setActiveTab('matches')}
+            activeOpacity={0.8}
           >
-            <Calendar size={16} color={activeTab === 'matches' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text style={[styles.tabText, { color: activeTab === 'matches' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+            <Calendar size={15} color={getTabIconColor('matches')} />
+            <Text style={[styles.tabText, { color: getTabTextColor('matches') }]}>
               Matches
             </Text>
           </TouchableOpacity>
@@ -394,9 +417,14 @@ export default function TeamProfileScreen() {
         {/* Tab Content */}
         <View style={styles.tabContentContainer}>
           {activeTab === 'squad' && (
-            <View>
-              {activeMembers.map((member) => (
-                <SquadMemberRow key={member.id} member={member} />
+            <View style={[styles.listCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              {activeMembers.map((member, index) => (
+                <React.Fragment key={member.id}>
+                  <SquadMemberRow member={member} borderless={true} />
+                  {index < activeMembers.length - 1 && (
+                    <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+                  )}
+                </React.Fragment>
               ))}
             </View>
           )}
@@ -427,19 +455,21 @@ export default function TeamProfileScreen() {
                     <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>{played}</Text>
                     <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Played</Text>
                   </View>
-                  <View style={[styles.statBox, { backgroundColor: '#EBFBEF', borderColor: '#C8E6C9' }]}>
-                    <Text style={[styles.statValue, { color: '#2E7D32' }]}>{wins}</Text>
-                    <Text style={[styles.statLabel, { color: '#2E7D32' }]}>Wins</Text>
+                  <View style={[styles.statBox, { backgroundColor: theme.colors.eventBg, borderColor: theme.colors.border, borderWidth: StyleSheet.hairlineWidth }]}>
+                    <Text style={[styles.statValue, { color: theme.colors.eventText }]}>{wins}</Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.eventText }]}>Wins</Text>
                   </View>
-                  <View style={[styles.statBox, { backgroundColor: '#FCEBEB', borderColor: '#F5C6CB' }]}>
-                    <Text style={[styles.statValue, { color: '#C62828' }]}>{losses}</Text>
-                    <Text style={[styles.statLabel, { color: '#C62828' }]}>Losses</Text>
+                  <View style={[styles.statBox, { backgroundColor: theme.colors.urgentBg, borderColor: theme.colors.border, borderWidth: StyleSheet.hairlineWidth }]}>
+                    <Text style={[styles.statValue, { color: theme.colors.urgentText }]}>{losses}</Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.urgentText }]}>Losses</Text>
                   </View>
                 </View>
 
                 {/* Win Rate Banner */}
                 <View style={[styles.statsRowBanner, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-                  <Trophy size={20} color="#D4A700" />
+                  <View style={[styles.trophyIconContainer, { backgroundColor: theme.colors.warningLight }]}>
+                    <Trophy size={16} color={theme.colors.warningText} fill={theme.colors.warningText} />
+                  </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[styles.bannerTitle, { color: theme.colors.textPrimary }]}>Win Ratio: {winRate}%</Text>
                     <Text style={[styles.bannerSub, { color: theme.colors.textSecondary }]}>
@@ -524,11 +554,14 @@ export default function TeamProfileScreen() {
           })()}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
@@ -556,34 +589,38 @@ const styles = StyleSheet.create({
   scrollBody: {
     flex: 1,
   },
-  descriptionCard: {
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 12,
+  descriptionSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
   descriptionText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
+    marginTop: 6,
   },
   actionContainer: {
-    height: 48,
-    marginHorizontal: 16,
+    paddingHorizontal: 20,
     marginTop: 16,
     justifyContent: 'center',
   },
   actionBtn: {
-    height: '100%',
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionBtnText: {
     fontSize: 15,
     fontWeight: '700',
   },
   disabledBtn: {
-    height: '100%',
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -597,32 +634,40 @@ const styles = StyleSheet.create({
   },
   halfBtn: {
     flex: 1,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    borderRadius: 24,
+    padding: 4,
+    marginHorizontal: 20,
     marginTop: 24,
-    gap: 10,
   },
-  tabPill: {
+  tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    paddingHorizontal: 16,
     borderRadius: 20,
-    borderWidth: 1.5,
+    marginHorizontal: 2,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
   },
   tabContentContainer: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
+  },
+  listCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 12,
   },
   comingSoon: {
     alignItems: 'center',
@@ -655,13 +700,13 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     marginBottom: 4,
   },
@@ -673,8 +718,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   bannerTitle: {
     fontSize: 15,
@@ -686,8 +731,8 @@ const styles = StyleSheet.create({
   },
   statsDetailsCard: {
     padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -697,5 +742,12 @@ const styles = StyleSheet.create({
   detailsDivider: {
     height: 0.5,
     marginVertical: 12,
+  },
+  trophyIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -29,8 +29,11 @@ import {
   Edit3,
   ChevronDown,
   ChevronUp,
+  Shield,
 } from 'lucide-react-native';
 import { PublicUser } from '../../types/profile.types';
+import { Role } from '../../types';
+import { updateUserRole } from '../../services/usersApi';
 
 let ImagePicker: any = null;
 try {
@@ -43,9 +46,10 @@ interface GeneralInfoSectionProps {
   user: PublicUser;
   isOwnProfile: boolean;
   isCricketPlayer?: boolean;
+  onRoleUpdated?: (role: Role) => void;
 }
 
-export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer }: GeneralInfoSectionProps) {
+export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer, onRoleUpdated }: GeneralInfoSectionProps) {
   const { theme } = useTheme();
   const { user: authUser, logout, updateProfile } = useAuth();
   const router = useRouter();
@@ -84,6 +88,39 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer }: Gene
       setSelectedImage(null);
     }
   }, [user, authUser, isEditing, isOwnProfile]);
+
+  const [roleUpdating, setRoleUpdating] = useState(false);
+
+  const handleRoleChange = async (targetRole: Role) => {
+    if (user.role === targetRole) return;
+
+    Alert.alert(
+      'Change User Role',
+      `Are you sure you want to change this user's role to ${targetRole.toUpperCase()}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setRoleUpdating(true);
+              await updateUserRole(user.id, targetRole);
+              if (onRoleUpdated) {
+                onRoleUpdated(targetRole);
+              }
+              Alert.alert('Success', `User role updated to ${targetRole} successfully.`);
+            } catch (error: any) {
+              console.error('Failed to update user role:', error);
+              Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to update user role');
+            } finally {
+              setRoleUpdating(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogout = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to log out?', [
@@ -289,6 +326,18 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer }: Gene
 
         {/* Metadata pills row */}
         <View style={styles.metaRow}>
+          {user.role === 'admin' && (
+            <View style={[styles.metaPill, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#F59E0B', borderWidth: 0.5 }]}>
+              <Shield size={10} color="#F59E0B" />
+              <Text style={[styles.metaPillText, { color: '#F59E0B', fontWeight: 'bold' }]}>Admin</Text>
+            </View>
+          )}
+          {user.role === 'moderator' && (
+            <View style={[styles.metaPill, { backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: '#3B82F6', borderWidth: 0.5 }]}>
+              <Shield size={10} color="#3B82F6" />
+              <Text style={[styles.metaPillText, { color: '#3B82F6', fontWeight: 'bold' }]}>Mod</Text>
+            </View>
+          )}
           <View style={styles.metaPill}>
             <MapPin size={11} color="rgba(255,255,255,0.7)" />
             <Text style={styles.metaPillText}>{displayVillage}</Text>
@@ -483,6 +532,80 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer }: Gene
               </View>
             </View>
           )}
+        </View>
+      )}
+
+      {/* ── Administrative Controls (for admins viewing other profiles) ── */}
+      {!isOwnProfile && authUser?.role === 'admin' && (
+        <View style={[styles.adminSection, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Text style={[styles.adminHeaderTitle, { color: theme.colors.textPrimary }]}>
+            Admin Controls
+          </Text>
+          <View style={styles.fieldsContainer}>
+            <Text style={[styles.adminSubtext, { color: theme.colors.textSecondary }]}>
+              Manage this user's platform role and permissions.
+            </Text>
+
+            <View style={styles.roleSelectorContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.roleSelectorBtn,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+                  user.role === 'resident' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                ]}
+                onPress={() => handleRoleChange('resident')}
+                disabled={roleUpdating}
+              >
+                <Text style={[
+                  styles.roleSelectorText,
+                  { color: theme.colors.textPrimary },
+                  user.role === 'resident' && { color: theme.colors.onPrimary, fontWeight: '700' }
+                ]}>
+                  Resident
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.roleSelectorBtn,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+                  user.role === 'moderator' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                ]}
+                onPress={() => handleRoleChange('moderator')}
+                disabled={roleUpdating}
+              >
+                <Text style={[
+                  styles.roleSelectorText,
+                  { color: theme.colors.textPrimary },
+                  user.role === 'moderator' && { color: theme.colors.onPrimary, fontWeight: '700' }
+                ]}>
+                  Moderator
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.roleSelectorBtn,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+                  user.role === 'admin' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                ]}
+                onPress={() => handleRoleChange('admin')}
+                disabled={roleUpdating}
+              >
+                <Text style={[
+                  styles.roleSelectorText,
+                  { color: theme.colors.textPrimary },
+                  user.role === 'admin' && { color: theme.colors.onPrimary, fontWeight: '700' }
+                ]}>
+                  Admin
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {roleUpdating && (
+              <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 8, marginBottom: 8 }} />
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -717,5 +840,41 @@ const styles = StyleSheet.create({
     color: '#aaa',
     marginTop: 3,
     fontStyle: 'italic',
+  },
+  adminSection: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 4,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    overflow: 'hidden',
+    paddingBottom: 4,
+  },
+  adminHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    padding: 16,
+    paddingBottom: 4,
+  },
+  adminSubtext: {
+    fontSize: 12,
+    marginBottom: 16,
+  },
+  roleSelectorContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+    marginBottom: 12,
+  },
+  roleSelectorBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roleSelectorText: {
+    fontSize: 13,
   },
 });

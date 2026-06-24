@@ -13,7 +13,7 @@ export default function AnnouncementCardSkeleton({ index = 0 }: AnnouncementCard
   const showImage = index % 3 === 0;
 
   return (
-    <View style={[styles.container, { borderColor: theme.colors.border }]}>
+    <View style={[styles.container, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
       {/* Header Row */}
       <View style={styles.header}>
         {/* Avatar */}
@@ -65,11 +65,10 @@ export default function AnnouncementCardSkeleton({ index = 0 }: AnnouncementCard
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 0.5,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',

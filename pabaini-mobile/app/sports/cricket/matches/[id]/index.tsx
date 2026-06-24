@@ -24,6 +24,7 @@ import {
 import { getTeamColor } from '../../../../../src/components/sports/teams/TeamCard';
 import { formatMatchDate } from '../../../../../src/utils/format';
 import { MatchScorecard } from '../../../../../src/components/sports/matches/MatchScorecard';
+import { MatchDetailSkeleton } from '../../../../../src/components/skeletons';
 
 export default function MatchDetailScreen() {
   const { theme } = useTheme();
@@ -101,10 +102,16 @@ export default function MatchDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary, flex: 1, textAlign: 'center' }]}>Match Details</Text>
+          <View style={{ width: 36 }} />
         </View>
+        <MatchDetailSkeleton />
       </SafeAreaView>
     );
   }

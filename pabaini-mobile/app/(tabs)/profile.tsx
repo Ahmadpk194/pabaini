@@ -1,7 +1,7 @@
-import React from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { Globe } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { Button } from '../../src/components/ui/Button';
@@ -14,7 +14,7 @@ export default function ProfileTab() {
 
   if (isGuest || !user) {
     return (
-      <View style={[styles.container, { backgroundColor: '#F4F3EF' }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.guestCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <Globe size={48} color="#004D26" style={styles.guestIcon} />
@@ -30,11 +30,15 @@ export default function ProfileTab() {
             />
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  return <UserProfileView userId={user.id} isOwnProfile={true} />;
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+      <UserProfileView userId={user.id} isOwnProfile={true} />
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({

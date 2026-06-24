@@ -1,4 +1,5 @@
 import { CricketRole, BattingHand, BowlingArm, BowlingType } from './sports.types';
+import { Role } from './index';
 
 export interface PublicUser {
   id: number;
@@ -6,6 +7,7 @@ export interface PublicUser {
   avatar_url: string | null;
   village: string | null;
   is_diaspora: boolean;
+  role: Role;
   created_at: string;
 }
 

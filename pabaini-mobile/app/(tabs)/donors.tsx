@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { LoginRequiredGate } from '../../src/components/ui/LoginRequiredGate';
@@ -13,7 +14,7 @@ export default function DonorsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Blood Donors</Text>
       <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
         Coming soon
@@ -21,7 +22,7 @@ export default function DonorsScreen() {
       <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
         Blood donor registry for the Pabaini community will be available here.
       </Text>
-    </View>
+    </SafeAreaView>
   );
 }
 

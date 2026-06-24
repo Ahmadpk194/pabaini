@@ -16,12 +16,12 @@ interface AnnouncementCardProps {
 }
 
 export function AnnouncementCard({ announcement, onShare, onSettingsPress }: AnnouncementCardProps) {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
   const likeMutation = useLikeMutation();
-  const { user, isGuest } = useAuth();
+  const { isGuest } = useAuth();
 
-  const showSettings = user?.role === 'admin' || user?.role === 'moderator' || user?.id === announcement.author_id;
+  const showSettings = true; // In index.tsx, settings visibility is controlled in handleSettingsPress, but here we show it for author/admin/mod
 
   // Animation for heart icon using React Native Animated
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -42,7 +42,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
   };
   
   const getInitials = (name: string): string => {
-    const parts = name.split(' ');
+    const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
@@ -50,14 +50,12 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
   const getCategoryBadgeStyle = (category: Category) => {
     switch (category) {
       case 'urgent':
-        return { backgroundColor: theme.colors.urgentBg, color: theme.colors.urgentText };
+        return { backgroundColor: theme.colors.dangerLight, color: theme.colors.dangerText };
       case 'event':
-        return { backgroundColor: theme.colors.eventBg, color: theme.colors.eventText };
-      case 'jirga_decision':
-        return { backgroundColor: '#EAF3DE', color: '#27500A' };
+        return { backgroundColor: theme.colors.infoLight, color: theme.colors.infoText };
       case 'general':
       default:
-        return { backgroundColor: theme.colors.generalBg, color: theme.colors.generalText };
+        return { backgroundColor: theme.colors.elevated, color: theme.colors.textSecondary };
     }
   };
   
@@ -87,155 +85,187 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
       });
       return;
     }
-    // Trigger bounce animation
     triggerBounceAnimation();
-    
-    // Call mutation - React Query handles optimistic updates
     likeMutation.mutate(announcement.id);
   };
 
   const handleCardPress = () => {
     router.push(`/announcement/${announcement.id}`);
   };
+
+  const avatarBg = mode === 'dark' ? theme.colors.primaryTint : theme.colors.primaryLight;
+  const avatarTextColor = mode === 'dark' ? theme.colors.primaryText : theme.colors.primaryTint;
   
   return (
     <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
-      <View style={[styles.container, { borderColor: theme.colors.border }]}>
-        {/* Header Row */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={(e) => {
-              e.stopPropagation();
-              if (isGuest) {
-                useAuthPromptStore.getState().showPrompt({
-                  title: 'Log In to View Profiles',
-                  description: 'Please sign in to view player profiles and interact with the community.',
-                });
-                return;
-              }
-              router.push(`/profile/${announcement.author.id}`);
-            }}
-            style={styles.authorClickable}
-          >
-            {/* Avatar Circle */}
-            {announcement.author.avatar_url ? (
-              <Image
-                source={{ uri: announcement.author.avatar_url }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={[styles.avatar, { backgroundColor: '#EAF3DE' }]}>
-                <Text style={[styles.avatarText, { color: '#27500A' }]}>
-                  {getInitials(announcement.author.name)}
-                </Text>
-              </View>
-            )}
-            
-            {/* Author Info */}
-            <View style={styles.headerInfo}>
-              <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
-                {announcement.author.name}
-              </Text>
-              <Text style={[styles.timestamp, { color: theme.colors.textSecondary }]}>
-                {timeAgo}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          
-          {/* Right Action/Badge Area */}
-          <View style={styles.headerRight}>
-            {showSettings && (
-              <TouchableOpacity 
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onSettingsPress?.(announcement);
-                }}
-                style={styles.settingsButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-            
-            <View style={styles.badgeRow}>
-              {/* Category Badge */}
-              <View style={[styles.categoryBadge, { backgroundColor: badgeStyle.backgroundColor }]}>
-                <Text style={[styles.categoryBadgeText, { color: badgeStyle.color }]}>
-                  {categoryLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        
-        {/* Body */}
-        <View style={styles.body}>
-          <View style={styles.titleRow}>
-            {announcement.is_pinned && (
-              <Pin size={16} color={theme.colors.primary} fill={theme.colors.primary} style={styles.titlePinIcon} />
-            )}
-            <Text style={[styles.title, { color: theme.colors.textPrimary, flex: 1 }]}>
-              {announcement.title}
-            </Text>
-          </View>
-          <Text style={[styles.content, { color: theme.colors.textSecondary }]} numberOfLines={3}>
-            {announcement.content}
-          </Text>
-        </View>
-        
-        {/* Image */}
-        {announcement.image_url && (
-          <Image 
-            source={{ uri: announcement.image_url }} 
-            style={styles.image} 
-            resizeMode="cover" 
-          />
+      <View style={[
+        styles.container, 
+        { 
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+          flexDirection: 'row',
+        }
+      ]}>
+        {announcement.is_pinned && (
+          <View style={{ width: 3, backgroundColor: theme.colors.primary }} />
         )}
-        
-        {/* Footer */}
-        <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
-          <View style={styles.leftActions}>
-            <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleLikePress(); }} style={styles.footerAction}>
-              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                <Ionicons
-                  name={announcement.liked_by_me ? 'heart' : 'heart-outline'}
-                  size={20}
-                  color={announcement.liked_by_me ? '#1F4A2E' : theme.colors.textSecondary}
-                />
-              </Animated.View>
-              <Text style={[
-                styles.footerActionText,
-                { color: theme.colors.textSecondary },
-                announcement.liked_by_me && styles.likedText
-              ]}>
-                {announcement.likes_count}
-              </Text>
-            </TouchableOpacity>
 
+        <View style={{ flex: 1 }}>
+          {/* Header Row */}
+          <View style={styles.header}>
             <TouchableOpacity
+              activeOpacity={0.7}
               onPress={(e) => {
                 e.stopPropagation();
-                router.push({
-                  pathname: `/announcement/${announcement.id}`,
-                  params: { focus: 'comments' }
-                });
+                if (isGuest) {
+                  useAuthPromptStore.getState().showPrompt({
+                    title: 'Log In to View Profiles',
+                    description: 'Please sign in to view player profiles and interact with the community.',
+                  });
+                  return;
+                }
+                router.push(`/profile/${announcement.author.id}`);
               }}
-              style={styles.footerAction}
+              style={styles.authorClickable}
             >
-              <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
-              <Text style={[styles.footerActionText, { color: theme.colors.textSecondary }]}>
-                2
+              {/* Avatar Circle */}
+              {announcement.author.avatar_url ? (
+                <Image
+                  source={{ uri: announcement.author.avatar_url }}
+                  style={[styles.avatar, { borderWidth: 1.5, borderColor: theme.colors.primaryLight }]}
+                />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: avatarBg, borderWidth: 1.5, borderColor: theme.colors.primaryLight }]}>
+                  <Text style={[styles.avatarText, { color: avatarTextColor }]}>
+                    {getInitials(announcement.author.name)}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Author Info */}
+              <View style={styles.headerInfo}>
+                <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
+                  {announcement.author.name}
+                </Text>
+                <View style={styles.subtitleRow}>
+                  {announcement.is_pinned ? (
+                    <View style={styles.pinnedLabelRow}>
+                      <Pin size={10} color={theme.colors.primary} fill={theme.colors.primary} style={styles.pinnedIcon} />
+                      <Text style={[styles.pinnedLabelText, { color: theme.colors.primary }]}>Pinned</Text>
+                      <Text style={[styles.timestampText, { color: theme.colors.textTertiary }]}>
+                        {' · '}{timeAgo}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.timestampText, { color: theme.colors.textTertiary }]}>
+                      {timeAgo}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            {/* Right Action/Badge Area */}
+            <View style={styles.headerRight}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* Category Badge */}
+                <View style={[styles.categoryBadge, { backgroundColor: badgeStyle.backgroundColor }]}>
+                  <Text style={[styles.categoryBadgeText, { color: badgeStyle.color }]}>
+                    {categoryLabel}
+                  </Text>
+                </View>
+
+                {onSettingsPress && (
+                  <TouchableOpacity 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onSettingsPress(announcement);
+                    }}
+                    style={styles.settingsButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textTertiary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+          
+          {/* Body */}
+          <View style={styles.body}>
+            <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+              {announcement.title}
+            </Text>
+            <Text 
+              style={[
+                styles.content, 
+                { 
+                  color: theme.colors.textSecondary,
+                  marginBottom: announcement.image_url ? 0 : 12
+                }
+              ]} 
+              numberOfLines={3}
+              ellipsizeMode="tail"
+            >
+              {announcement.content}
+            </Text>
+          </View>
+          
+          {/* Image */}
+          {announcement.image_url && (
+            <Image 
+              source={{ uri: announcement.image_url }} 
+              style={[
+                styles.image,
+                { marginTop: (announcement.title || announcement.content) ? 10 : 0 }
+              ]} 
+              resizeMode="cover" 
+            />
+          )}
+          
+          {/* Footer */}
+          <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
+            <View style={styles.leftActions}>
+              <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleLikePress(); }} style={styles.footerAction}>
+                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                  <Ionicons
+                    name={announcement.liked_by_me ? 'heart' : 'heart-outline'}
+                    size={17}
+                    color={announcement.liked_by_me ? theme.colors.danger : theme.colors.textTertiary}
+                  />
+                </Animated.View>
+                <Text style={[
+                  styles.footerActionText,
+                  { color: announcement.liked_by_me ? theme.colors.danger : theme.colors.textTertiary }
+                ]}>
+                  {announcement.likes_count}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push({
+                    pathname: `/announcement/${announcement.id}`,
+                    params: { focus: 'comments' }
+                  });
+                }}
+                style={styles.footerAction}
+              >
+                <Ionicons name="chatbubble-outline" size={17} color={theme.colors.textTertiary} />
+                <Text style={[styles.footerActionText, { color: theme.colors.textTertiary }]}>
+                  2
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={(e) => { e.stopPropagation(); onShare(announcement); }} style={styles.footerAction}>
+              <Ionicons name="share-social-outline" size={17} color={theme.colors.textTertiary} />
+              <Text style={[styles.footerActionText, { color: theme.colors.textTertiary }]}>
+                Share
               </Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity onPress={(e) => { e.stopPropagation(); onShare(announcement); }} style={styles.footerAction}>
-            <Ionicons name="share-social-outline" size={20} color={theme.colors.textSecondary} />
-            <Text style={[styles.footerActionText, { color: theme.colors.textSecondary }]}>
-              Share
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -259,16 +289,17 @@ function getTimeAgo(dateString: string): string {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 0.5,
+    marginBottom: 8,
     overflow: 'hidden',
-    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 10,
     gap: 8,
   },
   avatar: {
@@ -289,58 +320,61 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  timestamp: {
-    fontSize: 11,
+  subtitleRow: {
     marginTop: 2,
+  },
+  pinnedLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pinnedIcon: {
+    marginRight: 2,
+  },
+  pinnedLabelText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  timestampText: {
+    fontSize: 11,
   },
   categoryBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '500',
   },
-  pinIcon: {
-    marginLeft: 4,
-  },
   headerRight: {
-    alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 4,
   },
   settingsButton: {
-    padding: 2,
-  },
-  badgeRow: {
-    flexDirection: 'row',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   body: {
     paddingHorizontal: 14,
-    marginBottom: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  titlePinIcon: {
-    transform: [{ rotate: '45deg' }],
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 4,
+    lineHeight: 15 * 1.35,
   },
   content: {
     fontSize: 13,
-    lineHeight: 20.8,
+    lineHeight: 13 * 1.5,
   },
   image: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    height: 180,
   },
   footer: {
     flexDirection: 'row',
@@ -352,7 +386,7 @@ const styles = StyleSheet.create({
   leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
   footerAction: {
     flexDirection: 'row',
@@ -361,11 +395,6 @@ const styles = StyleSheet.create({
   },
   footerActionText: {
     fontSize: 13,
-    fontWeight: '500',
-  },
-  likedText: {
-    color: '#1F4A2E',
-    fontWeight: 'bold',
   },
   authorClickable: {
     flexDirection: 'row',

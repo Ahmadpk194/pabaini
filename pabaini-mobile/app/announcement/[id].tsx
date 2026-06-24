@@ -178,7 +178,11 @@ export default function AnnouncementDetailScreen() {
             </Text>
 
             {/* Author Row */}
-            <View style={styles.authorRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push(`/profile/${announcement.author.id}`)}
+              style={styles.authorRow}
+            >
               {announcement.author.avatar_url ? (
                 <Image source={{ uri: announcement.author.avatar_url }} style={styles.avatarCircle} />
               ) : (
@@ -194,7 +198,7 @@ export default function AnnouncementDetailScreen() {
                   {formatDate(announcement.created_at)} · {timeAgo}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Divider */}
             <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />

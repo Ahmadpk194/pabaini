@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,19 +28,25 @@ export default function DiscoverPlayersScreen() {
 
   // Local state
   const [players, setPlayers] = useState<CricketPlayerProfile[]>([]);
+  const playersRef = useRef(players);
+  playersRef.current = players;
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const isFetchingRef = useRef(false);
+
   const fetchPlayers = useCallback(
     async (targetPage: number, search = searchQuery, isRefresh = false) => {
-      if (loading || (targetPage > totalPages && !isRefresh)) return;
+      if (isFetchingRef.current || (targetPage > totalPages && !isRefresh)) return;
 
       try {
-        if (targetPage === 1 && !isRefresh) {
+        isFetchingRef.current = true;
+        if (targetPage === 1 && (!isRefresh || playersRef.current.length === 0)) {
           setLoading(true);
         } else if (targetPage > 1) {
           setLoadingMore(true);
@@ -69,9 +75,10 @@ export default function DiscoverPlayersScreen() {
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        isFetchingRef.current = false;
       }
     },
-    [loading, totalPages, searchQuery]
+    [totalPages, searchQuery]
   );
 
   useEffect(() => {

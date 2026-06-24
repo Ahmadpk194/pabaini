@@ -628,6 +628,7 @@
       <a href="#share"><span class="nav-icon">📤</span> Share Sheet</a>
       <a href="#profile"><span class="nav-icon">👤</span> Profile</a>
       <a href="#guest-gating"><span class="nav-icon">🔐</span> Guest Gating</a>
+      <a href="#global-search"><span class="nav-icon">🔍</span> Global Search</a>
     </nav>
 
     <div class="sidebar-section-label">Sports</div>
@@ -1743,6 +1744,90 @@ interface MyTeamResponse {  // returned by GET /my
         <ul>
           <li>On the frontend, the Axios request interceptor checks <code>is_guest</code> in <code>SecureStore</code> and skips Firebase token acquisition.</li>
           <li>On the backend, <code>FirebaseAuthGuard</code> and <code>DbUserGuard</code> are configured as optional for <code>GET</code> requests, enabling public notice board and matches list requests to return data successfully instead of throwing a <code>401 Unauthorized</code> exception.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── Global Search ──────────────────────────────────────────────────── -->
+    <section class="section" id="global-search">
+      <div class="section-header">
+        <div class="section-number">🔍</div>
+        <h2>Global Search Screen</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>Objective:</strong> Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams) under a unified screen. File: <code>app/search.tsx</code></div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🌍</span> Renamed Route &amp; Global Context</h3>
+        <ul>
+          <li>Migrated the route from <code>/announcement-search</code> to <code>/search</code> and renamed the component to <code>SearchScreen</code>.</li>
+          <li>Updated the search input placeholder (<code>Search posts, players, teams...</code>) and initial empty state text (<code>Search Pabaini</code> / <code>Search posts, players, teams and more</code>) to present a global search layout.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📱</span> Unified Header Entry Points</h3>
+        <ul>
+          <li><strong>Home Screen:</strong> Included a Search button next to the Bell icon in the compact layout (<code>paddingLeft: 12</code> to align with card boundaries).</li>
+          <li><strong>Sports Screen:</strong> Unified the Sports tab header to use the exact same compact Search button and custom Notification Bell (complete with unread badge rendering) as the Home tab header.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔍</span> Interactive Multi-Category Search</h3>
+        <ul>
+          <li><strong>Posts tab:</strong> Filters local mock announcements matching titles, body text, locations, or authors.</li>
+          <li><strong>Users tab:</strong> Searches residents, admins, mods, and diaspora profiles. Shows a green <code>Player</code> badge if they are a registered cricket player. Tapping a card routes to <code>/profile/[id]</code>.</li>
+          <li><strong>Players tab:</strong> Filters only users registered as active cricket players (displays cricket roles). Tapping a card routes to <code>/profile/[id]</code>.</li>
+          <li><strong>Teams tab:</strong> Searches teams by name, home ground, or captain name. Shows member counts. Tapping a card routes to <code>/sports/cricket/teams/[id]</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⏳</span> Debounced Loader State</h3>
+        <ul>
+          <li>Typing in the search input triggers an immediate loading state displaying 3 pulsing shimmer cards (<code>AnnouncementCardSkeleton</code>), executing a <code>500ms</code> setTimeout delay before showing matches, empty search screen, or no results.</li>
+        </ul>
+      </div>
+    </section>
+    <!-- ─── Sports Loading Skeletons ──────────────────────────────────────── -->
+    <section class="section" id="sports-skeletons">
+      <div class="section-header">
+        <div class="section-number">🏏</div>
+        <h2>Sports Loading Skeletons</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>Objective:</strong> Replace full-screen spinners with pulsing shimmer layouts (using SkeletonBox and SkeletonCircle) when loading match details or team profiles.</div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🏏</span> Match Details Skeleton (<code>MatchDetailSkeleton.tsx</code>)</h3>
+        <ul>
+          <li>Shimmering layout mimicking the Match Details screen layout: a status banner card, the team versus container, Playing XI lineups block, and three rows of match information (Date/Time, Venue, Scoring Mode).</li>
+          <li>Wired inside <code>app/sports/cricket/matches/[id]/index.tsx</code>. The navigation header bar remains interactive during loading so the back action is immediately available.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🛡️</span> Team Profile Skeleton (<code>TeamProfileSkeleton.tsx</code>)</h3>
+        <ul>
+          <li>Shimmering layout mirroring the Cricket Team Profile screen: glowing hero gradient banner, circular logo container, title slot, metadata badges, about section description text blocks, segmented control buttons, and 3 list rows representing members in the squad.</li>
+          <li>Wired inside <code>app/sports/cricket/teams/[id]/index.tsx</code>. The back button inside the hero header works instantly during loading.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⚡</span> Refined Segmented Tab Controls</h3>
+        <ul>
+          <li>Refined the tab buttons inside the Team Profile screen to show a distinct gray background (<code>theme.colors.border</code>) for inactive tabs, separating them visually with a <code>marginHorizontal: 2</code> spacing.</li>
+          <li>Styled the skeleton tabs to match this aesthetic (active tab with surface color, inactive tabs with border color).</li>
         </ul>
       </div>
     </section>

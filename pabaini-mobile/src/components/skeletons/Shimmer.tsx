@@ -13,19 +13,19 @@ export default function Shimmer({ width, height, borderRadius = 0, style }: Shim
   const { theme, mode } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
-          toValue: 0.6,
-          duration: 600,
+          toValue: 1.0,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 600,
+          toValue: 0.4,
+          duration: 400,
           useNativeDriver: true,
         }),
       ])

@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useAuthPromptStore } from '../../src/store/authPromptStore';
@@ -32,6 +33,7 @@ import { CricketPlayerProfile, TeamSummary } from '../../src/types/sports.types'
 import { Shield, Trophy, Calendar, Users, Award } from 'lucide-react-native';
 import { useMatches } from '../../src/hooks/useMatches';
 import { MatchCard } from '../../src/components/sports/matches/MatchCard';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const TABS = [
   { id: 'players', name: 'Players', icon: Users },
@@ -51,6 +53,7 @@ export default function SportsScreen() {
   const { theme } = useTheme();
   const { user, isGuest } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Zustand Store
   const seenOptIn = useSportsStore((state) => state.seenOptIn['cricket']);
@@ -83,6 +86,18 @@ export default function SportsScreen() {
 
   // Notifications unread count polling
   const fetchUnreadCount = useNotificationsStore((state) => state.fetchUnreadCount);
+  const unreadCount = useNotificationsStore((state) => state.unreadCount);
+
+  const handleBellPress = () => {
+    if (isGuest) {
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Notifications Required',
+        description: 'You must log in to view notifications.',
+      });
+      return;
+    }
+    router.push('/notifications');
+  };
 
   // Matches query hook
   const {
@@ -109,7 +124,7 @@ export default function SportsScreen() {
     try {
       const data = await getAllTeams();
       setAllTeams(data || []);
-      
+
       if (isRegistered) {
         await useTeamsStore.getState().fetchMyTeams();
       }
@@ -172,7 +187,7 @@ export default function SportsScreen() {
         if (isRefresh) {
           setPage(1);
         }
-        
+
         if (targetPage === 1) {
           setLoading(true);
         } else {
@@ -316,8 +331,8 @@ export default function SportsScreen() {
               <Award color={theme.colors.primary} size={20} />
               <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Player Profile</Text>
             </View>
-            <CricketPlayerCard 
-              profile={myProfile} 
+            <CricketPlayerCard
+              profile={myProfile}
               onPress={() => router.push(`/profile/${myProfile.user.id}`)}
             />
           </View>
@@ -374,572 +389,598 @@ export default function SportsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Premium Header */}
-      <View
-        style={[
-          styles.appBar,
-          {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.border,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          },
-        ]}
-      >
-        <Text 
-          style={[styles.appBarTitle, { color: theme.colors.textPrimary, flex: 1, marginRight: 10 }]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {/* Premium Header */}
+        <View
+          style={[
+            styles.appBar,
+            {
+              backgroundColor: theme.colors.surface,
+              borderBottomColor: theme.colors.border,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
+          ]}
         >
-          Pabaini Sports
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {activeTab === 'teams' && isRegistered && (
-            <TouchableOpacity
-              disabled={isAtCaptainLimit}
-              onPress={() => router.push('/sports/cricket/teams/create')}
-              style={{
-                backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
-                + Create Team
-              </Text>
-            </TouchableOpacity>
-          )}
-          {activeTab === 'matches' && isRegistered && captainedTeamsCount > 0 && (
-            <TouchableOpacity
-              onPress={() => router.push('/sports/cricket/matches/request')}
-              style={{
-                backgroundColor: theme.colors.primary,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ color: theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
-                + Challenge
-              </Text>
-            </TouchableOpacity>
-          )}
-          <NotificationBell onPress={() => router.push('/notifications')} />
-        </View>
-      </View>
-
-      {/* Tabs Selector */}
-      {!isGuest && (
-        <View style={[styles.tabsContainer, { backgroundColor: theme.colors.surface }]}>
-          <View style={[styles.tabsWrapper, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-            {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const TabIcon = tab.icon;
-            return (
+          <Text
+            style={[styles.appBarTitle, { color: theme.colors.textPrimary, flex: 1, marginRight: 10 }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            Sports
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {activeTab === 'teams' && isRegistered && (
               <TouchableOpacity
-                key={tab.id}
-                onPress={() => setActiveTab(tab.id)}
-                style={[
-                  styles.tabButton,
-                  isActive && {
-                    backgroundColor: theme.colors.primary,
-                    shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 3,
-                    elevation: 2,
-                  },
-                ]}
-                activeOpacity={0.8}
+                disabled={isAtCaptainLimit}
+                onPress={() => router.push('/sports/cricket/teams/create')}
+                style={{
+                  backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                }}
               >
-                <TabIcon 
-                  color={isActive ? theme.colors.onPrimary : theme.colors.textSecondary} 
-                  size={14} 
-                />
-                <Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: isActive ? theme.colors.onPrimary : theme.colors.textSecondary,
-                      fontWeight: isActive ? '700' : '600',
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tab.name}
+                <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
+                  + Create Team
                 </Text>
               </TouchableOpacity>
-            );
-          })}
+            )}
+            {activeTab === 'matches' && isRegistered && captainedTeamsCount > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push('/sports/cricket/matches/request')}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                }}
+              >
+                <Text style={{ color: theme.colors.onPrimary, fontSize: 12, fontWeight: '700' }}>
+                  + Challenge
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity
+              style={[styles.searchButton, { backgroundColor: theme.colors.elevated }]}
+              onPress={() => router.push('/search')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.bellButton, { backgroundColor: theme.colors.elevated }]}
+              onPress={handleBellPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-outline" size={20} color={theme.colors.textSecondary} />
+              {unreadCount > 0 && (
+                <View style={[
+                  styles.bellBadge,
+                  {
+                    backgroundColor: theme.colors.danger,
+                    borderColor: theme.colors.onPrimary,
+                  }
+                ]} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      {/* Main Tab Views */}
-      {isGuest ? (
-        (() => {
-          const matches = Array.isArray(matchesResponse)
-            ? matchesResponse
-            : (matchesResponse?.data || []);
-          const liveMatches = matches.filter(m => m.status === 'live');
-          const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
-          const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
+        {/* Tabs Selector */}
+        {!isGuest && (
+          <View style={[styles.tabsContainer, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.tabsWrapper, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const TabIcon = tab.icon;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    onPress={() => setActiveTab(tab.id)}
+                    style={[
+                      styles.tabButton,
+                      isActive && {
+                        backgroundColor: theme.colors.primary,
+                        shadowColor: theme.colors.primary,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 3,
+                        elevation: 2,
+                      },
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <TabIcon
+                      color={isActive ? theme.colors.onPrimary : theme.colors.textSecondary}
+                      size={14}
+                    />
+                    <Text
+                      style={[
+                        styles.tabText,
+                        {
+                          color: isActive ? theme.colors.onPrimary : theme.colors.textSecondary,
+                          fontWeight: isActive ? '700' : '600',
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {tab.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
-          return (
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl
-                  refreshing={isRefetchingMatches}
-                  onRefresh={refetchMatches}
-                  colors={[theme.colors.primary]}
-                  tintColor={theme.colors.primary}
-                />
-              }
-            >
-              {/* Setup Banner prompting profile setup */}
-              <View style={{ marginTop: 8 }}>
-                <SetupBanner onPress={handleRegisterPress} />
-              </View>
+        {/* Main Tab Views */}
+        {isGuest ? (
+          (() => {
+            const matches = Array.isArray(matchesResponse)
+              ? matchesResponse
+              : (matchesResponse?.data || []);
+            const liveMatches = matches.filter(m => m.status === 'live');
+            const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
+            const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
 
-              <View style={{ gap: 20, paddingTop: 10 }}>
-                {liveMatches.length > 0 && (
+            return (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefetchingMatches}
+                    onRefresh={refetchMatches}
+                    colors={[theme.colors.primary]}
+                    tintColor={theme.colors.primary}
+                  />
+                }
+              >
+                {/* Setup Banner prompting profile setup */}
+                <View style={{ marginTop: 8 }}>
+                  <SetupBanner onPress={handleRegisterPress} />
+                </View>
+
+                <View style={{ gap: 20, paddingTop: 10 }}>
+                  {liveMatches.length > 0 && (
+                    <View style={{ gap: 10 }}>
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
+                      {liveMatches.map(m => (
+                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      ))}
+                    </View>
+                  )}
+
                   <View style={{ gap: 10 }}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
-                    {liveMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
-                    ))}
+                    <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
+                    {upcomingMatches.length === 0 ? (
+                      <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No upcoming matches scheduled.</Text>
+                    ) : (
+                      upcomingMatches.map(m => (
+                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      ))
+                    )}
+                  </View>
+
+                  <View style={{ gap: 10 }}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
+                    {completedMatches.length === 0 ? (
+                      <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No completed matches found.</Text>
+                    ) : (
+                      completedMatches.map(m => (
+                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      ))
+                    )}
+                  </View>
+                </View>
+              </ScrollView>
+            );
+          })()
+        ) : (
+          <>
+            {activeTab === 'players' && (
+              <FlatList
+                data={players}
+                renderItem={renderPlayerItem}
+                keyExtractor={(item) => item.id.toString()}
+                ListHeaderComponent={renderListHeader}
+                ListFooterComponent={renderListFooter}
+                ListEmptyComponent={renderListEmpty}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.3}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    colors={[theme.colors.primary]}
+                    tintColor={theme.colors.primary}
+                  />
+                }
+              />
+            )}
+
+            {activeTab === 'teams' && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshingTeams}
+                    onRefresh={handleRefreshTeams}
+                    colors={[theme.colors.primary]}
+                    tintColor={theme.colors.primary}
+                  />
+                }
+              >
+                {/* Banner/Setup prompting player registration */}
+                {!isRegistered && (
+                  <View style={{ marginTop: 8 }}>
+                    <SetupBanner onPress={handleRegisterPress} />
                   </View>
                 )}
 
-                <View style={{ gap: 10 }}>
-                  <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
-                  {upcomingMatches.length === 0 ? (
-                    <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No upcoming matches scheduled.</Text>
+                {/* My Teams Section (only if registered) */}
+                {isRegistered && (
+                  <View style={styles.myTeamsSection}>
+                    <View style={styles.sectionHeader}>
+                      <Users color={theme.colors.primary} size={20} />
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Teams</Text>
+                    </View>
+
+                    {loadingTeams && myTeams.length === 0 ? (
+                      <View style={{ gap: 10 }}>
+                        <TeamCardSkeleton />
+                        <TeamCardSkeleton />
+                      </View>
+                    ) : myTeams.length === 0 ? (
+                      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
+                        <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
+                          You haven't joined or created any teams yet.
+                        </Text>
+                        <TouchableOpacity
+                          disabled={isAtCaptainLimit}
+                          style={{
+                            backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                            paddingHorizontal: 16,
+                            paddingVertical: 8,
+                            borderRadius: theme.radius.sm,
+                            marginTop: 12,
+                          }}
+                          onPress={() => router.push('/sports/cricket/teams/create')}
+                        >
+                          <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                            Create a Team
+                          </Text>
+                        </TouchableOpacity>
+                        {isAtCaptainLimit && (
+                          <Text style={{
+                            color: theme.colors.textSecondary,
+                            fontSize: 12,
+                            marginTop: 8,
+                            textAlign: 'center',
+                          }}>
+                            You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                          </Text>
+                        )}
+                      </View>
+                    ) : (
+                      <>
+                        {/* Active teams */}
+                        {myTeams.filter((t) => t.status === 'active').map((t) => (
+                          <TeamCard
+                            key={t.id}
+                            team={t}
+                            showCaptainBadge={t.role === 'captain'}
+                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                          />
+                        ))}
+
+                        {isAtCaptainLimit && (
+                          <Text style={{
+                            color: theme.colors.textSecondary,
+                            fontSize: 12,
+                            marginTop: 4,
+                            marginBottom: 12,
+                            fontStyle: 'italic',
+                          }}>
+                            You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                          </Text>
+                        )}
+
+                        {/* Pending join requests sent by the player */}
+                        {myTeams.filter((t) => t.status === 'pending_request').map((t) => (
+                          <TouchableOpacity
+                            key={`req-${t.id}`}
+                            activeOpacity={0.7}
+                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                            style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: '#D4A700' }]}
+                          >
+                            <View style={styles.pendingCardLeft}>
+                              <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                                {t.name}
+                              </Text>
+                              <Text style={styles.pendingCardSub}>
+                                {t.home_ground || 'Tap to view team'}
+                              </Text>
+                            </View>
+                            <View style={styles.pendingBadge}>
+                              <Text style={styles.pendingBadgeText}>Request Pending</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+
+                        {/* Pending invites received by the player */}
+                        {myTeams.filter((t) => t.status === 'pending_invite').map((t) => (
+                          <TouchableOpacity
+                            key={`inv-${t.id}`}
+                            activeOpacity={0.7}
+                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                            style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
+                          >
+                            <View style={styles.pendingCardLeft}>
+                              <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                                {t.name}
+                              </Text>
+                              <Text style={styles.pendingCardSub}>Invited to join — tap to accept</Text>
+                            </View>
+                            <View style={[styles.pendingBadge, { backgroundColor: `${theme.colors.primary}15`, borderColor: `${theme.colors.primary}50` }]}>
+                              <Text style={[styles.pendingBadgeText, { color: theme.colors.primary }]}>Invited ›</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+
+                        {/* Suggest creating own team if only pending items exist */}
+                        {myTeams.every((t) => t.status !== 'active') && myTeams.length > 0 && (
+                          <View style={{ marginTop: 8 }}>
+                            <TouchableOpacity
+                              disabled={isAtCaptainLimit}
+                              style={{
+                                backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                                paddingHorizontal: 16,
+                                paddingVertical: 8,
+                                borderRadius: theme.radius.sm,
+                                alignSelf: 'flex-start',
+                              }}
+                              onPress={() => router.push('/sports/cricket/teams/create')}
+                            >
+                              <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                                + Create Your Own Team
+                              </Text>
+                            </TouchableOpacity>
+                            {isAtCaptainLimit && (
+                              <Text style={{
+                                color: theme.colors.textSecondary,
+                                fontSize: 12,
+                                marginTop: 4,
+                              }}>
+                                You're already captaining 2 teams. Transfer or dissolve one to create a new team.
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+                )}
+
+                {/* Discover Teams Section (carousel) */}
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Shield color={theme.colors.primary} size={20} />
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => router.push('/sports/cricket/teams')}>
+                      <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {loadingTeams && allTeams.length === 0 ? (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
+                    >
+                      <DiscoverTeamCardSkeleton />
+                      <DiscoverTeamCardSkeleton />
+                      <DiscoverTeamCardSkeleton />
+                    </ScrollView>
+                  ) : allTeams.length === 0 ? (
+                    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
+                      <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
+                        No teams available at the moment.
+                      </Text>
+                    </View>
                   ) : (
-                    upcomingMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
-                    ))
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
+                    >
+                      {allTeams.map((t) => (
+                        <TouchableOpacity
+                          key={t.id}
+                          activeOpacity={0.7}
+                          onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                          style={{
+                            width: 220,
+                            backgroundColor: theme.colors.surface,
+                            borderColor: theme.colors.border,
+                            borderWidth: 1,
+                            borderRadius: theme.radius.md,
+                            padding: 14,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                            <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden' }}>
+                              {t.logo_url ? (
+                                <Image source={{ uri: t.logo_url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                              ) : (
+                                <View style={{ width: '100%', height: '100%', backgroundColor: getTeamColor(t.name), justifyContent: 'center', alignItems: 'center' }}>
+                                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                    {t.name ? t.name.charAt(0).toUpperCase() : '?'}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
+                                {t.name}
+                              </Text>
+                              <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                                {t.home_ground || 'No Home Ground'}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                              {t.member_count} members
+                            </Text>
+                            <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '600' }}>
+                              View Profile
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   )}
                 </View>
+              </ScrollView>
+            )}
 
-                <View style={{ gap: 10 }}>
-                  <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
-                  {completedMatches.length === 0 ? (
-                    <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No completed matches found.</Text>
-                  ) : (
-                    completedMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
-                    ))
-                  )}
-                </View>
-              </View>
-            </ScrollView>
-          );
-        })()
-      ) : (
-        <>
-          {activeTab === 'players' && (
-            <FlatList
-          data={players}
-          renderItem={renderPlayerItem}
-          keyExtractor={(item) => item.id.toString()}
-          ListHeaderComponent={renderListHeader}
-          ListFooterComponent={renderListFooter}
-          ListEmptyComponent={renderListEmpty}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
-            />
-          }
-        />
-      )}
+            {activeTab === 'matches' && (() => {
+              const matches = Array.isArray(matchesResponse)
+                ? matchesResponse
+                : (matchesResponse?.data || []);
+              const liveMatches = matches.filter(m => m.status === 'live');
+              const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
+              const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
 
-      {activeTab === 'teams' && (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshingTeams}
-              onRefresh={handleRefreshTeams}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
-            />
-          }
-        >
-          {/* Banner/Setup prompting player registration */}
-          {!isRegistered && (
-            <View style={{ marginTop: 8 }}>
-              <SetupBanner onPress={handleRegisterPress} />
-            </View>
-          )}
-
-          {/* My Teams Section (only if registered) */}
-          {isRegistered && (
-            <View style={styles.myTeamsSection}>
-              <View style={styles.sectionHeader}>
-                <Users color={theme.colors.primary} size={20} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Teams</Text>
-              </View>
-              
-              {loadingTeams && myTeams.length === 0 ? (
-                <View style={{ gap: 10 }}>
-                  <TeamCardSkeleton />
-                  <TeamCardSkeleton />
-                </View>
-              ) : myTeams.length === 0 ? (
-                <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
-                  <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
-                    You haven't joined or created any teams yet.
-                  </Text>
-                  <TouchableOpacity
-                    disabled={isAtCaptainLimit}
-                    style={{
-                      backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: theme.radius.sm,
-                      marginTop: 12,
-                    }}
-                    onPress={() => router.push('/sports/cricket/teams/create')}
-                  >
-                    <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
-                      Create a Team
-                    </Text>
-                  </TouchableOpacity>
-                  {isAtCaptainLimit && (
-                    <Text style={{
-                      color: theme.colors.textSecondary,
-                      fontSize: 12,
-                      marginTop: 8,
-                      textAlign: 'center',
-                    }}>
-                      You're already captaining 2 teams. Transfer or dissolve one to create a new team.
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                <>
-                  {/* Active teams */}
-                  {myTeams.filter((t) => t.status === 'active').map((t) => (
-                    <TeamCard
-                      key={t.id}
-                      team={t}
-                      showCaptainBadge={t.role === 'captain'}
-                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+              return (
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={styles.listContent}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={isRefetchingMatches}
+                      onRefresh={refetchMatches}
+                      colors={[theme.colors.primary]}
+                      tintColor={theme.colors.primary}
                     />
-                  ))}
-
-                  {isAtCaptainLimit && (
-                    <Text style={{
-                      color: theme.colors.textSecondary,
-                      fontSize: 12,
-                      marginTop: 4,
-                      marginBottom: 12,
-                      fontStyle: 'italic',
-                    }}>
-                      You're already captaining 2 teams. Transfer or dissolve one to create a new team.
-                    </Text>
+                  }
+                >
+                  {/* Banner prompting user to complete profile */}
+                  {!isRegistered && (
+                    <View style={{ marginTop: 8 }}>
+                      <SetupBanner onPress={handleRegisterPress} />
+                    </View>
                   )}
 
-                  {/* Pending join requests sent by the player */}
-                  {myTeams.filter((t) => t.status === 'pending_request').map((t) => (
-                    <TouchableOpacity
-                      key={`req-${t.id}`}
-                      activeOpacity={0.7}
-                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
-                      style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: '#D4A700' }]}
-                    >
-                      <View style={styles.pendingCardLeft}>
-                        <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                          {t.name}
-                        </Text>
-                        <Text style={styles.pendingCardSub}>
-                          {t.home_ground || 'Tap to view team'}
-                        </Text>
-                      </View>
-                      <View style={styles.pendingBadge}>
-                        <Text style={styles.pendingBadgeText}>Request Pending</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                  {isLoadingMatches && matches.length === 0 ? (
+                    <View style={styles.loaderContainer}>
+                      <ActivityIndicator size="large" color={theme.colors.primary} />
+                    </View>
+                  ) : matches.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyEmoji}>🏏</Text>
+                      <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>No matches scheduled</Text>
+                      <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                        No upcoming or live challenges are active at this moment.
+                      </Text>
+                      {isRegistered && captainedTeamsCount > 0 && (
+                        <TouchableOpacity
+                          style={[
+                            styles.emptyBtn,
+                            {
+                              backgroundColor: theme.colors.primary,
+                              borderRadius: theme.radius.sm,
+                              marginTop: 12,
+                            },
+                          ]}
+                          onPress={() => router.push('/sports/cricket/matches/request')}
+                        >
+                          <Text style={[styles.emptyBtnText, { color: theme.colors.onPrimary }]}>
+                            Challenge a Team
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={{ gap: 20, paddingTop: 10 }}>
+                      {liveMatches.length > 0 && (
+                        <View>
+                          <View style={styles.sectionHeader}>
+                            <View style={styles.liveBadgeDot} />
+                            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
+                          </View>
+                          {liveMatches.map((match) => (
+                            <MatchCard
+                              key={match.id}
+                              match={match}
+                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                            />
+                          ))}
+                        </View>
+                      )}
 
-                  {/* Pending invites received by the player */}
-                  {myTeams.filter((t) => t.status === 'pending_invite').map((t) => (
-                    <TouchableOpacity
-                      key={`inv-${t.id}`}
-                      activeOpacity={0.7}
-                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
-                      style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-                    >
-                      <View style={styles.pendingCardLeft}>
-                        <Text style={[styles.pendingCardName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                          {t.name}
-                        </Text>
-                        <Text style={styles.pendingCardSub}>Invited to join — tap to accept</Text>
-                      </View>
-                      <View style={[styles.pendingBadge, { backgroundColor: `${theme.colors.primary}15`, borderColor: `${theme.colors.primary}50` }]}>
-                        <Text style={[styles.pendingBadgeText, { color: theme.colors.primary }]}>Invited ›</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                      {upcomingMatches.length > 0 && (
+                        <View>
+                          <View style={styles.sectionHeader}>
+                            <Calendar color={theme.colors.primary} size={20} />
+                            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
+                          </View>
+                          {upcomingMatches.map((match) => (
+                            <MatchCard
+                              key={match.id}
+                              match={match}
+                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                            />
+                          ))}
+                        </View>
+                      )}
 
-                  {/* Suggest creating own team if only pending items exist */}
-                  {myTeams.every((t) => t.status !== 'active') && myTeams.length > 0 && (
-                    <View style={{ marginTop: 8 }}>
-                      <TouchableOpacity
-                        disabled={isAtCaptainLimit}
-                        style={{
-                          backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                          paddingHorizontal: 16,
-                          paddingVertical: 8,
-                          borderRadius: theme.radius.sm,
-                          alignSelf: 'flex-start',
-                        }}
-                        onPress={() => router.push('/sports/cricket/teams/create')}
-                      >
-                        <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
-                          + Create Your Own Team
-                        </Text>
-                      </TouchableOpacity>
-                      {isAtCaptainLimit && (
-                        <Text style={{
-                          color: theme.colors.textSecondary,
-                          fontSize: 12,
-                          marginTop: 4,
-                        }}>
-                          You're already captaining 2 teams. Transfer or dissolve one to create a new team.
-                        </Text>
+                      {completedMatches.length > 0 && (
+                        <View>
+                          <View style={styles.sectionHeader}>
+                            <Trophy color={theme.colors.primary} size={20} />
+                            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
+                          </View>
+                          {completedMatches.map((match) => (
+                            <MatchCard
+                              key={match.id}
+                              match={match}
+                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                            />
+                          ))}
+                        </View>
                       )}
                     </View>
                   )}
-                </>
-              )}
-            </View>
-          )}
+                </ScrollView>
+              );
+            })()}
 
-          {/* Discover Teams Section (carousel) */}
-          <View style={{ marginTop: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Shield color={theme.colors.primary} size={20} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/sports/cricket/teams')}>
-                <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
-              </TouchableOpacity>
-            </View>
-
-            {loadingTeams && allTeams.length === 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
-              >
-                <DiscoverTeamCardSkeleton />
-                <DiscoverTeamCardSkeleton />
-                <DiscoverTeamCardSkeleton />
-              </ScrollView>
-            ) : allTeams.length === 0 ? (
-              <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
-                <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
-                  No teams available at the moment.
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
-              >
-                {allTeams.map((t) => (
-                  <TouchableOpacity
-                    key={t.id}
-                    activeOpacity={0.7}
-                    onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
-                    style={{
-                      width: 220,
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
-                      borderWidth: 1,
-                      borderRadius: theme.radius.md,
-                      padding: 14,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden' }}>
-                        {t.logo_url ? (
-                          <Image source={{ uri: t.logo_url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                        ) : (
-                          <View style={{ width: '100%', height: '100%', backgroundColor: getTeamColor(t.name), justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-                              {t.name ? t.name.charAt(0).toUpperCase() : '?'}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
-                          {t.name}
-                        </Text>
-                        <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
-                          {t.home_ground || 'No Home Ground'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
-                        {t.member_count} members
-                      </Text>
-                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '600' }}>
-                        View Profile
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </ScrollView>
-      )}
-
-      {activeTab === 'matches' && (() => {
-        const matches = Array.isArray(matchesResponse)
-          ? matchesResponse
-          : (matchesResponse?.data || []);
-        const liveMatches = matches.filter(m => m.status === 'live');
-        const upcomingMatches = matches.filter(m => m.status === 'scheduled' || m.status === 'pending_request');
-        const completedMatches = matches.filter(m => m.status === 'completed' || m.status === 'cancelled' || m.status === 'no_result');
-
-        return (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetchingMatches}
-                onRefresh={refetchMatches}
-                colors={[theme.colors.primary]}
-                tintColor={theme.colors.primary}
+            {activeTab === 'leaderboard' && (
+              <ComingSoonState
+                title="Player Leaderboard"
+                description="See who dominates the local leaderboard in runs, wickets, and MVP points."
+                icon={<Trophy color={theme.colors.primary} size={36} />}
               />
-            }
-          >
-            {/* Banner prompting user to complete profile */}
-            {!isRegistered && (
-              <View style={{ marginTop: 8 }}>
-                <SetupBanner onPress={handleRegisterPress} />
-              </View>
             )}
-
-            {isLoadingMatches && matches.length === 0 ? (
-              <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </View>
-            ) : matches.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>🏏</Text>
-                <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>No matches scheduled</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-                  No upcoming or live challenges are active at this moment.
-                </Text>
-                {isRegistered && captainedTeamsCount > 0 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.emptyBtn,
-                      {
-                        backgroundColor: theme.colors.primary,
-                        borderRadius: theme.radius.sm,
-                        marginTop: 12,
-                      },
-                    ]}
-                    onPress={() => router.push('/sports/cricket/matches/request')}
-                  >
-                    <Text style={[styles.emptyBtnText, { color: theme.colors.onPrimary }]}>
-                      Challenge a Team
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : (
-              <View style={{ gap: 20, paddingTop: 10 }}>
-                {liveMatches.length > 0 && (
-                  <View>
-                    <View style={styles.sectionHeader}>
-                      <View style={styles.liveBadgeDot} />
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
-                    </View>
-                    {liveMatches.map((match) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
-                      />
-                    ))}
-                  </View>
-                )}
-
-                {upcomingMatches.length > 0 && (
-                  <View>
-                    <View style={styles.sectionHeader}>
-                      <Calendar color={theme.colors.primary} size={20} />
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Upcoming Matches</Text>
-                    </View>
-                    {upcomingMatches.map((match) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
-                      />
-                    ))}
-                  </View>
-                )}
-
-                {completedMatches.length > 0 && (
-                  <View>
-                    <View style={styles.sectionHeader}>
-                      <Trophy color={theme.colors.primary} size={20} />
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Completed Matches</Text>
-                    </View>
-                    {completedMatches.map((match) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
-                      />
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-          </ScrollView>
-        );
-      })()}
-
-      {activeTab === 'leaderboard' && (
-        <ComingSoonState
-          title="Player Leaderboard"
-          description="See who dominates the local leaderboard in runs, wickets, and MVP points."
-          icon={<Trophy color={theme.colors.primary} size={36} />}
-        />
-      )}
-        </>
-      )}
-    </View>
+          </>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -948,15 +989,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appBar: {
-    paddingTop: 16,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 16,
+    paddingRight: 16,
     borderBottomWidth: 1,
   },
   appBarTitle: {
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.5,
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
   },
   tabsContainer: {
     paddingHorizontal: 16,

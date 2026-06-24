@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import { Pill } from '../ui/Pill';
 import { Category } from '../../types';
 import { CATEGORIES } from '../../constants/categories';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CategoryFilterBarProps {
   selectedCategory: Category | 'all';
@@ -10,10 +11,18 @@ interface CategoryFilterBarProps {
 }
 
 export function CategoryFilterBar({ selectedCategory, onSelectCategory }: CategoryFilterBarProps) {
+  const { theme } = useTheme();
   const categories = ['all' as const, ...CATEGORIES];
   
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      {
+        backgroundColor: theme.colors.surface,
+        borderBottomWidth: 0.5,
+        borderBottomColor: theme.colors.border,
+      }
+    ]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {categories.map((category) => (
           <Pill
@@ -30,7 +39,7 @@ export function CategoryFilterBar({ selectedCategory, onSelectCategory }: Catego
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
   },
   scrollContent: {

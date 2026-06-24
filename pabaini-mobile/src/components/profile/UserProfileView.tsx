@@ -18,6 +18,7 @@ import { CricketSection } from './CricketSection';
 import { SetupBanner } from '../sports/common/SetupBanner';
 import { AlertTriangle } from 'lucide-react-native';
 import { PublicUser, CricketProfileBundle } from '../../types/profile.types';
+import { Role } from '../../types';
 
 interface UserProfileViewProps {
   userId: number;
@@ -40,6 +41,7 @@ export function UserProfileView({ userId, isOwnProfile }: UserProfileViewProps) 
         avatar_url: authUser.avatar_url,
         village: authUser.village || 'Pabaini',
         is_diaspora: authUser.is_diaspora || false,
+        role: authUser.role || 'resident',
         created_at: authUser.created_at,
       };
 
@@ -109,6 +111,18 @@ export function UserProfileView({ userId, isOwnProfile }: UserProfileViewProps) 
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchProfile(false);
+  };
+
+  const handleRoleUpdated = (newRole: Role) => {
+    if (data) {
+      setData({
+        ...data,
+        user: {
+          ...data.user,
+          role: newRole,
+        },
+      });
+    }
   };
 
   // 1. Render 404 Error State
@@ -191,6 +205,7 @@ export function UserProfileView({ userId, isOwnProfile }: UserProfileViewProps) 
         user={data.user}
         isOwnProfile={isOwnProfile}
         isCricketPlayer={isCricketPlayer}
+        onRoleUpdated={handleRoleUpdated}
       />
 
       {/* Cricket section or setup prompt */}

@@ -12,7 +12,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -31,6 +31,7 @@ export default function CreateAnnouncementScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -42,7 +43,7 @@ export default function CreateAnnouncementScreen() {
   // Check if user has permission
   if (user?.role !== 'admin' && user?.role !== 'moderator') {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F4F3EF' }]}>
+      <View style={[styles.safeArea, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
         <View style={styles.accessDeniedContainer}>
           <Text style={[styles.deniedTitle, { color: '#1F4A2E' }]}>Access Denied</Text>
           <Text style={[styles.deniedSubtitle, { color: theme.colors.textSecondary }]}>
@@ -55,7 +56,7 @@ export default function CreateAnnouncementScreen() {
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -161,13 +162,20 @@ export default function CreateAnnouncementScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F4F3EF' }]}>
+    <View style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.keyboardAvoidingView, { backgroundColor: theme.colors.surface }]}
       >
         {/* Header Bar */}
-        <View style={[styles.headerBar, { borderColor: '#E4E2DC' }]}>
+        <View style={[
+          styles.headerBar,
+          {
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.surface,
+            paddingTop: insets.top > 0 ? insets.top + 8 : 12
+          }
+        ]}>
           <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting}>
             <Text style={[styles.headerLink, { color: theme.colors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
@@ -195,7 +203,7 @@ export default function CreateAnnouncementScreen() {
 
         {/* Scrollable Body */}
         <ScrollView
-          style={styles.body}
+          style={[styles.body, { backgroundColor: theme.colors.background }]}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -330,30 +338,40 @@ export default function CreateAnnouncementScreen() {
           </View>
         </ScrollView>
 
-        {/* Footer Toolbar */}
-        <View style={[styles.footerToolbar, { borderColor: '#E4E2DC', backgroundColor: '#FFFFFF' }]}>
-          <View style={styles.toolbarIcons}>
-            <TouchableOpacity
-              onPress={handlePickImage}
-              style={styles.toolbarIconBtn}
-              disabled={isSubmitting}
-            >
-              <ImageIcon size={22} color="#1F4A2E" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleCaptureImage}
-              style={styles.toolbarIconBtn}
-              disabled={isSubmitting}
-            >
-              <Camera size={22} color="#1F4A2E" />
-            </TouchableOpacity>
+        {/* Footer Container */}
+        <View
+          style={{
+            borderTopWidth: 0.5,
+            borderTopColor: theme.colors.border,
+            backgroundColor: theme.colors.surface,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+          }}
+        >
+          {/* Footer Toolbar */}
+          <View style={[styles.footerToolbar, { borderTopWidth: 0 }]}>
+            <View style={styles.toolbarIcons}>
+              <TouchableOpacity
+                onPress={handlePickImage}
+                style={styles.toolbarIconBtn}
+                disabled={isSubmitting}
+              >
+                <ImageIcon size={22} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCaptureImage}
+                style={styles.toolbarIconBtn}
+                disabled={isSubmitting}
+              >
+                <Camera size={22} color={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.charCounter, { color: theme.colors.textSecondary }]}>
+              {content.length}/500
+            </Text>
           </View>
-          <Text style={[styles.charCounter, { color: theme.colors.textSecondary }]}>
-            {content.length}/500
-          </Text>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -365,11 +383,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerBar: {
-    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 0.5,
   },
   headerLink: {

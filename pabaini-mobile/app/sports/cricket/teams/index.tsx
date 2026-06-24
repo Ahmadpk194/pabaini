@@ -38,7 +38,7 @@ export default function DiscoverTeamsScreen() {
   // Local state
   const [teams, setTeams] = useState<TeamSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadTeams = async (showLoader = true) => {

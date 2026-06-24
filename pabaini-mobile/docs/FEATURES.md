@@ -34,14 +34,44 @@ This document provides a comprehensive overview of all features implemented in t
 ## 📢 3. Announcements Notice Feed (`app/(tabs)/index.tsx`)
 **Objective**: A unified virtual village board for announcements and community updates.
 
-*   **Filter Bar**: Horizontal scrolling bar with custom pills to filter posts by category: `General`, `Urgent`, `Event`, and `Jirga Decisions`.
+*   **Sticky Header & Notch Sync**:
+    *   Features a sticky header at the top of the feed screen displaying the wordmark **Pabaini** in bold text (20px, weight 800) and a notification bell icon button.
+    *   Tapping the bell redirects to notifications (gated for guest users).
+    *   If unread notifications exist, renders a small red dot badge (8px) at the top-right of the bell.
+    *   Notch background color flows into the header by setting the root `SafeAreaView` background to `surface`, wrapping everything below the header in a View with the page's grayish `background` color.
+*   **Filter Bar & Pills**:
+    *   Horizontal scrolling bar with custom pills to filter posts by category: `General`, `Urgent`, `Event`, and `Jirga Decisions`.
+    *   Refined container padding: 16px horizontal, 10px vertical, styled with `surface` background and a `0.5px` solid border bottom.
+    *   Active pill uses `primary` background with white (`onPrimary`) text, 13px font size, and medium weight (`500`).
+    *   Inactive pill uses `elevated` background with `textSecondary` color, regular weight, and no border outline.
+    *   Pill padding: 6px vertical, 14px horizontal, with a 999 border radius.
+*   **Announcements Feed Container**:
+    *   Set padding to `paddingHorizontal: 12`, `paddingTop: 8`, and `paddingBottom: 24` (leeway above the tab bar).
+    *   Card spacing is tightened to 8px gap between cards.
+*   **Announcement Cards**:
+    *   Card container: 14px border radius, 0.5px solid `border` color, `surface` background, no drop shadow, and `overflow: 'hidden'`.
+    *   Pinned post treatment: If `is_pinned` is true, renders a 3px wide vertical accent bar in `primary` color on the far left running the full height of the card. A small pin icon and a "Pinned" label (11px, medium weight) are displayed in `primary` color in the author row's subtitle followed by `· [timestamp]` in `textTertiary`.
+    *   Author details: 36px avatar with a `1.5px` border of `primaryLight`. If no photo exists, places initials in a theme-derived primary color box (`primaryTint` bg / `primaryText` text in dark, `primaryLight` bg / `primaryTint` text in light).
+    *   Category badges: 11px font size, medium weight, 999 border radius. Colored based on category (`urgent`: dangerLight bg / dangerText text; `event`: infoLight bg / infoText text; `general` or others: elevated bg / textSecondary text).
+    *   Three-dot settings: 28px circular touch target on header right, displaying `ellipsis-vertical` name in Ionicons.
+    *   Content area: 14px horizontal padding, 0px top and bottom. Title is 15px, semibold (`600`), line height 1.35. Body text is 13px, regular, `textSecondary`, line height 1.5, clamped to 3 lines.
+    *   Post image: Full card width (no margins), fixed height of 180px, clipped border radius.
+    *   Action row: 14px horizontal, 10px vertical padding, with a `0.5px` top border. Like button and comment button aligned left (16px gap), share button aligned right. Action icons are 17px, count text/label is 13px, styled in `textTertiary` (highlights to `danger` when liked). Removed settings icon from action row.
+*   **Floating Action Button (FAB)**:
+    *   Size: 52px diameter circle.
+    *   Icon: plus icon (`Plus` from lucide-react-native, size 22, color "#FFFFFF").
+    *   Label: Removed (icon-only FAB).
+    *   Position: absolute `bottom: 80` (above the tab bar) and `right: 16` with a subtle shadow (elevation 4).
+    *   Gating: Only visible to users with admin or moderator role.
 *   **Liking System**:
     *   Interactive heart buttons on each card.
     *   Uses TanStack Query mutation with **optimistic UI updates** and bounce scaling animation.
+*   **Skeletons & Empty States**:
+    *   NoticeFeedSkeleton count reduced to render exactly 3 skeleton cards that mimic the real card layout (borderRadius 14, surface bg, margin bottom 8).
+    *   Shimmer animation updated to fade between `0.4` and `1.0` opacity on an 800ms loop.
+    *   Empty state centers a megaphone icon (`megaphone-outline` in Ionicons, 48px) colored in `primaryLight`, with "No announcements yet" (15px, `textSecondary`) and "Check back soon" (13px, `textTertiary`).
 *   **Landmark Location Badges**:
     *   If a creator sets a location, a `MapPin` badge is dynamically shown on the detail screen [`app/announcement/[id].tsx`](file:///c:/dev/pabaini/pabaini-mobile/app/announcement/%5Bid%5D.tsx). If empty, the badge hides itself automatically.
-*   **Pin Indicators**:
-    *   Posts flagged as pinned render a green `Pin` icon (rotated diagonally) next to their title.
 *   **Pull-to-Refresh**:
     *   Pulls the list to execute standard refresh hooks.
 *   **Automatic Focus-Based Polling**:
@@ -129,7 +159,7 @@ This document provides a comprehensive overview of all features implemented in t
 ### 🌟 Phase 2: Cricket Teams & Squad Management (Implemented)
 
 *   **Teams tab in Sports Tab**: Displays "Your Teams" list for registered players + horizontal "Discover Teams" carousel. Features a "+ Create Team" button in the app-bar for eligible users.
-*   **Discover Teams ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/index.tsx))**: Full paginated list of all active village teams with client-side name search filter and pull-to-refresh.
+*   **Discover Teams ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/index.tsx))**: Full paginated list of all active village teams with client-side name search filter and pull-to-refresh. Its loading state is initialized to `true` to prevent the "No teams yet" empty state from temporarily flashing on mount.
 *   **Create Team ([create.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/create.tsx))**: Form with validations (name, description, home ground, founded year). On success, routes to the team's profile.
 *   **Team Profile ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/teams/[id]/index.tsx))**: Displays full team details, squad listings, statistics, and past/upcoming matches. Restricts admin controls dynamically based on the current user's role:
     *   *Unregistered*: Shows CTA to register as a player first.
@@ -166,7 +196,7 @@ This document provides a comprehensive overview of all features implemented in t
         *   **Extras Breakdown**: Detailed section listing total extras conceded alongside individual splits for wides, no-balls, byes, and leg-byes.
         *   **Fall of Wickets Timeline**: A chronological list of wickets showing the batsman name, dismissal type, over of dismissal, and team score at the time the wicket fell.
         *   **Collapsible sections**: Sections can be collapsed/expanded individually for cleaner reading.
-*   **Searchable Player Directory ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/players/index.tsx))**: A dedicated directory for resident players, accessible via the "See All" button on the Sports tab dashboard next to the registered players list. Includes a sticky search bar to query names, skeleton loading views, pull-to-refresh, and infinite scroll pagination.
+*   **Searchable Player Directory ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/players/index.tsx))**: A dedicated directory for resident players, accessible via the "See All" button next to the registered players list. It features a sticky search bar to query names, smooth pull-to-refresh, and infinite scroll pagination. The loading state is initialized to `true` by default, using concurrent fetch locking (`isFetchingRef`) and cached list state checks (`playersRef`) to completely prevent visual flickering of the "No players found" state during entry and searches. It loads high-fidelity custom skeletons (`PlayerCardSkeleton`) designed to visually match `CricketPlayerCard` (green gradient, metadata columns, and stats table).
 *   **Declare Playing XI ([lineup.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/lineup.tsx))**: Roster picking tool requiring exactly 11 players. Captains can select registered squad members or add guest players (name only), and must assign unique batting orders (1-11).
 *   **Simple Result Entry ([result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx))**: Retroactive form to log completed matches: winner selection card, final score inputs, Man of the Match, and per-player statistics accordions (batting and bowling metrics).
     *   *Man of the Match picker*: Lists both registered players and guest players (with a `(Guest)` label), and includes a "None / Clear" option at the top of the picker.
@@ -297,6 +327,41 @@ graph TD
 *   **Bypassing Auth Headers**:
     *   On the frontend, the Axios request interceptor checks `is_guest` in `SecureStore` and skips Firebase token acquisition.
     *   On the backend, `FirebaseAuthGuard` and `DbUserGuard` are configured as optional for `GET` requests, enabling public notice board and matches list requests to return data successfully instead of throwing a `401 Unauthorized` exception.
+
+---
+
+## 🔍 13. Global Search Screen (`app/search.tsx`)
+**Objective**: Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams) under a unified screen.
+
+*   **Renamed Route & Global Context**:
+    *   Migrated the route from `/announcement-search` to `/search` and renamed the component to `SearchScreen`.
+    *   Updated the search input placeholder (`Search posts, players, teams...`) and initial empty state text (`Search Pabaini` / `Search posts, players, teams and more`) to present a global search layout.
+*   **Header Entries**:
+    *   **Home Screen**: Included a Search button next to the Bell icon in the compact layout (`paddingLeft: 12` to align with card boundaries).
+    *   **Sports Screen**: Unified the Sports tab header to use the exact same compact Search button and custom Notification Bell (complete with unread badge rendering) as the Home tab header.
+*   **Interactive Multi-Category Search**:
+    *   **Posts tab**: Filters local mock announcements matching titles, body text, locations, or authors.
+    *   **Users tab**: Searches residents, admins, mods, and diaspora profiles. Shows a green `Player` badge if they are a registered cricket player. Tapping a card routes to `/profile/[id]`.
+    *   **Players tab**: Filters only users registered as active cricket players (displays cricket roles). Tapping a card routes to `/profile/[id]`.
+    *   **Teams tab**: Searches teams by name, home ground, or captain name. Shows member counts. Tapping a card routes to `/sports/cricket/teams/[id]`.
+*   **Debounced Loader State**:
+    *   Typing in the search input triggers an immediate loading state displaying 3 pulsing shimmer cards (`AnnouncementCardSkeleton`), executing a `500ms` setTimeout delay before showing matches, empty search screen, or no results.
+
+---
+
+## 🏏 14. Sports Loading Skeletons (Match Details & Team Profile)
+**Objective**: Enhance the user experience by replacing standard full-screen spinners with pulsing loading skeleton states when viewing match details or team profiles.
+
+*   **Match Details Loading Skeleton (`src/components/skeletons/sports/MatchDetailSkeleton.tsx`)**:
+    *   Designed a theme-aware shimmering layout using `SkeletonBox` and `SkeletonCircle` elements.
+    *   Replicates the exact structure of the cricket Match Details screen: a top status card banner, the team versus block (with circle placeholders for logo images, team titles, and captains), the Playing XI lineups block, and three rows of match information (Date, Venue, and Scoring Mode).
+    *   Wired into `app/sports/cricket/matches/[id]/index.tsx`. The screen header bar (with back navigation button and Title) remains visible and interactive immediately while details are loading.
+*   **Team Profile Loading Skeleton (`src/components/skeletons/sports/TeamProfileSkeleton.tsx`)**:
+    *   Replicates the Team Profile screen: a glowing linear gradient hero header, circular logo wrapper, team name slot, badges (founded year, home ground), about section, full-width action button placeholder, segmented controls bar, and 3 list rows representing members in the squad.
+    *   Wired into `app/sports/cricket/teams/[id]/index.tsx`.
+*   **Refined Segmented Tab Controls**:
+    *   Adjusted the tabs container on the Team Profile screen so that unselected tab buttons are visually distinct, styled with a subtle background (`theme.colors.border`) and separated by a clean horizontal spacing margin (`marginHorizontal: 2`).
+    *   Matched this aesthetic inside `TeamProfileSkeleton` by styling the active skeleton tab using `theme.colors.surface` and inactive tab placeholders using `theme.colors.border`.
 
 ---
 
