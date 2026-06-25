@@ -1117,6 +1117,10 @@
       <button class="nav-link" onclick="jumpToCard('card-14')"><span class="nav-method m-DELETE">DEL</span>/announcements/:id<span class="nav-number">#14</span></button>
       <button class="nav-link" onclick="jumpToCard('card-15')"><span class="nav-method m-POST">POST</span>/:id/like<span class="nav-number">#15</span></button>
       <button class="nav-link" onclick="jumpToCard('card-16')"><span class="nav-method m-POST">POST</span>/:id/image<span class="nav-number">#16</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-60')"><span class="nav-method m-GET">GET</span>/:announcementId/comments<span class="nav-number">#60</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-61')"><span class="nav-method m-POST">POST</span>/:announcementId/comments<span class="nav-number">#61</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-62')"><span class="nav-method m-PATCH">PATCH</span>/comments/:commentId<span class="nav-number">#62</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-63')"><span class="nav-method m-DELETE">DEL</span>/comments/:commentId<span class="nav-number">#63</span></button>
     </div>
 
     <div class="nav-group" id="nav-sports">
@@ -1188,10 +1192,10 @@
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-tabs">
-      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">59</span></button>
+      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">63</span></button>
       <button class="tab-pill" id="tab-auth" onclick="filterTab('auth', this)">Auth <span class="tab-count">1</span></button>
       <button class="tab-pill" id="tab-users" onclick="filterTab('users', this)">Users <span class="tab-count">7</span></button>
-      <button class="tab-pill" id="tab-announcements" onclick="filterTab('announcements', this)">Announcements <span class="tab-count">9</span></button>
+      <button class="tab-pill" id="tab-announcements" onclick="filterTab('announcements', this)">Announcements <span class="tab-count">13</span></button>
       <button class="tab-pill" id="tab-sports" onclick="filterTab('sports', this)">Sports <span class="tab-count">38</span></button>
       <button class="tab-pill" id="tab-notifications" onclick="filterTab('notifications', this)">Notifications <span class="tab-count">4</span></button>
     </div>
@@ -1204,7 +1208,7 @@
     <p class="hero-desc">Complete developer reference for the Pabaini village community platform — Firebase authentication, PostgreSQL, Supabase Storage, and FCM push notifications.</p>
     <div class="stats-grid">
       <div class="stat-chip">
-        <div class="stat-value">59</div>
+        <div class="stat-value">63</div>
         <div class="stat-label">Total Endpoints</div>
       </div>
       <div class="stat-chip">
@@ -1216,7 +1220,7 @@
         <div class="stat-label">Users</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-value">9</div>
+        <div class="stat-value">13</div>
         <div class="stat-label">Announcements</div>
       </div>
       <div class="stat-chip">
@@ -1836,7 +1840,7 @@ axios.post('/api/v1/users/me/avatar', formData, {
       <div class="module-icon">📢</div>
       <div>
         <div class="module-name">Announcements</div>
-        <div class="module-count">9 endpoints</div>
+        <div class="module-count">13 endpoints</div>
       </div>
     </div>
 
@@ -2203,6 +2207,259 @@ formData.append('image', fileObject);
 axios.post('/api/v1/announcements/12/image', formData, {
   headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
 });</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #60 -->
+    <div class="endpoint-card" id="card-60" data-category="announcements" data-path="/announcements/:announcementId/comments" data-desc="get comments announcement paginated oldest first resident">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#60</span>
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/announcements/:announcementId/comments</span>
+        <span class="auth-badge auth-public">Public</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/announcements/:announcementId/comments')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Returns a paginated list of comments for the specified announcement. Comments are sorted oldest first. Excludes deleted comments. Binds permission flags (isOwner, canEdit, canDelete) if an auth token is provided.</p>
+        <div class="field-label">Query Parameters</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">page</span></td><td><span class="param-type">number</span></td><td>1</td><td>Pagination offset</td></tr>
+              <tr><td><span class="param-name">limit</span></td><td><span class="param-type">number</span></td><td>20</td><td>Results per page</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/announcements/12/comments?page=1&amp;limit=20" \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/announcements/12/comments', {
+  params: { page: 1, limit: 20 },
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "message": "Comments retrieved successfully",
+  "data": {
+    "comments": [
+      {
+        "commentId": 1,
+        "entityType": "announcement",
+        "entityId": 12,
+        "parentId": null,
+        "body": "This water regulation is a great decision by the Jirga.",
+        "isDeleted": false,
+        "createdAt": "2026-06-25T12:00:00.000Z",
+        "updatedAt": "2026-06-25T12:00:00.000Z",
+        "author": {
+          "id": 42,
+          "name": "Jane Doe",
+          "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+          "role": "resident"
+        },
+        "isOwner": true,
+        "canEdit": true,
+        "canDelete": true
+      }
+    ],
+    "total": 1,
+    "hasMore": false
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #61 -->
+    <div class="endpoint-card" id="card-61" data-category="announcements" data-path="/announcements/:announcementId/comments" data-desc="post create comment announcement resident">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#61</span>
+        <span class="method-tag POST">POST</span>
+        <span class="path-text">/api/v1/announcements/:announcementId/comments</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/announcements/:announcementId/comments')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Creates a new comment on an announcement. Atomically increments comments_count on the announcement inside a transaction block.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="param-name">body</span></td>
+                <td><span class="param-type">string</span></td>
+                <td><span class="param-required req-yes">Yes</span></td>
+                <td>Comment body text</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 201</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X POST http://localhost:3000/api/v1/announcements/12/comments \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Indeed, very important update."}'</div>
+          <div class="code-pane" data-lang="axios">axios.post('/api/v1/announcements/12/comments', {
+  body: 'Indeed, very important update.'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 201,
+  "message": "Comment created successfully",
+  "data": {
+    "commentId": 2,
+    "entityType": "announcement",
+    "entityId": 12,
+    "parentId": null,
+    "body": "Indeed, very important update.",
+    "isDeleted": false,
+    "createdAt": "2026-06-25T12:45:00.000Z",
+    "updatedAt": "2026-06-25T12:45:00.000Z",
+    "author": {
+      "id": 42,
+      "name": "Jane Doe",
+      "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+      "role": "resident"
+    },
+    "isOwner": true,
+    "canEdit": true,
+    "canDelete": true
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #62 -->
+    <div class="endpoint-card" id="card-62" data-category="announcements" data-path="/announcements/:announcementId/comments/:commentId" data-desc="patch edit update comment owner admin mod">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#62</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/announcements/:announcementId/comments/:commentId</span>
+        <span class="auth-badge auth-protected">Owner / Admin / Mod</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/announcements/:announcementId/comments/:commentId')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Updates the body of a comment. Restricted to the comment owner, admins, and moderators.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Content-Type:</span><span class="header-val">application/json</span></div>
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="field-label">Request Body</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="param-name">body</span></td>
+                <td><span class="param-type">string</span></td>
+                <td><span class="param-required req-yes">Yes</span></td>
+                <td>Updated comment text</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/announcements/12/comments/2 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Indeed, very important updates."}'</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/announcements/12/comments/2', {
+  body: 'Indeed, very important updates.'
+}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "message": "Comment updated successfully",
+  "data": {
+    "commentId": 2,
+    "entityType": "announcement",
+    "entityId": 12,
+    "parentId": null,
+    "body": "Indeed, very important updates.",
+    "isDeleted": false,
+    "createdAt": "2026-06-25T12:45:00.000Z",
+    "updatedAt": "2026-06-25T12:46:12.000Z",
+    "author": {
+      "id": 42,
+      "name": "Jane Doe",
+      "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+      "role": "resident"
+    },
+    "isOwner": true,
+    "canEdit": true,
+    "canDelete": true
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #63 -->
+    <div class="endpoint-card" id="card-63" data-category="announcements" data-path="/announcements/:announcementId/comments/:commentId" data-desc="delete soft delete comment owner admin mod">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#63</span>
+        <span class="method-tag DELETE">DELETE</span>
+        <span class="path-text">/api/v1/announcements/:announcementId/comments/:commentId</span>
+        <span class="auth-badge auth-protected">Owner / Admin / Mod</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/announcements/:announcementId/comments/:commentId')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Soft-deletes a comment (sets is_deleted = true) inside a database transaction. Decrements comments_count on the target announcement (clamped to 0 minimum). Restricted to comment owners, admins, and moderators.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X DELETE http://localhost:3000/api/v1/announcements/12/comments/2 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.delete('/api/v1/announcements/12/comments/2', {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "message": "Comment deleted successfully",
+  "data": null
+}</div>
         </div>
       </div>
     </div>

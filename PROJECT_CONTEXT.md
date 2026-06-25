@@ -7,7 +7,7 @@
 > * **Architecture Design**: The codebase is split into a **NestJS (v11.0) backend** with PostgreSQL (hosted on Supabase) and an **Expo React Native (v56.0) mobile client**.
 > * **Authentication Engine**: Custom Firebase JWT validation. The mobile client obtains a token from Firebase Auth and attaches it as a Bearer header. The backend validates it in `FirebaseAuthGuard` (binds `request.authUser`) and resolves the PostgreSQL user in `DbUserGuard` (binds `request.dbUser`).
 > * **Standard Response Envelope**: Every backend response is wrapped in a global interceptor outputting `{ success: boolean, status: number, message?: string, data: T }`. Error filters capture Nest `HttpException` objects and map them to `{ success: false, status: number, message: string, errors?: string[], data: null }`.
-> * **Notice Board (Announcements)**: CRUD operations on the announcements feed with focus-based automatic background polling (20-second interval) that automatically stops when the screen is blurred. Admins and moderators can post, pin, and edit notices. Categories like `urgent` and `jirga_decision` trigger global push notifications via Firebase Cloud Messaging (FCM).
+> * **Notice Board (Announcements)**: CRUD operations on the announcements feed with focus-based automatic background polling (20-second interval) that automatically stops when the screen is blurred. Admins and moderators can post, pin, and edit notices. Categories like `urgent` and `jirga_decision` trigger global push notifications via Firebase Cloud Messaging (FCM). Includes Comments V1, allowing users to comment on announcements, complete with transaction-safe atomic count updates, soft deletion, and frontend-friendly permission flags.
 > * **Global Search**: Unifies search capabilities across the app under a single `/search` path. Accessed from compact matching header buttons (Search & Bell) on both the Home notice feed and Sports hub. Features interactive sub-category filtering (Posts, Users, Players, Teams) with simulated debounced loading states and visual card renderers.
 > * **Sports Hub (Cricket)**: Features player registration, searchable player discover directory (name search, pull-to-refresh, infinite scroll), team squad management (invites/requests), match scheduling request lifecycle, Playing XI declarations, and two scoring modes: Simple (retroactive scorecards with a 24-hour edit lock, collapsible team scorecard stats, guest player "Man of the Match" support, and real-time player statistics calculation) and Live (real-time ball-by-ball scoring console with bowler consecutive over validation, confirmation overrides, selection double-tap locks, strike rotation, innings transition, dismissed batsmen dropdown filtering, auto-closing console modals on match completion, undo features, and optimized pre-computed polling views). Post-match detail features a premium, tabbed `MatchScorecard` interface detailing batsman strike rates, bowler maidens, opponent extras, and chronological fall of wickets (FoW) timelines calculated dynamically from live events or simple records. Completed matches render with a styled victory badge displaying the winning margin on match cards. Includes theme-aware shimmering loading skeletons (`MatchDetailSkeleton` and `TeamProfileSkeleton`) to replace fullscreen spinners on match details and team profiles, alongside refined segmented tab buttons.
 > * **Safe Navigation Architecture**: Implemented a global wrapper layer (`safeRouterPush` and `safeRouterReplace`) to intercept multiple rapid screen taps within a 500ms self-healing lock window and duplicate route pushes (e.g. pushing a route matching the current path, filtering query parameters). Tied reactively to route updates via a `<PathnameTracker />` component in the root layout.
@@ -275,6 +275,7 @@ pabaini-mobile/
     *   One-to-Many with `announcements` (mapped by `author_id` in announcements).
     *   One-to-Many with `notifications` (mapped by `user_id` in notifications).
     *   One-to-Many with `announcement_likes` (mapped by `user_id` in likes).
+    *   One-to-Many with `comments` (mapped by `user_id` in comments).
 *   **Indexes**:
     *   Unique Index on `firebase_uid`.
     *   Unique Index on `phone`.
@@ -289,6 +290,7 @@ pabaini-mobile/
     *   `category` (`enum`, Default: `'general'`): Categorization tag (`'general'`, `'urgent'`, `'event'`, `'jirga_decision'`).
     *   `image_url` (`varchar`, Nullable): Accompanying visual attachment URL.
     *   `likes_count` (`integer`, Default: `0`): Denormalized counter tracking positive reactions.
+    *   `comments_count` (`integer`, Default: `0`): Denormalized counter tracking total comments.
     *   `is_pinned` (`boolean`, Default: `false`): Pin status indicating priority placement.
     *   `is_deleted` (`boolean`, Default: `false`): Soft-delete flag.
     *   `location` (`varchar`, Nullable): Landmark or event location.
@@ -298,6 +300,7 @@ pabaini-mobile/
 *   **Relationships**:
     *   Many-to-One with `users` (mapped by `author_id`).
     *   One-to-Many with `announcement_likes` (mapped by `announcement_id` in likes).
+    *   One-to-Many with `comments` (mapped by `entity_id` where `entity_type = 'announcement'`).
 
 ### 3. `announcement_likes` Table
 *   **Purpose**: Tracks announcement likes to prevent double-likes.
@@ -306,11 +309,29 @@ pabaini-mobile/
     *   `user_id` (`integer`, Required): ForeignKey mapping to `users(id)`.
     *   `announcement_id` (`integer`, Required): ForeignKey mapping to `announcements(id)`.
     *   `created_at` (`timestamp`): Saved date.
-*   **Relationships**:
+*   Relationships:
     *   Many-to-One with `users` (mapped by `user_id`).
     *   Many-to-One with `announcements` (mapped by `announcement_id`).
-*   **Indexes**:
+*   Indexes:
     *   Unique composite constraint: `Unique(['user_id', 'announcement_id'])`.
+
+### 3b. `comments` Table
+*   **Purpose**: Stores comments on announcements (and future entities like matches, teams, and players) using a polymorphic structure.
+*   **Columns**:
+    *   `comment_id` (`integer`, Primary Key, Autoincrement): Core comment identifier.
+    *   `entity_type` (`varchar(50)`, Required): Type of entity commented on (e.g. `'announcement'`).
+    *   `entity_id` (`integer`, Required): Reference ID of the target entity.
+    *   `user_id` (`integer`, Required): ForeignKey referencing `users(id)` ON DELETE CASCADE.
+    *   `parent_id` (`integer`, Nullable): ForeignKey referencing `comments(comment_id)` ON DELETE SET NULL (self-referencing for future replies).
+    *   `body` (`text`, Required): Comment text.
+    *   `is_deleted` (`boolean`, Default: `false`): Soft-delete flag.
+    *   `created_at` (`timestamp`): Creation timestamp.
+    *   `updated_at` (`timestamp`): Last updated timestamp.
+*   **Relationships**:
+    *   Many-to-One with `users` (mapped by `user_id` as author).
+    *   Many-to-One with `comments` (self-referencing parent/replies).
+*   **Indexes**:
+    *   Composite performance index: `Index(['entity_type', 'entity_id'])`.
 
 ### 4. `notifications` Table
 *   **Purpose**: Central logs for user notifications.

@@ -10,7 +10,7 @@
 |---|---|---|
 | Authentication | 1 | ✅ Live |
 | Users | 7 | ✅ Live |
-| Announcements | 9 | ✅ Live |
+| Announcements | 13 | ✅ Live |
 | Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
 | Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
 | Notifications Module | 4 | ✅ Live |
@@ -18,7 +18,7 @@
 | Sports — Phase 3 (Simple Scoring Mode) | 2 | ✅ Live |
 | Sports — Phase 3 (Live Scoring) | 6 | ✅ Live |
 | Sports — Phase 3 (Leaderboard & Standings) | 2 | 🗓 Roadmap |
-| **Total** | **59** | |
+| **Total** | **63** | |
 
 ---
 
@@ -67,6 +67,10 @@ interface ApiResponse<T> {
 - [#14 — DELETE `/announcements/:id`](#14-delete-announcementsid) — Hard-delete *(Admin only)*
 - [#15 — POST `/announcements/:id/like`](#15-post-announcementsidlike) — Toggle like
 - [#16 — POST `/announcements/:id/image`](#16-post-announcementsidimage) — Upload image
+- [#60 — GET `/announcements/:announcementId/comments`](#60-get-announcementsannouncementidcomments) — Get comments
+- [#61 — POST `/announcements/:announcementId/comments`](#61-post-announcementsannouncementidcomments) — Create comment
+- [#62 — PATCH `/announcements/:announcementId/comments/:commentId`](#62-patch-announcementsannouncementidcommentscommentid) — Edit comment
+- [#63 — DELETE `/announcements/:announcementId/comments/:commentId`](#63-delete-announcementsannouncementidcommentscommentid) — Delete comment (Soft-delete)
 
 ### 4. Sports Module — Phase 1 ✅ Implemented
 - [#17 — POST `/sports/cricket/players/me`](#17-post-sportscricketplayersme) — Create profile
@@ -801,6 +805,229 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 curl -X POST http://localhost:3000/api/v1/announcements/12/image \
   -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
   -F "image=@/path/to/notice.jpg"
+```
+
+---
+
+### #60 · GET `/announcements/:announcementId/comments`
+
+Returns a paginated list of comments for the specified announcement. Comments are sorted oldest first. Deleted comments are automatically filtered out.
+
+|||
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/announcements/:announcementId/comments` |
+| **Access** | 🟢 Public *(Optional Auth header to populate `isOwner`, `canEdit`, `canDelete` flags)* |
+
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | `number` | `1` | Pagination offset |
+| `limit` | `number` | `20` | Results per page |
+
+**cURL Example**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/announcements/12/comments?page=1&limit=20" \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Comments retrieved successfully",
+  "data": {
+    "comments": [
+      {
+        "commentId": 1,
+        "entityType": "announcement",
+        "entityId": 12,
+        "parentId": null,
+        "body": "This water regulation is a great decision by the Jirga.",
+        "isDeleted": false,
+        "createdAt": "2026-06-25T12:00:00.000Z",
+        "updatedAt": "2026-06-25T12:00:00.000Z",
+        "author": {
+          "id": 42,
+          "name": "Jane Doe",
+          "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+          "role": "resident"
+        },
+        "isOwner": true,
+        "canEdit": true,
+        "canDelete": true
+      }
+    ],
+    "total": 1,
+    "hasMore": false
+  }
+}
+```
+
+---
+
+### #61 · POST `/announcements/:announcementId/comments`
+
+Creates a new comment on an announcement. Atomically increments `comments_count` on the announcement.
+
+|||
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/announcements/:announcementId/comments` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `body` | `string` | ✅ Yes | Comment content |
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/announcements/12/comments \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Indeed, very important update."}'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "status": 201,
+  "message": "Comment created successfully",
+  "data": {
+    "commentId": 2,
+    "entityType": "announcement",
+    "entityId": 12,
+    "parentId": null,
+    "body": "Indeed, very important update.",
+    "isDeleted": false,
+    "createdAt": "2026-06-25T12:45:00.000Z",
+    "updatedAt": "2026-06-25T12:45:00.000Z",
+    "author": {
+      "id": 42,
+      "name": "Jane Doe",
+      "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+      "role": "resident"
+    },
+    "isOwner": true,
+    "canEdit": true,
+    "canDelete": true
+  }
+}
+```
+
+---
+
+### #62 · PATCH `/announcements/:announcementId/comments/:commentId`
+
+Updates the body of a comment. Restricted to comment owners, admins, and moderators.
+
+|||
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/announcements/:announcementId/comments/:commentId` |
+| **Access** | 🔴 Protected *(Owner / Admin / Mod)* |
+
+**Headers**
+
+```
+Content-Type: application/json
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `body` | `string` | ✅ Yes | Updated comment text |
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/announcements/12/comments/2 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Indeed, very important updates."}'
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Comment updated successfully",
+  "data": {
+    "commentId": 2,
+    "entityType": "announcement",
+    "entityId": 12,
+    "parentId": null,
+    "body": "Indeed, very important updates.",
+    "isDeleted": false,
+    "createdAt": "2026-06-25T12:45:00.000Z",
+    "updatedAt": "2026-06-25T12:46:12.000Z",
+    "author": {
+      "id": 42,
+      "name": "Jane Doe",
+      "avatarUrl": "https://pabaini-media/avatars/jane.jpg",
+      "role": "resident"
+    },
+    "isOwner": true,
+    "canEdit": true,
+    "canDelete": true
+  }
+}
+```
+
+---
+
+### #63 · DELETE `/announcements/:announcementId/comments/:commentId`
+
+Soft-deletes a comment (`is_deleted = true`). Restricted to comment owners, admins, and moderators. Decrements `comments_count` on the announcement (bound to 0 minimum).
+
+|||
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/v1/announcements/:announcementId/comments/:commentId` |
+| **Access** | 🔴 Protected *(Owner / Admin / Mod)* |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/announcements/12/comments/2 \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Comment deleted successfully",
+  "data": null
+}
 ```
 
 ---

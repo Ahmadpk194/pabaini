@@ -45,6 +45,9 @@ export class Announcement {
     @Column({ default: 0 })
     likes_count!: number;
 
+    @Column({ default: 0 })
+    comments_count!: number;
+
     @Column({ default: false })
     is_pinned!: boolean;
 

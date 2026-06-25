@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { CommentsModule } from './modules/comments/comments.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
@@ -30,7 +31,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     UsersModule,
     AnnouncementsModule,
     SportsModule,
-    NotificationsModule
+    NotificationsModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],
