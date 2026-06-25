@@ -365,6 +365,22 @@ graph TD
 
 ---
 
+## 🔐 15. Safe Navigation Architecture
+**Objective**: Protect the app's routing stack from rapid double-tapping (which pushes the same screen multiple times) and duplicate route pushes (which push a route matching the current path).
+
+*   **Problem**: In high-traffic lists or interactive cards (e.g. tapping notice cards, post creators, profile links, or buttons), rapid consecutive user taps push the same screen multiple times onto the navigation stack. Going back requires pressing the back button once for every extra tap.
+*   **Centralized Solution**:
+    *   **Module-level Navigation Lock**: Created [safeNavigation.ts](file:///c:/dev/pabaini/pabaini-mobile/src/navigation/safeNavigation.ts) with `safeRouterPush` and `safeRouterReplace` wrappers. On execution, it sets a global `isNavigating` flag that blocks subsequent navigation calls for a 500ms self-healing lock window.
+    *   **Duplicate Path Interception**: Compares the target path against a `globalCurrentPath` tracker. If they match (excluding query parameters), the navigation push is safely blocked.
+    *   **Reactive Path Tracker**: Implemented a `<PathnameTracker />` in the root layout ([_layout.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/_layout.tsx)) that reads `usePathname()` and updates the navigation utility dynamically.
+*   **Migrated Areas**:
+    *   **Home Notice Feed**: FAB Post button, Notification Bell, Search Icon, and AnnouncementCard elements (Notice click, Comments click, Author avatar press).
+    *   **Global Search**: Detail clicks for Users, Players, and Teams.
+    *   **Notification Rows**: Deep-link row click navigations.
+    *   **Sports Dashboard & Directories**: Bell press, Register Player buttons, player profiles, See All players list, discover teams list, empty state team creators, challenge request buttons, and match detail card lists.
+
+---
+
 ## 🛠️ Verification & Building
 All features compile cleanly under TypeScript. To check type safety at any time, run:
 ```bash

@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Shield, Trophy, Calendar, Users } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
+import { safeRouterPush } from '../../../../../src/navigation/safeNavigation';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../../../../src/store/sports/teamsStore';
 import {
@@ -194,7 +195,7 @@ export default function TeamProfileScreen() {
                   });
                   return;
                 }
-                router.push('/sports/cricket/onboarding/role');
+                safeRouterPush(router, '/sports/cricket/onboarding/role');
               }}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>
@@ -209,7 +210,7 @@ export default function TeamProfileScreen() {
           <View style={styles.actionContainer}>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: 24 }]}
-              onPress={() => router.push(`/sports/cricket/teams/${teamId}/manage`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/teams/${teamId}/manage`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>
                 Manage Team (Captain)
@@ -525,7 +526,7 @@ export default function TeamProfileScreen() {
                   <View style={{ gap: 10 }}>
                     <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, fontSize: 15, marginBottom: 0 }]}>Live Matches</Text>
                     {liveMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                     ))}
                   </View>
                 )}
@@ -536,7 +537,7 @@ export default function TeamProfileScreen() {
                     <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No upcoming challenges scheduled.</Text>
                   ) : (
                     upcomingMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                     ))
                   )}
                 </View>
@@ -545,7 +546,7 @@ export default function TeamProfileScreen() {
                   <View style={{ gap: 10 }}>
                     <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, fontSize: 15, marginBottom: 0 }]}>Past Match Results</Text>
                     {completedMatches.map(m => (
-                      <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                      <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                     ))}
                   </View>
                 )}

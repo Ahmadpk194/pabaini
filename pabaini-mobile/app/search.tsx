@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../src/context/ThemeContext';
+import { safeRouterPush } from '../src/navigation/safeNavigation';
 import { Announcement } from '../src/types';
 import { AnnouncementCard } from '../src/components/notice/AnnouncementCard';
 import { Pill } from '../src/components/ui/Pill';
@@ -261,7 +262,7 @@ export default function SearchScreen() {
     return (
       <TouchableOpacity
         key={user.id}
-        onPress={() => router.push(`/profile/${user.id}`)}
+        onPress={() => safeRouterPush(router, `/profile/${user.id}`)}
         activeOpacity={0.7}
         style={[styles.resultCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
       >
@@ -301,7 +302,7 @@ export default function SearchScreen() {
     return (
       <TouchableOpacity
         key={player.id}
-        onPress={() => router.push(`/profile/${player.id}`)}
+        onPress={() => safeRouterPush(router, `/profile/${player.id}`)}
         activeOpacity={0.7}
         style={[styles.resultCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
       >
@@ -337,7 +338,7 @@ export default function SearchScreen() {
     return (
       <TouchableOpacity
         key={team.id}
-        onPress={() => router.push(`/sports/cricket/teams/${team.id}`)}
+        onPress={() => safeRouterPush(router, `/sports/cricket/teams/${team.id}`)}
         activeOpacity={0.7}
         style={[styles.resultCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
       >

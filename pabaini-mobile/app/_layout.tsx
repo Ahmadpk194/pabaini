@@ -1,10 +1,12 @@
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { LoginPromptModal } from '../src/components/ui/LoginPromptModal';
+import { setGlobalCurrentPath } from '../src/navigation/safeNavigation';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,6 +17,14 @@ const queryClient = new QueryClient({
   },
 });
 
+function PathnameTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    setGlobalCurrentPath(pathname);
+  }, [pathname]);
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -22,6 +32,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <StatusBar style="dark" />
+            <PathnameTracker />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

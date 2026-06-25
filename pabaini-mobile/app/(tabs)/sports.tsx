@@ -14,6 +14,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
+import { safeRouterPush } from '../../src/navigation/safeNavigation';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useAuthPromptStore } from '../../src/store/authPromptStore';
 import { useSportsStore } from '../../src/store/sports/sportsStore';
@@ -96,7 +97,7 @@ export default function SportsScreen() {
       });
       return;
     }
-    router.push('/notifications');
+    safeRouterPush(router, '/notifications');
   };
 
   // Matches query hook
@@ -252,7 +253,7 @@ export default function SportsScreen() {
       });
       return;
     }
-    router.push('/sports/cricket/onboarding/role');
+    safeRouterPush(router, '/sports/cricket/onboarding/role');
   };
 
   const handleJustBrowsing = () => {
@@ -296,7 +297,7 @@ export default function SportsScreen() {
     return (
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => router.push(`/profile/${item.user.id}`)}
+        onPress={() => safeRouterPush(router, `/profile/${item.user.id}`)}
         style={[styles.playerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
       >
         <Avatar uri={item.user.avatar_url} size={48} name={item.user.name} />
@@ -333,7 +334,7 @@ export default function SportsScreen() {
             </View>
             <CricketPlayerCard
               profile={myProfile}
-              onPress={() => router.push(`/profile/${myProfile.user.id}`)}
+              onPress={() => safeRouterPush(router, `/profile/${myProfile.user.id}`)}
             />
           </View>
         )}
@@ -347,7 +348,7 @@ export default function SportsScreen() {
                 {isRegistered ? 'Other Registered Players' : 'Registered Players'}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/sports/cricket/players')}>
+            <TouchableOpacity onPress={() => safeRouterPush(router, '/sports/cricket/players')}>
               <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -415,7 +416,7 @@ export default function SportsScreen() {
             {activeTab === 'teams' && isRegistered && (
               <TouchableOpacity
                 disabled={isAtCaptainLimit}
-                onPress={() => router.push('/sports/cricket/teams/create')}
+                onPress={() => safeRouterPush(router, '/sports/cricket/teams/create')}
                 style={{
                   backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
                   paddingHorizontal: 10,
@@ -430,7 +431,7 @@ export default function SportsScreen() {
             )}
             {activeTab === 'matches' && isRegistered && captainedTeamsCount > 0 && (
               <TouchableOpacity
-                onPress={() => router.push('/sports/cricket/matches/request')}
+                onPress={() => safeRouterPush(router, '/sports/cricket/matches/request')}
                 style={{
                   backgroundColor: theme.colors.primary,
                   paddingHorizontal: 10,
@@ -446,7 +447,7 @@ export default function SportsScreen() {
             
             <TouchableOpacity
               style={[styles.searchButton, { backgroundColor: theme.colors.elevated }]}
-              onPress={() => router.push('/search')}
+              onPress={() => safeRouterPush(router, '/search')}
               activeOpacity={0.7}
             >
               <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
@@ -552,7 +553,7 @@ export default function SportsScreen() {
                     <View style={{ gap: 10 }}>
                       <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Live Matches</Text>
                       {liveMatches.map(m => (
-                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                        <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                       ))}
                     </View>
                   )}
@@ -563,7 +564,7 @@ export default function SportsScreen() {
                       <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No upcoming matches scheduled.</Text>
                     ) : (
                       upcomingMatches.map(m => (
-                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                        <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                       ))
                     )}
                   </View>
@@ -574,7 +575,7 @@ export default function SportsScreen() {
                       <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>No completed matches found.</Text>
                     ) : (
                       completedMatches.map(m => (
-                        <MatchCard key={m.id} match={m} onPress={() => router.push(`/sports/cricket/matches/${m.id}`)} />
+                        <MatchCard key={m.id} match={m} onPress={() => safeRouterPush(router, `/sports/cricket/matches/${m.id}`)} />
                       ))
                     )}
                   </View>
@@ -680,7 +681,7 @@ export default function SportsScreen() {
                             key={t.id}
                             team={t}
                             showCaptainBadge={t.role === 'captain'}
-                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                            onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
                           />
                         ))}
 
@@ -701,7 +702,7 @@ export default function SportsScreen() {
                           <TouchableOpacity
                             key={`req-${t.id}`}
                             activeOpacity={0.7}
-                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                            onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
                             style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: '#D4A700' }]}
                           >
                             <View style={styles.pendingCardLeft}>
@@ -723,7 +724,7 @@ export default function SportsScreen() {
                           <TouchableOpacity
                             key={`inv-${t.id}`}
                             activeOpacity={0.7}
-                            onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                            onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
                             style={[styles.pendingCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
                           >
                             <View style={styles.pendingCardLeft}>
@@ -750,7 +751,7 @@ export default function SportsScreen() {
                                 borderRadius: theme.radius.sm,
                                 alignSelf: 'flex-start',
                               }}
-                              onPress={() => router.push('/sports/cricket/teams/create')}
+                              onPress={() => safeRouterPush(router, '/sports/cricket/teams/create')}
                             >
                               <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
                                 + Create Your Own Team
@@ -779,7 +780,7 @@ export default function SportsScreen() {
                       <Shield color={theme.colors.primary} size={20} />
                       <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Discover Teams</Text>
                     </View>
-                    <TouchableOpacity onPress={() => router.push('/sports/cricket/teams')}>
+                    <TouchableOpacity onPress={() => safeRouterPush(router, '/sports/cricket/teams')}>
                       <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>See All</Text>
                     </TouchableOpacity>
                   </View>
@@ -810,7 +811,7 @@ export default function SportsScreen() {
                         <TouchableOpacity
                           key={t.id}
                           activeOpacity={0.7}
-                          onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                          onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
                           style={{
                             width: 220,
                             backgroundColor: theme.colors.surface,
@@ -907,7 +908,7 @@ export default function SportsScreen() {
                               marginTop: 12,
                             },
                           ]}
-                          onPress={() => router.push('/sports/cricket/matches/request')}
+                          onPress={() => safeRouterPush(router, '/sports/cricket/matches/request')}
                         >
                           <Text style={[styles.emptyBtnText, { color: theme.colors.onPrimary }]}>
                             Challenge a Team
@@ -927,7 +928,7 @@ export default function SportsScreen() {
                             <MatchCard
                               key={match.id}
                               match={match}
-                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}`)}
                             />
                           ))}
                         </View>
@@ -943,7 +944,7 @@ export default function SportsScreen() {
                             <MatchCard
                               key={match.id}
                               match={match}
-                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}`)}
                             />
                           ))}
                         </View>
@@ -959,7 +960,7 @@ export default function SportsScreen() {
                             <MatchCard
                               key={match.id}
                               match={match}
-                              onPress={() => router.push(`/sports/cricket/matches/${match.id}`)}
+                              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}`)}
                             />
                           ))}
                         </View>

@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../src/context/ThemeContext';
+import { safeRouterPush } from '../src/navigation/safeNavigation';
 import { useNotificationsStore } from '../src/store/notificationsStore';
 import { useAuth } from '../src/hooks/useAuth';
 import { LoginRequiredGate } from '../src/components/ui/LoginRequiredGate';
@@ -112,7 +113,7 @@ export default function NotificationsScreen() {
     }
 
     if (notification.deep_link) {
-      router.push(notification.deep_link as any);
+      safeRouterPush(router, notification.deep_link);
     }
   };
 

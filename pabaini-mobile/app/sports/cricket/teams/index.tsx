@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../src/context/ThemeContext';
+import { safeRouterPush } from '../../../../src/navigation/safeNavigation';
 import { useSportsStore } from '../../../../src/store/sports/sportsStore';
 import { useTeamsStore } from '../../../../src/store/sports/teamsStore';
 import { useAuth } from '../../../../src/hooks/useAuth';
@@ -108,7 +109,7 @@ export default function DiscoverTeamsScreen() {
                   borderRadius: theme.radius.sm,
                 },
               ]}
-              onPress={() => router.push('/sports/cricket/teams/create')}
+              onPress={() => safeRouterPush(router, '/sports/cricket/teams/create')}
             >
               <Text style={[styles.emptyBtnText, { color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary }]}>
                 Create Team
@@ -145,7 +146,7 @@ export default function DiscoverTeamsScreen() {
           <TouchableOpacity
             disabled={isAtCaptainLimit}
             style={styles.headerAction}
-            onPress={() => router.push('/sports/cricket/teams/create')}
+            onPress={() => safeRouterPush(router, '/sports/cricket/teams/create')}
           >
             <Text style={[styles.createLink, { color: isAtCaptainLimit ? theme.colors.border : theme.colors.primary }]}>
               + Create
@@ -197,7 +198,7 @@ export default function DiscoverTeamsScreen() {
           renderItem={({ item }) => (
             <TeamCard
               team={item}
-              onPress={() => router.push(`/sports/cricket/teams/${item.id}`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/teams/${item.id}`)}
             />
           )}
           ListEmptyComponent={renderEmpty}

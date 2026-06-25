@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { safeRouterPush } from '../../navigation/safeNavigation';
 import { Announcement, Category } from '../../types';
 import { useLikeMutation } from '../../hooks/useLikeMutation';
 import { useAuth } from '../../hooks/useAuth';
@@ -90,7 +91,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
   };
 
   const handleCardPress = () => {
-    router.push(`/announcement/${announcement.id}`);
+    safeRouterPush(router, `/announcement/${announcement.id}`);
   };
 
   const avatarBg = mode === 'dark' ? theme.colors.primaryTint : theme.colors.primaryLight;
@@ -124,7 +125,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
                   });
                   return;
                 }
-                router.push(`/profile/${announcement.author.id}`);
+                safeRouterPush(router, `/profile/${announcement.author.id}`);
               }}
               style={styles.authorClickable}
             >
@@ -245,7 +246,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation();
-                  router.push({
+                  safeRouterPush(router, {
                     pathname: `/announcement/${announcement.id}`,
                     params: { focus: 'comments' }
                   });

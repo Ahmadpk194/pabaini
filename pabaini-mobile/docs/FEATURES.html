@@ -1832,6 +1832,53 @@ interface MyTeamResponse {  // returned by GET /my
       </div>
     </section>
 
+    <!-- ─── Safe Navigation Architecture ─────────────────────────────────── -->
+    <section class="section" id="safe-navigation">
+      <div class="section-header">
+        <div class="section-number">🔐</div>
+        <h2>Safe Navigation Architecture</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">🔐</span>
+        <div><strong>Problem:</strong> Rapid consecutive user taps push the same screen multiple times onto the routing stack. Going back requires clicking back multiple times, degrading UX. Additionally, tapping active items multiple times duplicates screen history.</div>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">🛠️</span>
+        <div><strong>Solution:</strong> A centralized lock and tracker utility (<code>src/navigation/safeNavigation.ts</code>) using a 500ms self-healing navigation lock and duplicate pathname interception. A root <code>PathnameTracker</code> updates the active pathname state reactively on every navigation route shift.</div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⏳</span> Module-Level Lock Window</h3>
+        <ul>
+          <li>Sets a global <code>isNavigating</code> flag to <code>true</code> immediately upon routing execution.</li>
+          <li>Subsequent push/replace events within a <code>500ms</code> threshold are automatically intercepted and ignored.</li>
+          <li>A self-healing <code>setTimeout</code> unlocks the state automatically after the delay passes.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🛡️</span> Duplicate Route Interception</h3>
+        <ul>
+          <li>Maintains a module-level <code>globalCurrentPath</code> reference.</li>
+          <li>Strips query parameters (e.g., <code>?focus=comments</code>) from new Hrefs via <code>resolvePathname</code> to compare base paths cleanly.</li>
+          <li>Blocks the navigation push if the target path matches the active screen, avoiding layout duplicates.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📱</span> Unified Integration Areas</h3>
+        <ul>
+          <li><strong>Home notice board:</strong> FAB Post button, search entry, notification bell, and AnnouncementCard touch layers.</li>
+          <li><strong>Notifications:</strong> Deep-link list row redirects.</li>
+          <li><strong>Global Search:</strong> Detail card redirects for Users, Players, and Teams.</li>
+          <li><strong>Sports Hub &amp; Directories:</strong> Header search buttons, player registrations, team squads list, see all lists, discover teams, and match scorecards.</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- ─── Verification ──────────────────────────────────────────────────── -->
     <section class="section" id="verification">
       <div class="section-header">

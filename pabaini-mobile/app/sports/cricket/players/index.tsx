@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useTheme } from '../../../../src/context/ThemeContext';
+import { safeRouterPush } from '../../../../src/navigation/safeNavigation';
 import client from '../../../../src/api/client';
 import { useAuth } from '../../../../src/hooks/useAuth';
 import { LoginRequiredGate } from '../../../../src/components/ui/LoginRequiredGate';
@@ -188,7 +189,7 @@ export default function DiscoverPlayersScreen() {
             <View style={styles.cardContainer}>
               <CricketPlayerCard
                 profile={item}
-                onPress={() => router.push(`/profile/${item.user.id}`)}
+                onPress={() => safeRouterPush(router, `/profile/${item.user.id}`)}
               />
             </View>
           )}

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity, Modal, Alert, ActivityIndicator, Share, Animated, Easing } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { safeRouterPush } from '../../src/navigation/safeNavigation';
 import { Plus } from 'lucide-react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -164,7 +165,8 @@ export default function HomeScreen() {
       return;
     }
     if (user?.role === 'admin' || user?.role === 'moderator') {
-      router.push('/announcement/create');
+      // router.push('/announcement/create');
+      safeRouterPush(router, '/announcement/create');
     }
   };
 
@@ -176,7 +178,8 @@ export default function HomeScreen() {
       });
       return;
     }
-    router.push('/notifications');
+    // router.push('/notifications');
+    safeRouterPush(router, '/notifications');
   };
 
   const handleShare = async (announcement: Announcement) => {
@@ -211,7 +214,8 @@ export default function HomeScreen() {
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.searchButton, { backgroundColor: theme.colors.elevated }]}
-            onPress={() => router.push('/search')}
+            // onPress={() => router.push('/search')}
+            onPress={() => safeRouterPush(router, '/search')}
             activeOpacity={0.7}
           >
             <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
