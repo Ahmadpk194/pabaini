@@ -4,6 +4,9 @@ export const queryKeys = {
     list: (filters?: { category?: string }) => ['announcements', 'list', filters] as const,
     detail: (id: number) => ['announcements', 'detail', id] as const,
   },
+  comments: {
+    list: (announcementId: number) => ['announcements', announcementId, 'comments'] as const,
+  },
   matches: {
     all: ['matches'] as const,
     list: (filters?: { status?: string; team_id?: number }) => ['matches', 'list', filters] as const,

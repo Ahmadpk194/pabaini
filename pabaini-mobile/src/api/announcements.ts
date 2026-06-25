@@ -18,6 +18,7 @@ export interface Announcement {
     name: string;
     avatar_url: string | null;
   };
+  comments_count?: number;
   created_at: string;
   updated_at: string;
 }

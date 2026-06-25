@@ -255,7 +255,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
               >
                 <Ionicons name="chatbubble-outline" size={17} color={theme.colors.textTertiary} />
                 <Text style={[styles.footerActionText, { color: theme.colors.textTertiary }]}>
-                  2
+                  {announcement.comments_count}
                 </Text>
               </TouchableOpacity>
             </View>

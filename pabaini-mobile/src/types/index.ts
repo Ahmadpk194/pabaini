@@ -31,6 +31,30 @@ export interface Announcement {
     name: string;
     avatar_url: string | null;
   };
+  comments_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface CommentAuthor {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  role: Role;
+}
+
+export interface Comment {
+  commentId: number;
+  entityType: string;
+  entityId: number;
+  parentId: number | null;
+  body: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: CommentAuthor;
+  isOwner: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  isPending?: boolean;
 }

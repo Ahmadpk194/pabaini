@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Image as ImageIcon, X, MapPin } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, X, MapPin, Globe, AlertTriangle, Calendar, Scale } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { create, uploadImage } from '../../src/api/announcements';
@@ -25,6 +25,13 @@ import { queryKeys } from '../../src/constants/queryKeys';
 import { Avatar } from '../../src/components/ui/Avatar';
 
 const CATEGORIES: Category[] = ['general', 'urgent', 'event', 'jirga_decision'];
+
+const CATEGORY_ICONS = {
+  general: Globe,
+  urgent: AlertTriangle,
+  event: Calendar,
+  jirga_decision: Scale,
+};
 
 export default function CreateAnnouncementScreen() {
   const { theme } = useTheme();
@@ -45,12 +52,13 @@ export default function CreateAnnouncementScreen() {
     return (
       <View style={[styles.safeArea, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
         <View style={styles.accessDeniedContainer}>
-          <Text style={[styles.deniedTitle, { color: '#1F4A2E' }]}>Access Denied</Text>
+          <AlertTriangle size={48} color={theme.colors.danger} style={styles.deniedIcon} />
+          <Text style={[styles.deniedTitle, { color: theme.colors.textPrimary }]}>Access Denied</Text>
           <Text style={[styles.deniedSubtitle, { color: theme.colors.textSecondary }]}>
             Only admins and moderators are authorized to create community announcements.
           </Text>
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: '#1F4A2E' }]}
+            style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.back()}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -161,11 +169,18 @@ export default function CreateAnnouncementScreen() {
     return cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ');
   };
 
+  const getCharCounterColor = () => {
+    const len = content.length;
+    if (len >= 480) return theme.colors.dangerText;
+    if (len >= 400) return theme.colors.warningText;
+    return theme.colors.textSecondary;
+  };
+
   return (
     <View style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.keyboardAvoidingView, { backgroundColor: theme.colors.surface }]}
+        style={[styles.keyboardAvoidingView, { backgroundColor: theme.colors.background }]}
       >
         {/* Header Bar */}
         <View style={[
@@ -176,23 +191,28 @@ export default function CreateAnnouncementScreen() {
             paddingTop: insets.top > 0 ? insets.top + 8 : 12
           }
         ]}>
-          <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting}>
+          <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting} style={styles.headerCancelBtn}>
             <Text style={[styles.headerLink, { color: theme.colors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: '#1F4A2E' }]}>New Announcement</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>New Announcement</Text>
           <TouchableOpacity
             onPress={handlePost}
             disabled={!isValid || isSubmitting}
-            style={styles.postButtonContainer}
+            style={[
+              styles.postButton,
+              {
+                backgroundColor: isValid ? theme.colors.primary : theme.colors.border,
+                opacity: isSubmitting ? 0.8 : 1
+              }
+            ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="#1F4A2E" />
+              <ActivityIndicator size="small" color={isValid ? theme.colors.onPrimary : theme.colors.textTertiary} />
             ) : (
               <Text
                 style={[
-                  styles.headerPostText,
-                  { color: '#1F4A2E' },
-                  (!isValid || isSubmitting) && styles.disabledPostText,
+                  styles.postButtonText,
+                  { color: isValid ? theme.colors.onPrimary : theme.colors.textTertiary }
                 ]}
               >
                 Post
@@ -210,77 +230,81 @@ export default function CreateAnnouncementScreen() {
         >
           {/* Author info row */}
           <View style={styles.authorRow}>
-            <Avatar uri={user?.avatar_url} name={user?.name} size={42} />
+            <Avatar uri={user?.avatar_url} name={user?.name} size={40} />
             <View style={styles.authorDetails}>
               <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
                 {user?.name || 'Administrator'}
               </Text>
-              <View style={[styles.categoryBadge, { backgroundColor: '#E4E2DC' }]}>
-                <Text style={[styles.categoryBadgeText, { color: '#1F4A2E' }]}>
-                  {getCategoryLabel(category)}
-                </Text>
-              </View>
+              <Text style={[styles.authorSubtitle, { color: theme.colors.textSecondary }]}>
+                Posting to Pabaini board
+              </Text>
             </View>
           </View>
 
-          {/* Title Input */}
-          <TextInput
-            style={[styles.titleInput, { color: theme.colors.textPrimary }]}
-            placeholder="Title"
-            placeholderTextColor={theme.colors.textSecondary}
-            value={title}
-            onChangeText={setTitle}
-            maxLength={100}
-            editable={!isSubmitting}
-          />
-
-          {/* Text Area Content */}
-          <TextInput
-            style={[styles.contentTextArea, { color: theme.colors.textPrimary }]}
-            placeholder="Share an announcement with the village..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={content}
-            onChangeText={setContent}
-            multiline
-            maxLength={500}
-            editable={!isSubmitting}
-            textAlignVertical="top"
-          />
-
-          {/* Location Input */}
-          <View style={[styles.locationSection, { borderBottomColor: theme.colors.border }]}>
-            <MapPin size={20} color="#1F4A2E" />
+          {/* Card 1: Text Inputs (Title & Content) */}
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <TextInput
-              style={[styles.locationInput, { color: theme.colors.textPrimary, flex: 1 }]}
+              style={[styles.titleInput, { color: theme.colors.textPrimary }]}
+              placeholder="Title"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={100}
+              editable={!isSubmitting}
+            />
+            <View style={[styles.cardDivider, { backgroundColor: theme.colors.border }]} />
+            <TextInput
+              style={[styles.contentTextArea, { color: theme.colors.textPrimary }]}
+              placeholder="Share an announcement with the village..."
+              placeholderTextColor={theme.colors.textTertiary}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              maxLength={500}
+              editable={!isSubmitting}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Card 2: Location Row Card */}
+          <View style={[styles.card, styles.rowCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <MapPin size={18} color={theme.colors.primary} />
+            <TextInput
+              style={[styles.locationInput, { color: theme.colors.textPrimary }]}
               placeholder="Add Location (Optional)"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={theme.colors.textTertiary}
               value={location}
               onChangeText={setLocation}
               maxLength={100}
               editable={!isSubmitting}
             />
+            {location.length > 0 && (
+              <TouchableOpacity onPress={() => setLocation('')} disabled={isSubmitting} style={styles.clearBtn}>
+                <X size={16} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Image Selection Area */}
-          <View style={styles.imageSection}>
+          {/* Card 3: Image Picker / Preview Card */}
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 12 }]}>
             {selectedImage ? (
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
                 <TouchableOpacity
-                  style={[styles.removeImageBadge, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}
+                  style={[styles.removeImageBadge, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}
                   onPress={handleRemoveImage}
                   disabled={isSubmitting}
                 >
-                  <X size={18} color="#FFFFFF" />
+                  <X size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
                 onPress={handlePickImage}
                 disabled={isSubmitting}
-                style={[styles.dashedUploadButton, { borderColor: '#E4E2DC' }]}
+                style={[styles.dashedUploadButton, { borderColor: theme.colors.borderStrong }]}
               >
-                <ImageIcon size={24} color="#1F4A2E" />
+                <ImageIcon size={22} color={theme.colors.primary} />
                 <Text style={[styles.uploadButtonText, { color: theme.colors.textSecondary }]}>
                   Add Photo (Optional)
                 </Text>
@@ -288,8 +312,8 @@ export default function CreateAnnouncementScreen() {
             )}
           </View>
 
-          {/* Category Selector Section */}
-          <View style={styles.categorySection}>
+          {/* Card 4: Category Selection Card */}
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <Text style={[styles.sectionHeading, { color: theme.colors.textSecondary }]}>
               Category
             </Text>
@@ -297,24 +321,25 @@ export default function CreateAnnouncementScreen() {
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
                 const label = getCategoryLabel(cat);
+                const IconComponent = CATEGORY_ICONS[cat];
 
-                // Category pill styles for selected state
-                let catStyles = { bg: '#FFFFFF', text: '#666666', border: '#E4E2DC' };
-                if (isSelected) {
-                  switch (cat) {
-                    case 'general':
-                      catStyles = { bg: '#1F4A2E', text: '#EAF3DE', border: '#1F4A2E' };
-                      break;
-                    case 'urgent':
-                      catStyles = { bg: '#FCEBEB', text: '#791F1F', border: '#FCEBEB' };
-                      break;
-                    case 'event':
-                      catStyles = { bg: '#E1F5EE', text: '#04342C', border: '#E1F5EE' };
-                      break;
-                    case 'jirga_decision':
-                      catStyles = { bg: '#EAF3DE', text: '#27500A', border: '#EAF3DE' };
-                      break;
-                  }
+                // Category pill styles for selected state from brand & theme
+                let activeBg = theme.colors.primaryLight;
+                let activeText = theme.colors.primaryTint;
+                let activeBorder = theme.colors.primary;
+
+                if (cat === 'urgent') {
+                  activeBg = theme.colors.dangerLight;
+                  activeText = theme.colors.dangerText;
+                  activeBorder = theme.colors.danger;
+                } else if (cat === 'event') {
+                  activeBg = theme.colors.infoLight;
+                  activeText = theme.colors.infoText;
+                  activeBorder = theme.colors.info;
+                } else if (cat === 'jirga_decision') {
+                  activeBg = theme.colors.warningLight;
+                  activeText = theme.colors.warningText;
+                  activeBorder = theme.colors.warning;
                 }
 
                 return (
@@ -324,13 +349,29 @@ export default function CreateAnnouncementScreen() {
                     disabled={isSubmitting}
                     style={[
                       styles.categoryChip,
-                      {
-                        backgroundColor: catStyles.bg,
-                        borderColor: catStyles.border,
-                      },
+                      isSelected
+                        ? {
+                            backgroundColor: activeBg,
+                            borderColor: activeBorder,
+                          }
+                        : {
+                            backgroundColor: theme.colors.surface,
+                            borderColor: theme.colors.border,
+                          },
                     ]}
                   >
-                    <Text style={[styles.chipText, { color: catStyles.text }]}>{label}</Text>
+                    <IconComponent
+                      size={15}
+                      color={isSelected ? activeText : theme.colors.textTertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: isSelected ? activeText : theme.colors.textSecondary },
+                      ]}
+                    >
+                      {label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -365,7 +406,7 @@ export default function CreateAnnouncementScreen() {
                 <Camera size={22} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.charCounter, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.charCounter, { color: getCharCounterColor() }]}>
               {content.length}/500
             </Text>
           </View>
@@ -390,29 +431,52 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 0.5,
   },
+  headerCancelBtn: {
+    paddingVertical: 6,
+    paddingRight: 12,
+  },
   headerLink: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  postButtonContainer: {
-    paddingHorizontal: 8,
+  postButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: 20,
+    minWidth: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerPostText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  disabledPostText: {
-    opacity: 0.4,
+  postButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   body: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
+    gap: 16,
+  },
+  card: {
+    borderRadius: 12,
+    borderWidth: 0.5,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+  },
+  cardDivider: {
+    height: 0.5,
+    marginVertical: 4,
   },
   accessDeniedContainer: {
     flex: 1,
@@ -420,76 +484,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
+  deniedIcon: {
+    marginBottom: 16,
+  },
   deniedTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   deniedSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
+    lineHeight: 20,
+    marginBottom: 28,
   },
   backButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 24,
   },
   backButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 14,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   authorDetails: {
-    marginLeft: 12,
+    marginLeft: 10,
     justifyContent: 'center',
   },
   authorName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
   },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+  authorSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   titleInput: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    paddingVertical: 12,
-    borderBottomWidth: 0,
-    marginBottom: 12,
+    paddingVertical: 8,
   },
   contentTextArea: {
     fontSize: 15,
     lineHeight: 22,
-    minHeight: 150,
+    minHeight: 140,
     paddingVertical: 8,
-    borderBottomWidth: 0,
   },
-  imageSection: {
-    marginVertical: 20,
+  locationInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 4,
+  },
+  clearBtn: {
+    padding: 4,
   },
   dashedUploadButton: {
-    height: 120,
-    borderRadius: 12,
+    height: 100,
+    borderRadius: 10,
     borderWidth: 1,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: 8,
   },
   uploadButtonText: {
@@ -498,13 +561,8 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     position: 'relative',
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
   imagePreview: {
     width: '100%',
@@ -521,15 +579,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  categorySection: {
-    marginTop: 12,
-    marginBottom: 30,
-  },
   sectionHeading: {
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 12,
-    marginLeft: 2,
   },
   chipRow: {
     flexDirection: 'row',
@@ -537,13 +590,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryChip: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 0.5,
+    borderWidth: 1,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   footerToolbar: {
@@ -552,7 +608,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderTopWidth: 0.5,
   },
   toolbarIcons: {
     flexDirection: 'row',
@@ -563,19 +618,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   charCounter: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
-  },
-  locationSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderBottomWidth: 0.5,
-    paddingVertical: 10,
-    marginBottom: 12,
-  },
-  locationInput: {
-    fontSize: 15,
-    paddingVertical: 4,
   },
 });

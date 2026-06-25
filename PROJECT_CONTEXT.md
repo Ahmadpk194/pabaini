@@ -173,6 +173,7 @@ pabaini-backend/
 │   ├── modules/               # Domain feature modules
 │   │   ├── announcements/     # Village board notices, image uploads, toggle likes
 │   │   ├── auth/              # Firebase ID token verify logins
+│   │   ├── comments/          # Polymorphic comments table and engine
 │   │   ├── notifications/     # In-app notifications feed, unread metrics
 │   │   ├── sports/            # Sports container
 │   │   │   └── cricket/       # Cricket sub-scope
@@ -599,6 +600,21 @@ pabaini-mobile/
 *   **Key Logic**:
     *   **Atomic Like Toggles**: Uses TypeORM transaction managers to execute checking and inserting/deleting likes atomically. If duplicate likes are caught, it throws an error.
     *   **Push Notification Triggers**: When creating an announcement with category `urgent` or `jirga_decision`, it automatically queries all users with active device tokens and sends a multicast notification.
+
+### Comments Module
+*   **Purpose**: Polymorphic comments engine for notice board discussion and future entities (e.g. matches, teams).
+*   **Folder Structure**:
+    ```
+    comments/
+    ├── entities/                 # Comment entity mapping parent/replies
+    ├── comments.module.ts        # registers TypeORM features and services
+    └── comments.service.ts       # core create/edit/delete logic
+    ```
+*   **Key Logic**:
+    *   **Response Formatter**: Strips user private data (email, phone, etc.) and formats results to camelCase. Renames `user` relation to `author`.
+    *   **Permission Flags**: Automates `isOwner`, `canEdit`, and `canDelete` flags dynamically based on the current user.
+    *   **Counter Updates**: Atomic `comments_count` increments on comment creation, decrements on soft-deletion, clamped to a minimum of 0 under database transactions.
+    *   **Optimistic Creation (Mobile Client)**: React Query client intercepts creates, inserts the comment locally immediately with `isPending=true` and opacity `0.6` for snappy UX, replacing it with the server response on success, or rolling back on failure.
 
 ### Sports Module
 *   **Purpose**: Handles player registrations, teams, invitations, and statistics.

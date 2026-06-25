@@ -1,6 +1,6 @@
-# Pabaini Mobile - Push Notifications Documentation
+# Pabaini Mobile - Frontend Features & Engineering Documentation
 
-This document describes the design and flow of the push notifications system, tracking both the current device token registration and the planned future implementation details.
+This document describes the design, implementation, and engineering flows of major frontend features in the Pabaini mobile application, including push notifications and comments.
 
 ---
 
@@ -67,3 +67,38 @@ Device token registration manages how the unique Firebase Cloud Messaging (FCM) 
 - **Category Restrictions**: Send notifications **only** for `urgent` and `jirga_decision` categories. General and event notices should not trigger push notifications to prevent spamming residents.
 - **Database Cleanup**: When the backend calls FCM, if FCM responds with an invalid/expired token error (e.g. `messaging/registration-token-not-registered`), the backend service must catch this error and automatically delete the stale token from the database.
 - **Batching**: Use batching APIs or multicast messages if target tokens scale beyond standard limits, minimizing connection overhead on the server.
+
+---
+
+## 💬 Comments V1 Feature Integration (Already Implemented)
+
+The Comments V1 feature provides community discussion and feedback on announcements. Comments are polymorphic and designed to easily adapt to matches, teams, and players in future phases.
+
+### Approach Choice: React Query Optimistic Updates
+
+We choose **React Query (`useQuery` and `useMutation`)** cache manipulation for handling comment states, rather than custom Zustand or local React state array trackers. 
+
+#### Full Flow Lifecycle:
+1. **Fetch & Render**: On screen load, `getComments` fetches the first page of comments. If empty, the user is presented with a prompt: *"No comments yet. Be the first to comment."*. Pull-to-refresh invalidates detail queries.
+2. **Optimistic Creation**:
+   - The user inputs text and taps Send.
+   - The app immediately cancels active comments refetches using `queryClient.cancelQueries`.
+   - It captures a snapshot of the current comments cache (`queryClient.getQueryData`).
+   - It instantiates a mock `Comment` payload containing a temporary timestamp-derived ID and `isPending: true`.
+   - The comments cache is updated directly, rendering the comment immediately with **lower opacity (0.6)** and **no Edit/Delete triggers** (gated by `!comment.isPending`).
+   - The request runs in the background. On success, it replaces the temporary comment with the server response. On error, it rolls back to the snapshotted cache and raises an alert.
+3. **Inline Edit**:
+   - Authorized users see an "Edit" button next to their comment's timestamp.
+   - Tapping it loads the text back into the text input, focus is requested, and a custom header displays "Editing comment" with a "Cancel" button.
+   - Tapping send fires the `PATCH` API and resets input states on success.
+4. **Soft Delete**:
+   - The user taps "Delete". A native confirmation dialog `Alert.alert` is displayed.
+   - If confirmed, the API runs, the item is removed from the local lists, and count badges update.
+
+#### Pros and Cons:
+
+| **Pros** | **Cons** |
+|---|---|
+| **Zero Latency**: UI updates immediately after sending, providing a snappy experience. | **Mock Overhead**: Requires generating dummy date/ID objects in the client logic. |
+| **Robust Error Recovery**: Handles automatic rollbacks, eliminating stale loading states. | **Code Complexity**: Demands strict handler synchronization during cache overrides. |
+| **Atomic Cache Sync**: Keeps notice feed stats and details page comments counts synced. | |

@@ -627,6 +627,7 @@
       <a href="#create"><span class="nav-icon">📝</span> Create Post</a>
       <a href="#share"><span class="nav-icon">📤</span> Share Sheet</a>
       <a href="#profile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="#comments"><span class="nav-icon">💬</span> Comments</a>
       <a href="#guest-gating"><span class="nav-icon">🔐</span> Guest Gating</a>
       <a href="#global-search"><span class="nav-icon">🔍</span> Global Search</a>
     </nav>
@@ -661,8 +662,8 @@
       <h1>Pabaini Mobile<br>Feature Documentation</h1>
       <p>Comprehensive overview of all implemented features, user flows, and architecture decisions for the Pabaini village community app.</p>
       <div class="stats-row">
-        <div class="stat-pill"><span class="stat-num">11</span><span class="stat-label">Features</span></div>
-        <div class="stat-pill"><span class="stat-num">38</span><span class="stat-label">API Endpoints</span></div>
+        <div class="stat-pill"><span class="stat-num">12</span><span class="stat-label">Features</span></div>
+        <div class="stat-pill"><span class="stat-num">42</span><span class="stat-label">API Endpoints</span></div>
         <div class="stat-pill"><span class="stat-num">5</span><span class="stat-label">Screens (Phase 2)</span></div>
         <div class="stat-pill"><span class="stat-num">14</span><span class="stat-label">Team APIs</span></div>
       </div>
@@ -863,10 +864,50 @@
       </div>
     </section>
 
-    <!-- ─── 7. Profile ────────────────────────────────────────────────────── -->
-    <section class="section" id="profile">
+    <!-- ─── 7. Comments ───────────────────────────────────────────────────── -->
+    <section class="section" id="comments">
       <div class="section-header">
         <div class="section-number">7</div>
+        <h2>Announcement Comments Integration</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">💬</span>
+        <div><strong>Objective:</strong> Enable community discussion, feedback, and interactive moderation of announcements. File: <code>app/announcement/[id].tsx</code></div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔄</span> Paginated Listing &amp; Refetching</h3>
+        <ul>
+          <li>Fetches and renders announcement comments oldest first.</li>
+          <li>Includes pull-to-refresh (<code>RefreshControl</code>) to invalidate caches and fetch the latest entries.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⚡</span> Optimistic Creation Flow</h3>
+        <ul>
+          <li>Inserts comments into UI immediately with a temporary ID and <code>isPending=true</code> (lower opacity, locked actions).</li>
+          <li>Swaps temporary comments with server response on success; rolls back cache on error and triggers alert toast message.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">✏️</span> Inline Editing &amp; Soft Deletion</h3>
+        <ul>
+          <li><strong>Edit:</strong> Gated by <code>canEdit</code>. Clicking "Edit" populates the input bar and displays a cancel indicator panel.</li>
+          <li><strong>Delete:</strong> Gated by <code>canDelete</code>. Renders a native confirmation pop-up before calling DELETE, removing comment from layout and updating badges.</li>
+        </ul>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ─── 8. Profile ────────────────────────────────────────────────────── -->
+    <section class="section" id="profile">
+      <div class="section-header">
+        <div class="section-number">8</div>
         <h2>Member Profile Screen</h2>
         <span class="section-tag tag-done">✓ Implemented</span>
       </div>
@@ -883,10 +924,10 @@
 
     <hr>
 
-    <!-- ─── 8. Sports Phase 1 ─────────────────────────────────────────────── -->
+    <!-- ─── 9. Sports Phase 1 ─────────────────────────────────────────────── -->
     <section class="section" id="sports-p1">
       <div class="section-header">
-        <div class="section-number">8</div>
+        <div class="section-number">9</div>
         <h2>Sports Hub — Phase 1: Cricket Player Profiles</h2>
         <span class="section-tag tag-done">✓ Implemented</span>
       </div>
@@ -1434,10 +1475,10 @@ interface MyTeamResponse {  // returned by GET /my
 
     <hr>
 
-    <!-- ─── 8B. Sports Phases 3 & 4: Matches & Scoring ────────────────────── -->
+    <!-- ─── 9B. Sports Phases 3 & 4: Matches & Scoring ────────────────────── -->
     <section class="section" id="sports-matches">
       <div class="section-header">
-        <div class="section-number">8B</div>
+        <div class="section-number">9B</div>
         <h2>Sports Hub — Phases 3 &amp; 4: Cricket Matches &amp; Scoring</h2>
         <span class="section-tag tag-done">✓ Implemented</span>
       </div>
@@ -1526,10 +1567,10 @@ interface MyTeamResponse {  // returned by GET /my
 
     <hr>
 
-    <!-- ─── 9. Donors ─────────────────────────────────────────────────────── -->
+    <!-- ─── 10. Donors ─────────────────────────────────────────────────────── -->
     <section class="section" id="donors">
       <div class="section-header">
-        <div class="section-number">9</div>
+        <div class="section-number">10</div>
         <h2>Donors Directory</h2>
         <span class="section-tag tag-partial">Partial</span>
       </div>
@@ -1543,10 +1584,10 @@ interface MyTeamResponse {  // returned by GET /my
       </div>
     </section>
 
-    <!-- ─── 10. Push Notifications ────────────────────────────────────────── -->
+    <!-- ─── 11. Push Notifications ────────────────────────────────────────── -->
     <section class="section" id="notifications">
       <div class="section-header">
-        <div class="section-number">10</div>
+        <div class="section-number">11</div>
         <h2>Push Notifications (FCM)</h2>
         <span class="section-tag tag-partial">Token Active</span>
       </div>
@@ -1580,10 +1621,10 @@ interface MyTeamResponse {  // returned by GET /my
       </div>
     </section>
 
-    <!-- ─── 11. In-App Notifications ──────────────────────────────────────── -->
+    <!-- ─── 12. In-App Notifications ──────────────────────────────────────── -->
     <section class="section" id="inapp-notifications">
       <div class="section-header">
-        <div class="section-number">11</div>
+        <div class="section-number">12</div>
         <h2>In-App Notifications</h2>
         <span class="section-tag tag-done">✓ Implemented</span>
       </div>

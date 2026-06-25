@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Animated, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Animated, Share, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, Heart, MessageCircle, Eye, MapPin, Send, Pin } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { getById } from '../../src/api/announcements';
-import { Announcement } from '../../src/types';
+import { Announcement, Comment } from '../../src/types';
 import { Badge } from '../../src/components/ui/Badge';
 import { getCategoryConfig } from '../../src/constants/categories';
 import { AnnouncementDetailSkeleton } from '../../src/components/skeletons';
@@ -16,6 +16,7 @@ import { Avatar } from '../../src/components/ui/Avatar';
 import { useLikeMutation } from '../../src/hooks/useLikeMutation';
 import { queryKeys } from '../../src/constants/queryKeys';
 import { useAuthPromptStore } from '../../src/store/authPromptStore';
+import { getComments, createComment, updateComment, deleteComment, CommentsListResponse } from '../../src/api/comments';
 
 export default function AnnouncementDetailScreen() {
   const { theme } = useTheme();
@@ -25,12 +26,229 @@ export default function AnnouncementDetailScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState('');
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const likeMutation = useLikeMutation();
   const commentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Fetch comments
+  const { data: commentsResponse, isLoading: isCommentsLoading } = useQuery({
+    queryKey: queryKeys.comments.list(Number(id)),
+    queryFn: () => getComments(Number(id)),
+    enabled: !!id,
+  });
 
-  
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.announcements.detail(Number(id)) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.list(Number(id)) }),
+    ]);
+    setRefreshing(false);
+  };
+
+  const createCommentMutation = useMutation({
+    mutationFn: (body: string) => createComment(Number(id), body),
+    onMutate: async (newCommentBody) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: queryKeys.comments.list(Number(id)) });
+
+      // Snapshot the previous value
+      const previousComments = queryClient.getQueryData<CommentsListResponse>(
+        queryKeys.comments.list(Number(id))
+      );
+
+      // Create optimistic comment
+      const tempId = Date.now();
+      const optimisticComment: Comment = {
+        commentId: tempId,
+        entityType: 'announcement',
+        entityId: Number(id),
+        parentId: null,
+        body: newCommentBody,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        author: {
+          id: user?.id || 0,
+          name: user?.name || 'Me',
+          avatarUrl: user?.avatar_url || null,
+          role: user?.role || 'resident',
+        },
+        isOwner: true,
+        canEdit: true,
+        canDelete: true,
+        isPending: true,
+      };
+
+      // Optimistically update to the new value
+      if (previousComments) {
+        queryClient.setQueryData<CommentsListResponse>(
+          queryKeys.comments.list(Number(id)),
+          {
+            ...previousComments,
+            comments: [...previousComments.comments, optimisticComment],
+            total: previousComments.total + 1,
+          }
+        );
+      } else {
+        queryClient.setQueryData<CommentsListResponse>(
+          queryKeys.comments.list(Number(id)),
+          {
+            comments: [optimisticComment],
+            total: 1,
+            hasMore: false,
+          }
+        );
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousComments, tempId };
+    },
+    onError: (error: any, newCommentBody, context) => {
+      // Rollback to the previous value
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          queryKeys.comments.list(Number(id)),
+          context.previousComments
+        );
+      }
+      Alert.alert('Error', error.response?.data?.message || 'Failed to post comment. Please try again.');
+    },
+    onSuccess: (savedComment, newCommentBody, context) => {
+      // Clear input
+      setCommentText('');
+
+      // Replace the temporary comment with the server response
+      const currentComments = queryClient.getQueryData<CommentsListResponse>(
+        queryKeys.comments.list(Number(id))
+      );
+      if (currentComments && context?.tempId) {
+        const updatedList = currentComments.comments.map((comment) =>
+          comment.commentId === context.tempId ? savedComment : comment
+        );
+        queryClient.setQueryData<CommentsListResponse>(
+          queryKeys.comments.list(Number(id)),
+          {
+            ...currentComments,
+            comments: updatedList,
+          }
+        );
+      }
+      // Also invalidate comments count stats on parent announcement
+      queryClient.invalidateQueries({ queryKey: queryKeys.announcements.detail(Number(id)) });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to keep server sync
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.list(Number(id)) });
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: ({ commentId, body }: { commentId: number; body: string }) =>
+      updateComment(Number(id), commentId, body),
+    onSuccess: () => {
+      setEditingComment(null);
+      setCommentText('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.list(Number(id)) });
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update comment. Please try again.');
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: number) => deleteComment(Number(id), commentId),
+    onMutate: async (deletedCommentId) => {
+      // Cancel outgoing comments list refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.comments.list(Number(id)) });
+
+      // Snapshot the current cache
+      const previousComments = queryClient.getQueryData<CommentsListResponse>(
+        queryKeys.comments.list(Number(id))
+      );
+
+      // Optimistically update: filter out the deleted comment
+      if (previousComments) {
+        queryClient.setQueryData<CommentsListResponse>(
+          queryKeys.comments.list(Number(id)),
+          {
+            ...previousComments,
+            comments: previousComments.comments.filter((c) => c.commentId !== deletedCommentId),
+            total: Math.max(0, previousComments.total - 1),
+          }
+        );
+      }
+
+      // Return context containing previous comments
+      return { previousComments };
+    },
+    onError: (error: any, deletedCommentId, context) => {
+      // Rollback to the snapshotted cache
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          queryKeys.comments.list(Number(id)),
+          context.previousComments
+        );
+      }
+      Alert.alert('Error', error.response?.data?.message || 'Failed to delete comment. Please try again.');
+    },
+    onSuccess: () => {
+      // Invalidate announcements count stats on parent announcement
+      queryClient.invalidateQueries({ queryKey: queryKeys.announcements.detail(Number(id)) });
+    },
+    onSettled: () => {
+      // Keep in sync with backend
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.list(Number(id)) });
+    },
+  });
+
+  const handleSend = () => {
+    if (isGuest) {
+      useAuthPromptStore.getState().showPrompt({
+        title: 'Log In to Comment',
+        description: 'Please sign in to comment on announcements and interact with the community.',
+      });
+      return;
+    }
+
+    const trimmed = commentText.trim();
+    if (!trimmed) return;
+
+    if (editingComment) {
+      updateCommentMutation.mutate({ commentId: editingComment.commentId, body: trimmed });
+    } else {
+      createCommentMutation.mutate(trimmed);
+    }
+  };
+
+  const handleDeleteComment = (commentId: number) => {
+    Alert.alert(
+      'Delete Comment',
+      'Are you sure you want to delete this comment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteCommentMutation.mutate(commentId)
+        }
+      ]
+    );
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingComment(comment);
+    setCommentText(comment.body);
+    commentInputRef.current?.focus();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingComment(null);
+    setCommentText('');
+  };
+
   // Animation for heart icon
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -122,12 +340,6 @@ export default function AnnouncementDetailScreen() {
   const categoryConfig = getCategoryConfig(announcement.category);
   const timeAgo = getTimeAgo(announcement.created_at);
 
-  // Mock comments for design - TODO: Replace with actual comments API
-  const mockComments = [
-    { id: 1, author: 'Zaid Khan', text: 'Inshallah will be there. Very important', initials: 'ZK', timestamp: '2h ago' },
-    { id: 2, author: 'Ali Hassan', text: 'Thanks for the information', initials: 'AH', timestamp: '5h ago' },
-  ];
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
       <KeyboardAvoidingView 
@@ -149,6 +361,14 @@ export default function AnnouncementDetailScreen() {
           ref={scrollViewRef}
           style={styles.scrollView} 
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
         >
           {/* Full width image (16:9 aspect ratio) */}
           {announcement.image_url && (
@@ -222,11 +442,11 @@ export default function AnnouncementDetailScreen() {
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                   <Heart 
                     size={18} 
-                    fill={announcement.liked_by_me ? theme.colors.primary : 'none'}
-                    color={announcement.liked_by_me ? theme.colors.primary : theme.colors.textSecondary}
+                    fill={announcement.liked_by_me ? theme.colors.danger : 'none'}
+                    color={announcement.liked_by_me ? theme.colors.danger : theme.colors.textSecondary}
                   />
                 </Animated.View>
-                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.statText, { color: announcement.liked_by_me ? theme.colors.danger : theme.colors.textSecondary }]}>
                   {announcement.likes_count} likes
                 </Text>
               </TouchableOpacity>
@@ -234,7 +454,7 @@ export default function AnnouncementDetailScreen() {
               <TouchableOpacity onPress={() => commentInputRef.current?.focus()} style={styles.statItem}>
                 <MessageCircle size={18} color={theme.colors.textSecondary} />
                 <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
-                  {mockComments.length} comments
+                  {(commentsResponse?.total ?? announcement.comments_count ?? 0)} comments
                 </Text>
               </TouchableOpacity>
 
@@ -249,36 +469,63 @@ export default function AnnouncementDetailScreen() {
             {/* Comments section */}
             <View style={styles.commentsSection}>
               <Text style={[styles.commentsTitle, { color: theme.colors.textPrimary }]}>
-                Comments ({mockComments.length})
+                Comments ({(commentsResponse?.total ?? announcement.comments_count ?? 0)})
               </Text>
 
-              {mockComments.map((comment) => (
-                <View key={comment.id} style={styles.commentItem}>
-                  <View style={[styles.commentAvatar, { backgroundColor: theme.colors.primary }]}>
-                    <Text style={styles.commentAvatarInitials}>{comment.initials}</Text>
-                  </View>
-                  <View style={styles.commentBubbleContainer}>
-                    <View style={[styles.commentBubble, { backgroundColor: theme.colors.surface }]}>
-                      <Text style={[styles.commentAuthor, { color: theme.colors.textPrimary }]}>
-                        {comment.author}
-                      </Text>
-                      <Text style={[styles.commentText, { color: theme.colors.textSecondary }]}>
-                        {comment.text}
-                      </Text>
-                    </View>
-                    <Text style={[styles.commentTimestamp, { color: theme.colors.textSecondary }]}>
-                      {comment.timestamp}
-                    </Text>
-                  </View>
+              {isCommentsLoading ? (
+                <View style={styles.commentsLoadingContainer}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
                 </View>
-              ))}
-
-              {mockComments.length > 2 && (
-                <TouchableOpacity style={styles.viewAllButton}>
-                  <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
-                    View all {mockComments.length} comments
+              ) : !commentsResponse?.comments || commentsResponse.comments.length === 0 ? (
+                <View style={styles.emptyCommentsContainer}>
+                  <Text style={[styles.emptyCommentsText, { color: theme.colors.textSecondary }]}>
+                    No comments yet. Be the first to comment.
                   </Text>
-                </TouchableOpacity>
+                </View>
+              ) : (
+                commentsResponse.comments.map((comment) => (
+                  <View key={comment.commentId} style={[styles.commentItem, { opacity: comment.isPending ? 0.6 : 1 }]}>
+                    {comment.author.avatarUrl ? (
+                      <Image source={{ uri: comment.author.avatarUrl }} style={styles.commentAvatar} />
+                    ) : (
+                      <View style={[styles.commentAvatar, { backgroundColor: theme.colors.primary }]}>
+                        <Text style={styles.commentAvatarInitials}>
+                          {getInitials(comment.author.name)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.commentBubbleContainer}>
+                      <View style={[styles.commentBubble, { backgroundColor: theme.colors.surface }]}>
+                        <Text style={[styles.commentAuthor, { color: theme.colors.textPrimary }]}>
+                          {comment.author.name}
+                        </Text>
+                        <Text style={[styles.commentText, { color: theme.colors.textSecondary }]}>
+                          {comment.body}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.commentMetaRow}>
+                        <Text style={[styles.commentTimestamp, { color: theme.colors.textSecondary }]}>
+                          {getTimeAgo(comment.createdAt)}
+                        </Text>
+                        {comment.canEdit && !comment.isPending && (
+                          <TouchableOpacity onPress={() => handleEditComment(comment)}>
+                            <Text style={[styles.commentActionText, { color: theme.colors.primary }]}>
+                              Edit
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        {comment.canDelete && !comment.isPending && (
+                          <TouchableOpacity onPress={() => handleDeleteComment(comment.commentId)}>
+                            <Text style={[styles.commentActionText, { color: theme.colors.danger }]}>
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))
               )}
             </View>
           </View>
@@ -286,11 +533,11 @@ export default function AnnouncementDetailScreen() {
 
         {/* Sticky Comment Input Bar */}
         <View style={[
-          styles.commentInputBar, 
+          styles.commentInputContainer, 
           { 
             backgroundColor: theme.colors.surface, 
             borderTopColor: theme.colors.border,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 12
+            borderTopWidth: 0.5,
           }
         ]}>
           {isGuest && (
@@ -305,31 +552,61 @@ export default function AnnouncementDetailScreen() {
               style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.4)', zIndex: 10 }]}
             />
           )}
-          {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.myAvatar} />
-          ) : (
-            <View style={[styles.myAvatar, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.myAvatarInitials}>{getInitials(user?.name || 'Guest')}</Text>
+
+          {editingComment && (
+            <View style={[styles.editingHeader, { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.editingText, { color: theme.colors.textSecondary }]}>
+                Editing comment
+              </Text>
+              <TouchableOpacity onPress={handleCancelEdit}>
+                <Text style={[styles.cancelText, { color: theme.colors.primary }]}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           )}
-          <View style={styles.inputContainer}>
-            <TextInput
-              ref={commentInputRef}
-              style={[styles.commentInput, { backgroundColor: theme.colors.background, color: theme.colors.textPrimary }]}
-              placeholder={isGuest ? "Login to comment" : "Add a comment..."}
-              placeholderTextColor={theme.colors.textSecondary}
-              value={commentText}
-              onChangeText={setCommentText}
-              multiline
-              editable={!isGuest}
-            />
+
+          <View style={[
+            styles.commentInputBar, 
+            { 
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 12
+            }
+          ]}>
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.myAvatar} />
+            ) : (
+              <View style={[styles.myAvatar, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.myAvatarInitials}>{getInitials(user?.name || 'Guest')}</Text>
+              </View>
+            )}
+            <View style={styles.inputContainer}>
+              <TextInput
+                ref={commentInputRef}
+                style={[styles.commentInput, { backgroundColor: theme.colors.background, color: theme.colors.textPrimary }]}
+                placeholder={isGuest ? "Login to comment" : editingComment ? "Edit comment..." : "Add a comment..."}
+                placeholderTextColor={theme.colors.textSecondary}
+                value={commentText}
+                onChangeText={setCommentText}
+                multiline
+                editable={!isGuest && !(createCommentMutation.isPending || updateCommentMutation.isPending)}
+              />
+            </View>
+            <TouchableOpacity 
+              style={[
+                styles.sendButton, 
+                { 
+                  backgroundColor: theme.colors.primary, 
+                  opacity: (isGuest || !commentText.trim() || createCommentMutation.isPending || updateCommentMutation.isPending) ? 0.5 : 1 
+                }
+              ]}
+              disabled={isGuest || !commentText.trim() || createCommentMutation.isPending || updateCommentMutation.isPending}
+              onPress={handleSend}
+            >
+              {(createCommentMutation.isPending || updateCommentMutation.isPending) ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Send size={18} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={[styles.sendButton, { backgroundColor: theme.colors.primary, opacity: isGuest ? 0.5 : 1 }]}
-            disabled={isGuest}
-          >
-            <Send size={18} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -534,12 +811,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  commentInputContainer: {
+    width: '100%',
+  },
   commentInputBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderTopWidth: 0.5,
+  },
+  commentMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  commentActionText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  editingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+  },
+  editingText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  cancelText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  commentsLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCommentsContainer: {
+    paddingVertical: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCommentsText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   myAvatar: {
     width: 30,

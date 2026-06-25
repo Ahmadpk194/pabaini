@@ -110,7 +110,18 @@ This document provides a comprehensive overview of all features implemented in t
 
 ---
 
-## 👤 7. Member Profile Screen (`app/(tabs)/profile.tsx`)
+## 💬 7. Announcement Comments Integration (`app/announcement/[id].tsx`)
+**Objective**: Enable community discussion, feedback, and interactive moderation of announcements.
+
+*   **Paginated Listing**: Fetches and renders announcement comments oldest first.
+*   **Loading & Empty States**: Displays an inline loading indicator while comments load. Shows a friendly placeholder (*"No comments yet. Be the first to comment."*) if there are no comments.
+*   **Optimistic Creation Flow**: Inserts new comments into the UI immediately with a temporary ID and 0.6 opacity (`isPending: true`), sending the API request in the background. On success, the local comment is replaced by the server response; on failure, the comment is removed and a native alert error message is shown.
+*   **Inline Edit Flow**: Authorized owners (where `canEdit` is true) can tap "Edit" next to the timestamp, which loads the text into the input field and displays an editing banner with a "Cancel" button.
+*   **Soft Deletion Flow**: Gated by `canDelete: true`. Displays a confirmation prompt before calling the deletion API, immediately removing the comment from the screen and decrementing parent announcement badges.
+
+---
+
+## 👤 8. Member Profile Screen (`app/(tabs)/profile.tsx`)
 **Objective**: View account status, check roles, update details, and log out.
 
 *   **Details Rendered**: Displays name, contact details (phone/email), role badge (`resident`, `moderator`, `admin`), village, and diaspora tags.
@@ -119,7 +130,7 @@ This document provides a comprehensive overview of all features implemented in t
 
 ---
 
-## 🏏 8. Sports Hub: Cricket Player Onboarding & Feed (Phase 1)
+## 🏏 9. Sports Hub: Cricket Player Onboarding & Feed (Phase 1)
 **Objective**: Build a premium sports community starting with Cricket Player Profiles, featuring a multi-step onboarding registration wizard, personal player cards, and a paginated list of all community players.
 
 ### 🌟 Phase 1: Cricket Player Profiles & Onboarding (Implemented)
