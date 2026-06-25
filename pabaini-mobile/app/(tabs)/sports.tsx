@@ -260,17 +260,8 @@ export default function SportsScreen() {
     markOptInSeen('cricket');
   };
 
-  // Render loading indicator while profile details are being synchronized from backend
-  if (loadingProfile) {
-    return (
-      <View style={[styles.container, styles.loaderContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
-
   // 1. Render Opt-in Overlay Screen
-  if (!seenOptIn && !isRegistered && !isGuest) {
+  if (!loadingProfile && !seenOptIn && !isRegistered && !isGuest) {
     return (
       <SportsOptIn
         onRegisterCricket={handleRegisterPress}
@@ -323,10 +314,10 @@ export default function SportsScreen() {
     return (
       <View style={styles.feedHeader}>
         {/* Banner prompting user to complete profile if they skipped */}
-        {!isRegistered && <SetupBanner onPress={handleRegisterPress} />}
+        {!loadingProfile && !isRegistered && <SetupBanner onPress={handleRegisterPress} />}
 
         {/* User's Premium Player Card at the top */}
-        {isRegistered && myProfile && (
+        {!loadingProfile && isRegistered && myProfile && (
           <View style={styles.myProfileSection}>
             <View style={styles.sectionHeader}>
               <Award color={theme.colors.primary} size={20} />
@@ -369,7 +360,7 @@ export default function SportsScreen() {
 
   // Empty state when no players are registered
   const renderListEmpty = () => {
-    if (loading) {
+    if (loading || loadingProfile) {
       return (
         <View style={{ gap: 10, marginTop: 10 }}>
           <PlayerCardSkeleton />
@@ -623,21 +614,21 @@ export default function SportsScreen() {
                 }
               >
                 {/* Banner/Setup prompting player registration */}
-                {!isRegistered && (
+                {!loadingProfile && !isRegistered && (
                   <View style={{ marginTop: 8 }}>
                     <SetupBanner onPress={handleRegisterPress} />
                   </View>
                 )}
 
                 {/* My Teams Section (only if registered) */}
-                {isRegistered && (
+                {(isRegistered || loadingProfile) && (
                   <View style={styles.myTeamsSection}>
                     <View style={styles.sectionHeader}>
                       <Users color={theme.colors.primary} size={20} />
                       <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Teams</Text>
                     </View>
 
-                    {loadingTeams && myTeams.length === 0 ? (
+                    {(loadingTeams || loadingProfile) && myTeams.length === 0 ? (
                       <View style={{ gap: 10 }}>
                         <TeamCardSkeleton />
                         <TeamCardSkeleton />
@@ -785,7 +776,7 @@ export default function SportsScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {loadingTeams && allTeams.length === 0 ? (
+                  {(loadingTeams || loadingProfile) && allTeams.length === 0 ? (
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -881,13 +872,13 @@ export default function SportsScreen() {
                   }
                 >
                   {/* Banner prompting user to complete profile */}
-                  {!isRegistered && (
+                  {!loadingProfile && !isRegistered && (
                     <View style={{ marginTop: 8 }}>
                       <SetupBanner onPress={handleRegisterPress} />
                     </View>
                   )}
 
-                  {isLoadingMatches && matches.length === 0 ? (
+                  {(isLoadingMatches || loadingProfile) && matches.length === 0 ? (
                     <View style={styles.loaderContainer}>
                       <ActivityIndicator size="large" color={theme.colors.primary} />
                     </View>

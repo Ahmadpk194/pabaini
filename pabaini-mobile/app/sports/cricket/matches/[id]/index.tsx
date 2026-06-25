@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, Trophy, Shield, Clock, Award, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
+import { safeRouterPush } from '../../../../../src/navigation/safeNavigation';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import {
   useMatchDetail,
@@ -102,7 +103,7 @@ export default function MatchDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -111,22 +112,24 @@ export default function MatchDetailScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.textPrimary, flex: 1, textAlign: 'center' }]}>Match Details</Text>
           <View style={{ width: 36 }} />
         </View>
-        <MatchDetailSkeleton />
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <MatchDetailSkeleton />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (error || !match) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.headerBar}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft color={theme.colors.textPrimary} size={24} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Match Details</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary, flex: 1, textAlign: 'center' }]}>Match Details</Text>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { flex: 1, backgroundColor: theme.colors.background }]}>
           <Text style={{ color: theme.colors.textSecondary, marginBottom: 12 }}>
             Failed to load match details.
           </Text>
@@ -215,7 +218,7 @@ export default function MatchDetailScreen() {
   };
 
   const handleEdit = () => {
-    router.push(`/sports/cricket/matches/request?matchId=${match.id}`);
+    safeRouterPush(router, `/sports/cricket/matches/request?matchId=${match.id}`);
   };
 
   // Rendering Action Buttons based on status & role
@@ -298,7 +301,7 @@ export default function MatchDetailScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-                  onPress={() => router.push(`/sports/cricket/matches/${match.id}/start`)}
+                  onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/start`)}
                 >
                   <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Start Match</Text>
                 </TouchableOpacity>
@@ -335,7 +338,7 @@ export default function MatchDetailScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-                  onPress={() => router.push(`/sports/cricket/matches/${match.id}/result`)}
+                  onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/result`)}
                 >
                   <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Submit Result</Text>
                 </TouchableOpacity>
@@ -376,14 +379,14 @@ export default function MatchDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.halfBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-              onPress={() => router.push(`/sports/cricket/matches/${match.id}/score`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/score`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Continue Scoring</Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.halfBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary, borderWidth: 1, borderRadius: theme.radius.sm }]}
-              onPress={() => router.push(`/sports/cricket/matches/${match.id}/live`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/live`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.primary }]}>Watch Live</Text>
             </TouchableOpacity>
@@ -395,7 +398,7 @@ export default function MatchDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-              onPress={() => router.push(`/sports/cricket/matches/${match.id}/live`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/live`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Watch Live</Text>
             </TouchableOpacity>
@@ -412,7 +415,7 @@ export default function MatchDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-              onPress={() => router.push(`/sports/cricket/matches/${match.id}/result`)}
+              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/result`)}
             >
               <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Edit Result</Text>
             </TouchableOpacity>
@@ -428,7 +431,7 @@ export default function MatchDetailScreen() {
   // The bottom edge is padded dynamically inside the ScrollView using insets.bottom
   // to ensure bottom action buttons clear the phone's navigation gesture bar.
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -442,7 +445,7 @@ export default function MatchDetailScreen() {
 
       {/* Scrollable content extending under the bottom safe area navigation bar */}
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 40 }
@@ -464,7 +467,11 @@ export default function MatchDetailScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.md }]}>
           <View style={styles.vsContainer}>
             {/* Team A */}
-            <View style={styles.teamBlock}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.teamBlock}
+              onPress={() => safeRouterPush(router, `/sports/cricket/teams/${match.team_a.id}`)}
+            >
               <View style={styles.logoWrapper}>
                 {match.team_a.logo_url ? (
                   <Image source={{ uri: match.team_a.logo_url }} style={styles.teamLogo} />
@@ -485,7 +492,7 @@ export default function MatchDetailScreen() {
                   {match.team_a_score}
                 </Text>
               ) : null}
-            </View>
+            </TouchableOpacity>
 
             {/* VS Divider */}
             <View style={styles.vsMiddle}>
@@ -493,7 +500,11 @@ export default function MatchDetailScreen() {
             </View>
 
             {/* Team B */}
-            <View style={styles.teamBlock}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.teamBlock}
+              onPress={() => safeRouterPush(router, `/sports/cricket/teams/${match.team_b.id}`)}
+            >
               <View style={styles.logoWrapper}>
                 {match.team_b.logo_url ? (
                   <Image source={{ uri: match.team_b.logo_url }} style={styles.teamLogo} />
@@ -514,7 +525,7 @@ export default function MatchDetailScreen() {
                   {match.team_b_score}
                 </Text>
               ) : null}
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -634,6 +645,21 @@ export default function MatchDetailScreen() {
                   <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Winner</Text>
                   <Text style={[styles.infoValue, { color: '#D4A700', fontWeight: '700' }]}>
                     {match.winner_team.name}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {match.status === 'completed' && match.result_submitted_at && (
+            <>
+              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+              <View style={styles.infoRow}>
+                <Clock size={18} color={theme.colors.primary} />
+                <View style={styles.infoTextContainer}>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Completed At</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.textPrimary }]}>
+                    {formatMatchDate(match.result_submitted_at)}
                   </Text>
                 </View>
               </View>
