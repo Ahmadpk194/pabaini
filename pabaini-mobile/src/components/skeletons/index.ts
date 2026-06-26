@@ -1,6 +1,7 @@
 export { default as AnnouncementCardSkeleton } from './notice/AnnouncementCardSkeleton';
 export { default as NoticeFeedSkeleton } from './notice/NoticeFeedSkeleton';
 export { default as AnnouncementDetailSkeleton } from './notice/AnnouncementDetailSkeleton';
+export { default as CommentSkeleton } from './notice/CommentSkeleton';
 export { default as ProfileSkeleton } from './profile/ProfileSkeleton';
 export { default as TournamentCardSkeleton } from './sports/TournamentCardSkeleton';
 export { default as PlayerCardSkeleton } from './sports/PlayerCardSkeleton';

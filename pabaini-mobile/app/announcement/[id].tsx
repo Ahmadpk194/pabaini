@@ -10,7 +10,7 @@ import { getById } from '../../src/api/announcements';
 import { Announcement, Comment } from '../../src/types';
 import { Badge } from '../../src/components/ui/Badge';
 import { getCategoryConfig } from '../../src/constants/categories';
-import { AnnouncementDetailSkeleton } from '../../src/components/skeletons';
+import { AnnouncementDetailSkeleton, CommentSkeleton } from '../../src/components/skeletons';
 import { ImageViewer } from '../../src/components/ui/ImageViewer';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useLikeMutation } from '../../src/hooks/useLikeMutation';
@@ -473,9 +473,7 @@ export default function AnnouncementDetailScreen() {
               </Text>
 
               {isCommentsLoading ? (
-                <View style={styles.commentsLoadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
-                </View>
+                <CommentSkeleton />
               ) : !commentsResponse?.comments || commentsResponse.comments.length === 0 ? (
                 <View style={styles.emptyCommentsContainer}>
                   <Text style={[styles.emptyCommentsText, { color: theme.colors.textSecondary }]}>

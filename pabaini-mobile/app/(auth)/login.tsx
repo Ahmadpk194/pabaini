@@ -11,6 +11,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ImageBackground,
+  Image,
   Dimensions,
   Platform,
   KeyboardAvoidingView,
@@ -23,7 +24,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { firebaseAuthService } from '../../src/api/firebaseAuth';
 import { GoogleIcon } from '../../src/components/ui/GoogleIcon';
-import { PabainiLogo } from '../../src/components/ui/PabainiLogo';
+const pabainiLogoImage = require('../../assets/images/pabaini_logo.png');
 import { getIdToken, FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -383,7 +384,11 @@ export default function LoginScreen() {
         {/* Centred logo mark + wordmark */}
         <View style={styles.heroContent}>
           <View style={styles.logoContainer}>
-            <PabainiLogo size={64} color="#FFFFFF" />
+            <Image
+              source={pabainiLogoImage}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.wordmark}>Pabaini</Text>
         </View>
@@ -500,8 +505,10 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   logoContainer: {
-    padding: 16,
+    width: 96,
+    height: 96,
     borderRadius: 24,
+    overflow: 'hidden',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
@@ -511,6 +518,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   heroContent: {
     alignItems: 'center',

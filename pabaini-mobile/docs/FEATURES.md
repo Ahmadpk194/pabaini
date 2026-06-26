@@ -119,6 +119,32 @@ This document provides a comprehensive overview of all features implemented in t
 *   **Inline Edit Flow**: Authorized owners (where `canEdit` is true) can tap "Edit" next to the timestamp, which loads the text into the input field and displays an editing banner with a "Cancel" button.
 *   **Soft Deletion Flow**: Gated by `canDelete: true`. Displays a confirmation prompt before calling the deletion API, immediately removing the comment from the screen and decrementing parent announcement badges.
 
+### 📊 Comments User Flows & Optimistic UI Lifecycle
+
+```mermaid
+graph TD
+    %% Creation Flow %%
+    subgraph Creation Flow
+    A[Tap Send Button] --> B[Optimistic Cache Update<br>isPending=true, Count+1]
+    B --> C[POST /announcements/:id/comments]
+    C --> D{API Success?}
+    D -- Yes --> E[Commit Comment<br>Set Real ID, opacity 1.0]
+    D -- No --> F[Rollback Cache<br>Remove comment, Count-1, Alert Error]
+    end
+
+    %% Deletion Flow %%
+    subgraph Deletion Flow
+    G[Tap Delete Link] --> H[Alert.alert Confirmation]
+    H --> I{Confirmed?}
+    I -- No --> J[Abort Deletion]
+    I -- Yes --> K[Optimistic Cache Update<br>Filter item out, Count-1]
+    K --> L[DELETE /comments/:id]
+    L --> M{API Success?}
+    M -- Yes --> N[Confirm Delete<br>Invalidate parent stats]
+    M -- No --> O[Rollback Cache<br>Restore item, Count+1, Alert Error]
+    end
+```
+
 ---
 
 ## 👤 8. Member Profile Screen (`app/(tabs)/profile.tsx`)

@@ -900,6 +900,133 @@
           <li><strong>Delete:</strong> Gated by <code>canDelete</code>. Renders a native confirmation pop-up before calling DELETE, removing comment from layout and updating badges.</li>
         </ul>
       </div>
+
+      <!-- Comments Feature Flowchart -->
+      <div class="flow-wrap">
+        <div class="flow-title">📊 User Flow — Comments Lifecycle &amp; Optimistic UI</div>
+        <svg class="flowchart-svg" viewBox="0 0 820 540" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#B0BDB8"/>
+            </marker>
+            <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#1A6B3C"/>
+            </marker>
+            <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#C85C5C"/>
+            </marker>
+          </defs>
+
+          <!-- ================= LEFT COLUMN: CREATION FLOW ================= -->
+          <!-- Start -->
+          <rect x="110" y="10" width="200" height="36" rx="18" class="fc-start"/>
+          <text x="210" y="28" class="fc-text-light">Tap Send Button (Create)</text>
+
+          <line x1="210" y1="46" x2="210" y2="76" class="fc-arrow"/>
+
+          <!-- Step 1: Optimistic UI -->
+          <rect x="90" y="76" width="240" height="44" rx="8" class="fc-proc"/>
+          <text x="210" y="92" class="fc-text-dark">Optimistic Cache Update</text>
+          <text x="210" y="106" class="fc-text-small">isPending=true (opacity 0.6), count +1</text>
+
+          <line x1="210" y1="120" x2="210" y2="152" class="fc-arrow"/>
+
+          <!-- Step 2: Post Call -->
+          <rect x="110" y="152" width="200" height="36" rx="8" class="fc-action"/>
+          <text x="210" y="170" class="fc-text-dark">POST /announcements/:id/comments</text>
+
+          <line x1="210" y1="188" x2="210" y2="218" class="fc-arrow"/>
+
+          <!-- Decision: Success? -->
+          <polygon points="210,218 300,248 210,278 120,248" class="fc-decide"/>
+          <text x="210" y="248" class="fc-text-dark">API Success?</text>
+
+          <!-- Yes Path (Left) -->
+          <path d="M 120 248 L 70 248 L 70 308" class="fc-arrow-yes"/>
+          <text x="85" y="238" class="fc-label">Yes</text>
+
+          <rect x="10" y="308" width="120" height="44" rx="8" class="fc-end"/>
+          <text x="70" y="324" class="fc-text-dark">Commit Comment</text>
+          <text x="70" y="338" class="fc-text-small">Real ID, opacity 1.0</text>
+
+          <!-- No Path (Right) -->
+          <path d="M 300 248 L 350 248 L 350 308" class="fc-arrow-no"/>
+          <text x="315" y="238" class="fc-label">No</text>
+
+          <rect x="290" y="308" width="120" height="44" rx="8" class="fc-proc"/>
+          <text x="350" y="324" class="fc-text-dark">Rollback Cache</text>
+          <text x="350" y="338" class="fc-text-small">Remove item &amp; Alert error</text>
+
+          <!-- Success/Failure to End -->
+          <path d="M 70 352 L 70 390 L 150 390" class="fc-arrow-yes"/>
+          <path d="M 350 352 L 350 390 L 270 390" class="fc-arrow-no"/>
+
+          <rect x="150" y="372" width="120" height="36" rx="18" class="fc-proc"/>
+          <text x="210" y="390" class="fc-text-dark">Cache Synced</text>
+
+
+          <!-- ================= RIGHT COLUMN: DELETION FLOW ================= -->
+          <!-- Start -->
+          <rect x="510" y="10" width="200" height="36" rx="18" class="fc-start"/>
+          <text x="610" y="28" class="fc-text-light">Tap Delete Link (Delete)</text>
+
+          <line x1="610" y1="46" x2="610" y2="76" class="fc-arrow"/>
+
+          <!-- Step 1: Alert Prompt -->
+          <rect x="500" y="76" width="220" height="36" rx="8" class="fc-proc"/>
+          <text x="610" y="94" class="fc-text-dark">Alert.alert() Confirmation</text>
+
+          <line x1="610" y1="112" x2="610" y2="142" class="fc-arrow"/>
+
+          <!-- Decision: Confirmed? -->
+          <polygon points="610,142 700,172 610,202 520,172" class="fc-decide"/>
+          <text x="610" y="172" class="fc-text-dark">Confirmed?</text>
+
+          <!-- No branch (Right) -->
+          <path d="M 700 172 L 750 172 L 750 232" class="fc-arrow-no"/>
+          <text x="715" y="162" class="fc-label">No</text>
+
+          <rect x="700" y="232" width="100" height="36" rx="8" class="fc-proc"/>
+          <text x="750" y="250" class="fc-text-dark">Abort Deletion</text>
+
+          <!-- Yes branch (Down) -->
+          <line x1="610" y1="202" x2="610" y2="232" class="fc-arrow-yes"/>
+          <text x="620" y="217" class="fc-label">Yes</text>
+
+          <!-- Step 2: Optimistic UI -->
+          <rect x="490" y="232" width="240" height="44" rx="8" class="fc-proc"/>
+          <text x="610" y="248" class="fc-text-dark">Optimistic Cache Update</text>
+          <text x="610" y="262" class="fc-text-small">Filter item out, count -1</text>
+
+          <line x1="610" y1="276" x2="610" y2="308" class="fc-arrow"/>
+
+          <!-- Step 3: Delete Call -->
+          <rect x="510" y="308" width="200" height="36" rx="8" class="fc-action"/>
+          <text x="610" y="326" class="fc-text-dark">DELETE /comments/:id</text>
+
+          <line x1="610" y1="344" x2="610" y2="374" class="fc-arrow"/>
+
+          <!-- Decision: Success? -->
+          <polygon points="610,374 700,404 610,434 520,404" class="fc-decide"/>
+          <text x="610" y="404" class="fc-text-dark">API Success?</text>
+
+          <!-- Yes Path (Left) -->
+          <path d="M 520 404 L 470 404 L 470 464" class="fc-arrow-yes"/>
+          <text x="485" y="394" class="fc-label">Yes</text>
+
+          <rect x="410" y="464" width="120" height="44" rx="8" class="fc-end"/>
+          <text x="470" y="480" class="fc-text-dark">Confirm Delete</text>
+          <text x="470" y="494" class="fc-text-small">Invalidate parent stats</text>
+
+          <!-- No Path (Right) -->
+          <path d="M 700 404 L 750 404 L 750 464" class="fc-arrow-no"/>
+          <text x="715" y="394" class="fc-label">No</text>
+
+          <rect x="690" y="464" width="120" height="44" rx="8" class="fc-proc"/>
+          <text x="750" y="480" class="fc-text-dark">Rollback Cache</text>
+          <text x="750" y="494" class="fc-text-small">Restore item &amp; Alert</text>
+        </svg>
+      </div>
     </section>
 
     <hr>
