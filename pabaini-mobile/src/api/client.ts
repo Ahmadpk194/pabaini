@@ -4,10 +4,10 @@ import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { firebaseAuthService } from "./firebaseAuth";
 
-// const BASE_URL =
-//   Constants?.expoConfig?.extra?.apiUrl ??
-//   "https://pabaini-production.up.railway.app/api/v1";
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;   // development
+const BASE_URL =
+  Constants?.expoConfig?.extra?.apiUrl ??
+  "https://pabaini-production.up.railway.app/api/v1";
+// const BASE_URL = process.env.EXPO_PUBLIC_API_URL;   // development
 
 console.log("API URL:", BASE_URL);
 
