@@ -416,6 +416,85 @@ graph TD
     *   **Notification Rows**: Deep-link row click navigations.
     *   **Sports Dashboard & Directories**: Bell press, Register Player buttons, player profiles, See All players list, discover teams list, empty state team creators, challenge request buttons, and match detail card lists.
 
+
+---
+
+## 🗂️ 16. Global App Drawer (Overlay Sidebar)
+**Objective**: Add a Facebook-style overlay sidebar drawer reachable from any screen header without restructuring the navigation stack.
+
+### Architecture Decision — Modal Overlay vs React Navigation Drawer Navigator
+
+The drawer is implemented as a **`Modal`-based overlay component** (`src/components/common/AppDrawer.tsx`) rather than React Navigation's Drawer Navigator. This was a deliberate architectural choice:
+
+| Concern | Modal Overlay (chosen) | RN Drawer Navigator |
+|---|---|---|
+| **Expo Router compatibility** | ✅ Zero conflicts — Modal sits above all routing layers | ⚠️ Requires a Drawer layout file wrapping tabs; conflicts with nested tab navigation in Expo Router |
+| **Reusability** | ✅ Drop-in on any screen with 4 lines of code | ❌ Screen must live inside the Drawer Navigator subtree |
+| **Navigation stack impact** | ✅ None — Modal does not push to the stack | ❌ Adds a navigation layer to the hierarchy |
+| **Animation control** | ✅ Full custom bezier curves, simultaneous slide + fade | ⚠️ Limited without overriding internals |
+| **Android back button** | ✅ Manual `BackHandler` wired inside the Modal | ✅ Handled automatically |
+| **Swipe-to-open gesture** | ❌ Not wired (can be added with `PanResponder`) | ✅ Built-in |
+| **Bundle size** | ✅ Zero new packages | ➕ Adds `@react-navigation/drawer` + `react-native-gesture-handler` |
+
+### Implementation Flow
+
+1.  **Theme Store** (`src/store/themeStore.ts`): Created a new Zustand store using `persist` middleware backed by `@react-native-async-storage/async-storage`. This is the first store in the project to use Zustand persistence. It holds a single `colorScheme: 'light' | 'dark' | 'system'` value (default: `'system'`) and a `setColorScheme()` action. Persisted to AsyncStorage under the key `pabaini-theme`.
+
+2.  **ThemeContext update** (`src/context/ThemeContext.tsx`): Refactored to read `colorScheme` from `useThemeStore` instead of local `useState`. Resolution logic: `'system'` → follows device `useColorScheme()` live; `'light'` or `'dark'` → forces that mode. The public API is unchanged (`theme`, `mode`, `toggleTheme`) — two new fields added (`colorScheme`, `setColorScheme`). `toggleTheme()` kept for backward compatibility.
+
+3.  **ThemeAwareStatusBar** (`app/_layout.tsx`): A tiny component inside `ThemeProvider` that reads `mode` from `useTheme()` and renders `<StatusBar style={mode === 'dark' ? 'light' : 'dark'} />`. This makes status bar icon colour (clock, battery, signal) automatically match the theme in real time.
+
+4.  **AppDrawer component** (`src/components/common/AppDrawer.tsx`):
+    *   **Props**: `isOpen: boolean`, `onClose: () => void` — minimal surface by design.
+    *   **Animation**: Uses React Native's built-in `Animated` API (`useNativeDriver: true`). On open: drawer slides from `-DRAWER_WIDTH` to `0` (X axis) while backdrop fades from `0` to `0.5` opacity — both via `Animated.parallel`, 280ms, `Easing.out(Easing.poly(4))`. On close: reversed, 260ms, `Easing.in(Easing.poly(4))`. `onClose()` is called **only inside the `.start()` callback** — never before animation completes.
+    *   **Smooth open fix**: Animation starts from `Modal.onShow` callback (not a `useEffect` on `isOpen`). This ensures the panel is fully rendered before the first animation frame fires — preventing the janky "jump" caused by animating an unmounted view.
+    *   **Android back**: `BackHandler.addEventListener` inside a `useEffect` that fires when `isOpen` is true — hardware back closes the drawer instead of navigating backwards.
+    *   **Drawer width**: `Math.min(screenWidth * 0.82, 320)` — 82% of screen width, capped at 320px.
+    *   **Safe area**: Bottom padding uses `useSafeAreaInsets().bottom + 12` so content never hides behind the home indicator.
+    *   **Contents (top to bottom)**:
+        -   **User identity card**: Horizontal row — 52px circular avatar (photo or initials fallback), user name (15px semibold, white), role + village (12px muted). Tapping navigates to `/(tabs)/profile`. Dark green (`primaryTint`) background matches the Profile screen hero.
+        -   **Navigation rows**: Sports & Cricket (`/(tabs)/sports`), Settings (`/settings`), Notifications (`/notifications`). Each row is 52px tall with icon, label, chevron.
+        -   **Appearance switcher**: Three equal-width segmented cards (Light / Dark / System). Active card has `primary` green background. Tapping calls `setColorScheme()` immediately — the entire app re-themes in real time with no navigation or restart.
+        -   **Sign-out button**: Full-width pill button with `danger` colour at 7% opacity background and 19% opacity border. `LogOut` icon + "Sign out" label centred. Tapping shows an `Alert.alert` confirmation before calling `logout()` and navigating to `/(auth)/login`.
+
+5.  **Profile tab integration** (`src/components/profile/GeneralInfoSection.tsx`):
+    *   `isDrawerOpen` state added.
+    *   Hamburger icon (`AlignLeft`, 36px circular touch target, `rgba(255,255,255,0.15)` background) added to the top-left of the hero banner — visible only when `isOwnProfile && !isEditing`.
+    *   Sign-out button removed from the hero banner (`handleLogout` function and `LogOut` import removed).
+    *   Edit pencil icon position and behaviour unchanged.
+    *   `<AppDrawer>` rendered at the root of `GeneralInfoSection` — Modal floats above the entire UI.
+
+6.  **Profile notch fix** (`app/(tabs)/profile.tsx`): The authenticated `SafeAreaView` `backgroundColor` changed from `theme.colors.background` to `#004D26` — the notch/status bar area now bleeds seamlessly into the dark green hero banner.
+
+7.  **Settings screen scaffold** (`app/settings.tsx`): New screen registered in `_layout.tsx`. Contains four sections: **Privacy & Visibility** (toggles for phone, email, diaspora status, cricket stats, teams, joined date), **Notifications** (per-event push toggles), **Account** (change password, account email), **About** (app version, privacy policy). All toggles use local `useState` with `// TODO: wire to PATCH /users/me/settings` comments ready for backend integration.
+
+### How to Add the Drawer to Any Screen (4 Steps)
+```tsx
+import AppDrawer from '@/components/common/AppDrawer';
+
+// 1. State
+const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+// 2. Hamburger trigger in header
+<TouchableOpacity onPress={() => setIsDrawerOpen(true)}>
+  <AlignLeft size={18} color="white" />
+</TouchableOpacity>
+
+// 3. Render at root of screen JSX (outside ScrollView)
+<AppDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+```
+
+### Files Changed
+| File | Change |
+|---|---|
+| `src/store/themeStore.ts` | **NEW** — Zustand persist store for `colorScheme` |
+| `src/components/common/AppDrawer.tsx` | **NEW** — Overlay sidebar component |
+| `app/settings.tsx` | **NEW** — Settings screen scaffold |
+| `src/context/ThemeContext.tsx` | **MODIFIED** — reads from themeStore, adds `colorScheme`/`setColorScheme` |
+| `app/_layout.tsx` | **MODIFIED** — `ThemeAwareStatusBar`, registers `/settings` route |
+| `src/components/profile/GeneralInfoSection.tsx` | **MODIFIED** — hamburger added, sign-out removed, drawer rendered |
+| `app/(tabs)/profile.tsx` | **MODIFIED** — notch `backgroundColor` → `#004D26` |
+
 ---
 
 ## 🛠️ Verification & Building

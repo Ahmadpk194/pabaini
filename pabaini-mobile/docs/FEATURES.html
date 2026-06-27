@@ -2047,6 +2047,145 @@ interface MyTeamResponse {  // returned by GET /my
       </div>
     </section>
 
+
+    <!-- ─── App Drawer ─────────────────────────────────────────────────────── -->
+    <section class="section" id="app-drawer">
+      <div class="section-header">
+        <div class="section-number">🗂️</div>
+        <h2>16. Global App Drawer (Overlay Sidebar)</h2>
+      </div>
+      <p style="font-size:0.875rem; color:var(--text-2); margin-bottom:20px;">
+        A Facebook-style overlay sidebar drawer accessible from any screen header. Built as a <code>Modal</code>-based component so it overlays any screen without touching the navigation stack.
+      </p>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🏗️</span> Architecture — Modal Overlay vs React Navigation Drawer</h3>
+        <p style="margin-bottom:12px; font-size:0.875rem; color:var(--text-2);">The drawer uses <strong>React Native Modal</strong> rather than React Navigation's Drawer Navigator. Key reasons:</p>
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; margin-bottom:8px;">
+          <thead>
+            <tr style="background:var(--surface-2);">
+              <th style="padding:8px 10px; text-align:left; border:1px solid var(--border);">Concern</th>
+              <th style="padding:8px 10px; text-align:left; border:1px solid var(--border);">Modal Overlay ✅</th>
+              <th style="padding:8px 10px; text-align:left; border:1px solid var(--border);">RN Drawer Navigator</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Expo Router compat</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Zero conflicts — Modal sits above all routing layers</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">⚠️ Requires Drawer layout file; conflicts with nested tab navigation</td>
+            </tr>
+            <tr style="background:var(--surface-2);">
+              <td style="padding:7px 10px; border:1px solid var(--border);">Reusability</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Drop-in on any screen with 4 lines of code</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Screen must live inside the Drawer Navigator subtree</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Navigation stack</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">No impact — Modal does not push to the stack</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Adds a navigation layer to the hierarchy</td>
+            </tr>
+            <tr style="background:var(--surface-2);">
+              <td style="padding:7px 10px; border:1px solid var(--border);">Animation control</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Full custom curves, simultaneous slide + fade</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Limited without overriding internals</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Bundle size</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Zero new packages</td>
+              <td style="padding:7px 10px; border:1px solid var(--border);">Adds @react-navigation/drawer + gesture-handler</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🏪</span> Theme Store (<code>src/store/themeStore.ts</code>)</h3>
+        <ul>
+          <li>New Zustand store — <strong>first store in the project to use <code>persist</code> middleware</strong> with AsyncStorage.</li>
+          <li>State: <code>colorScheme: 'light' | 'dark' | 'system'</code> (default: <code>'system'</code>).</li>
+          <li>Action: <code>setColorScheme(scheme)</code> — persisted to AsyncStorage key <code>pabaini-theme</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🎨</span> ThemeContext Update (<code>src/context/ThemeContext.tsx</code>)</h3>
+        <ul>
+          <li>Reads <code>colorScheme</code> from <code>useThemeStore</code> instead of local <code>useState</code>.</li>
+          <li>Resolution: <code>'system'</code> → follows device <code>useColorScheme()</code> live; <code>'light'</code>/<code>'dark'</code> → forced.</li>
+          <li>Public API unchanged — <code>theme</code>, <code>mode</code>, <code>toggleTheme</code> all still present for existing consumers.</li>
+          <li>Two new fields added: <code>colorScheme</code> and <code>setColorScheme</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📶</span> ThemeAwareStatusBar (<code>app/_layout.tsx</code>)</h3>
+        <ul>
+          <li>Small component rendered inside <code>&lt;ThemeProvider&gt;</code> — reads <code>mode</code> from <code>useTheme()</code>.</li>
+          <li>Dark mode → <code>style="light"</code> (white clock/battery icons). Light mode → <code>style="dark"</code> (dark icons).</li>
+          <li>Updates in real time when user switches theme in the drawer — no restart needed.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📱</span> AppDrawer Component (<code>src/components/common/AppDrawer.tsx</code>)</h3>
+        <ul>
+          <li><strong>Props</strong>: <code>isOpen: boolean</code>, <code>onClose: () =&gt; void</code> — two props only.</li>
+          <li><strong>Modal</strong>: <code>transparent={true}</code>, <code>animationType="none"</code>, <code>statusBarTranslucent</code>.</li>
+          <li><strong>Animation</strong>: <code>Animated.parallel</code> — slide (X: <code>-drawerWidth → 0</code>) and backdrop fade (<code>0 → 0.5</code>) simultaneously. 280ms open, 260ms close. <code>Easing.out/in(Easing.poly(4))</code>.</li>
+          <li><strong>Smooth open</strong>: Animation triggered from <code>Modal.onShow</code> callback — ensures panel is rendered before first animation frame. Animated values reset on each open for clean re-entry.</li>
+          <li><strong>Android back</strong>: <code>BackHandler.addEventListener</code> inside <code>useEffect</code> — hardware back closes drawer instead of navigating back.</li>
+          <li><strong>Width</strong>: <code>Math.min(screenWidth × 0.82, 320px)</code>.</li>
+          <li><strong>Safe area</strong>: Bottom padding from <code>useSafeAreaInsets().bottom + 12</code>.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">👤</span> Drawer Contents</h3>
+        <ul>
+          <li><strong>User identity card</strong>: Horizontal row — 52px avatar (photo or initials), name (15px semibold, white), role + village (12px muted). Dark green <code>primaryTint</code> background. Tapping → <code>/(tabs)/profile</code>.</li>
+          <li><strong>Navigation rows</strong>: Sports &amp; Cricket, Settings, Notifications — 52px rows with icon, label, chevron.</li>
+          <li><strong>Appearance switcher</strong>: Three segmented cards (Light / Dark / System). Active = <code>primary</code> green. Calls <code>setColorScheme()</code> immediately — whole app re-themes live.</li>
+          <li><strong>Sign-out button</strong>: Full-width pill. <code>danger</code> colour at 7% opacity background, 19% border. Confirmation <code>Alert.alert</code> before calling <code>logout()</code>. Close animation completes before <code>onClose()</code> is called.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔧</span> Profile Tab Integration</h3>
+        <ul>
+          <li>Hamburger icon (<code>AlignLeft</code>, 36px circular, <code>rgba(255,255,255,0.15)</code> bg) added top-left of hero — visible only when <code>isOwnProfile &amp;&amp; !isEditing</code>.</li>
+          <li>Sign-out removed from hero banner — now lives in the drawer.</li>
+          <li>Edit pencil icon position and behaviour unchanged.</li>
+          <li>Profile notch: <code>SafeAreaView backgroundColor</code> set to <code>#004D26</code> — notch bleeds into the green hero seamlessly.</li>
+          <li><code>&lt;AppDrawer&gt;</code> rendered at root of <code>GeneralInfoSection</code> — floats above all content via Modal.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">⚙️</span> Settings Screen Scaffold (<code>app/settings.tsx</code>)</h3>
+        <ul>
+          <li>Registered in <code>_layout.tsx</code> Stack. Reachable from drawer → Settings row.</li>
+          <li><strong>Privacy &amp; Visibility</strong>: Toggle switches for phone, email, diaspora status, cricket stats, teams, joined date.</li>
+          <li><strong>Notifications</strong>: Per-event push toggles (announcements, comments, likes, team updates).</li>
+          <li><strong>Account</strong>: Change password, account email rows.</li>
+          <li>All toggles use local <code>useState</code> with <code>// TODO: wire to PATCH /users/me/settings</code> comments for backend integration.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📂</span> Files Changed</h3>
+        <ul>
+          <li><code>src/store/themeStore.ts</code> — <strong>NEW</strong></li>
+          <li><code>src/components/common/AppDrawer.tsx</code> — <strong>NEW</strong></li>
+          <li><code>app/settings.tsx</code> — <strong>NEW</strong></li>
+          <li><code>src/context/ThemeContext.tsx</code> — MODIFIED</li>
+          <li><code>app/_layout.tsx</code> — MODIFIED (ThemeAwareStatusBar + /settings route)</li>
+          <li><code>src/components/profile/GeneralInfoSection.tsx</code> — MODIFIED</li>
+          <li><code>app/(tabs)/profile.tsx</code> — MODIFIED (notch colour)</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- ─── Verification ──────────────────────────────────────────────────── -->
     <section class="section" id="verification">
       <div class="section-header">

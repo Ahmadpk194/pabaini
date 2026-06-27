@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../src/context/ThemeContext';
+import { useTheme } from '../src/context/ThemeContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { LoginPromptModal } from '../src/components/ui/LoginPromptModal';
 import { setGlobalCurrentPath } from '../src/navigation/safeNavigation';
@@ -25,13 +26,20 @@ function PathnameTracker() {
   return null;
 }
 
+// Reads the resolved mode from ThemeContext so the status bar icons
+// are always legible: white icons on dark bg, dark icons on light bg.
+function ThemeAwareStatusBar() {
+  const { mode } = useTheme();
+  return <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <StatusBar style="dark" />
+            <ThemeAwareStatusBar />
             <PathnameTracker />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -40,6 +48,7 @@ export default function RootLayout() {
               <Stack.Screen name="announcement/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="announcement/create" options={{ headerShown: false }} />
               <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
             </Stack>
             <LoginPromptModal />
           </AuthProvider>

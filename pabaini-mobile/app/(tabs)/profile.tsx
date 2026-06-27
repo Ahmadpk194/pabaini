@@ -35,7 +35,7 @@ export default function ProfileTab() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#004D26' }]} edges={['top', 'left', 'right']}>
       <UserProfileView userId={user.id} isOwnProfile={true} />
     </SafeAreaView>
   );

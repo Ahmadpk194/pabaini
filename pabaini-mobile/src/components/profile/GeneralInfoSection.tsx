@@ -25,15 +25,16 @@ import {
   Camera,
   Check,
   X,
-  LogOut,
   Edit3,
   ChevronDown,
   ChevronUp,
   Shield,
+  AlignLeft,
 } from 'lucide-react-native';
 import { PublicUser } from '../../types/profile.types';
 import { Role } from '../../types';
 import { updateUserRole } from '../../services/usersApi';
+import AppDrawer from '../common/AppDrawer';
 
 let ImagePicker: any = null;
 try {
@@ -51,8 +52,11 @@ interface GeneralInfoSectionProps {
 
 export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer, onRoleUpdated }: GeneralInfoSectionProps) {
   const { theme } = useTheme();
-  const { user: authUser, logout, updateProfile } = useAuth();
+  const { user: authUser, updateProfile } = useAuth();
   const router = useRouter();
+
+  // Drawer state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -122,24 +126,6 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer, onRole
     );
   };
 
-  const handleLogout = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            router.replace('/(auth)/login');
-          } catch (error) {
-            console.error('Logout error:', error);
-            Alert.alert('Error', 'Failed to log out. Please try again.');
-          }
-        },
-      },
-    ]);
-  };
 
   const handlePickImage = async () => {
     try {
@@ -258,9 +244,26 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer, onRole
 
   return (
     <View style={styles.wrapper}>
+      {/* AppDrawer — floats above everything via Modal */}
+      <AppDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
+
       {/* ── Hero Banner ─────────────────────────────────────── */}
       <View style={[styles.heroBanner, { backgroundColor: '#004D26' }]}>
-        {/* Own-profile action buttons in top-right corner */}
+        {/* Hamburger — top-left */}
+        {isOwnProfile && !isEditing && (
+          <TouchableOpacity
+            onPress={() => setIsDrawerOpen(true)}
+            style={styles.heroHamburger}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <AlignLeft size={18} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
+        )}
+
+        {/* Edit pencil — top-right, unchanged */}
         {isOwnProfile && !isEditing && (
           <View style={styles.heroActions}>
             <TouchableOpacity
@@ -269,13 +272,6 @@ export function GeneralInfoSection({ user, isOwnProfile, isCricketPlayer, onRole
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Edit3 size={18} color="rgba(255,255,255,0.9)" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={[styles.heroIconBtn, { marginLeft: 8 }]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <LogOut size={18} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           </View>
         )}
@@ -623,6 +619,17 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 28,
     paddingHorizontal: 20,
+  },
+  heroHamburger: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   heroActions: {
     position: 'absolute',

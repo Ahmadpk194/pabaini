@@ -17,15 +17,15 @@ async function bootstrap() {
     transform: true,
   }));
 
-  // app.enableCors({
-  //   origin: [
-  //     'http://localhost:3000',
-  //     'https://pabaini-production.up.railway.app',
-  //   ],
-  //   credentials: true,
-  //   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  //   allowedHeaders: ['Content-Type', 'Authorization'],
-  // });
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'https://pabaini-production.up.railway.app',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   // standard response format
   app.useGlobalInterceptors(new TransformInterceptor());
