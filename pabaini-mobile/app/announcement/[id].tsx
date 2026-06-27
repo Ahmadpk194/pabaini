@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Animated, Share, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Animated, Share, ActivityIndicator, Alert, RefreshControl, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, Heart, MessageCircle, Eye, MapPin, Send, Pin } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -29,6 +29,24 @@ export default function AnnouncementDetailScreen() {
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const likeMutation = useLikeMutation();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   const commentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -344,7 +362,8 @@ export default function AnnouncementDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
       <KeyboardAvoidingView 
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Fixed Header Bar */}
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border, paddingTop: insets.top }]}>
@@ -565,9 +584,9 @@ export default function AnnouncementDetailScreen() {
           <View style={[
             styles.commentInputBar, 
             { 
-              paddingBottom: insets.bottom > 0 ? insets.bottom : 12
-            }
-          ]}>
+            paddingBottom: (insets.bottom > 0 && !keyboardVisible) ? insets.bottom : 12
+          }
+        ]}>
             {user?.avatar_url ? (
               <Image source={{ uri: user.avatar_url }} style={styles.myAvatar} />
             ) : (

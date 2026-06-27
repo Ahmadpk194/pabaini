@@ -6,7 +6,7 @@
     "scheme": "pabaini",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "extra": {
       "apiUrl": "https://pabaini-production.up.railway.app/api/v1",
       "router": {},
