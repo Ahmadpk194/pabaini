@@ -497,6 +497,65 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
 ---
 
+## 📸 17. Shareable Match Scorecards (`app/sports/cricket/matches/[id]/share-preview.tsx`)
+**Objective**: Enable captains, players, and spectators to generate, preview, and share high-quality customized scorecard cards of completed matches.
+
+### Packages & Libraries
+*   **`react-native-view-shot`**: Renders dynamic screens off-screen and converts React Native component trees into static PNG image URIs.
+*   **`expo-media-library`**: Saves the generated PNG files directly to the device's native photo gallery (compatible with Expo SDK 56 class-based Media Library API).
+*   **React Native `Share`**: Triggers the system's native share tray to send the image URI to external social applications (WhatsApp, Messenger, SMS, etc.).
+
+### Scorecard Templates (Component Registry)
+Rather than hardcoding template branches, templates are mapped in `SHARE_CARD_REGISTRY` for extensibility:
+*   **Highlight Card (`HighlightCard.tsx`)**: Displays match summary, final scores, winning banner margin, Player of the Match, and top batting/bowling performers.
+*   **My Team Scorecard (`TeamScorecardCard.tsx`)**: Batting scorecard (Runs, Balls, 4s, 6s, Strike Rate) and Bowling scorecard (Overs, Maidens, Runs, Wickets, Economy) for the user's registered team (falls back to Team A if unassociated).
+*   **Full Scorecard (`FullScorecardCard.tsx`)**: Stacked double-innings layouts composing both Team A and Team B's detailed score tables, divided by a custom Innings separator.
+
+### System Architecture & Capture Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant MatchScreen as Match Detail Screen
+    participant Loader as Overlay Loader Modal
+    participant PreviewScreen as Share Preview Screen
+    participant ViewShot as ViewShot (off-screen)
+    participant ShareSvc as ShareService
+    participant Gallery as Device Photo Gallery
+
+    User->>MatchScreen: Tap Share Icon (Header Right)
+    MatchScreen->>MatchScreen: Slide Up Bottom Sheet Options
+    User->>MatchScreen: Select Scorecard Template
+    MatchScreen->>Loader: Render Fullscreen Loader Modal
+    Note over MatchScreen, Loader: Displays "Preparing scorecard..." overlay
+    MatchScreen->>PreviewScreen: safeRouterPush (/share-preview) after 350ms
+    Loader->>Loader: Dismiss Loader Modal
+    Note over PreviewScreen, ViewShot: Renders scaled-down Visible Preview<br/>Renders off-screen ViewShot at full 360px resolution (left: -9999)
+    
+    alt Save to Gallery
+        User->>PreviewScreen: Tap "Save to Gallery"
+        PreviewScreen->>ShareSvc: saveImage(viewShotRef)
+        ShareSvc->>ShareSvc: Request MediaLibrary Permissions
+        ShareSvc->>ViewShot: Capture off-screen ViewShot to temp URI
+        ShareSvc->>Gallery: Save captured URI to Camera Roll
+        ShareSvc-->>PreviewScreen: Success
+        PreviewScreen-->>User: Alert ("Success", "Image saved to gallery!")
+    else Share to Socials
+        User->>PreviewScreen: Tap "Share Scorecard"
+        PreviewScreen->>ShareSvc: shareImage(viewShotRef)
+        ShareSvc->>ViewShot: Capture off-screen ViewShot to temp URI
+        ShareSvc->>User: Open Native Share Sheet (WhatsApp, etc.)
+    end
+```
+
+### Key Technical Implementations
+1.  **Off-Screen Snapshotting**: Rendering captured containers visible but stashed off-screen (`position: 'absolute', left: -9999`) prevents snapshot clipping, layout scaling skewing, and empty black output screens on older Android systems.
+2.  **Instant Visual Feedback Overlay**: To hide slow navigation transits while bottom sheets retract, option selection immediately renders a fullscreen `Modal` overlay ("Preparing scorecard... / Creating your shareable image") containing an `ActivityIndicator` in `theme.colors.primary`. Once navigation is finished, the overlay is dismissed.
+3.  **Dedicated Share Service (`shareService.ts`)**: Encapsulates capture, permission check, gallery saving, and share sheet logic into pure reusable utility methods.
+
+---
+
 ## 🛠️ Verification & Building
 All features compile cleanly under TypeScript. To check type safety at any time, run:
 ```bash

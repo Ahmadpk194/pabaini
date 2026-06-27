@@ -637,6 +637,7 @@
       <a href="#sports-p1"><span class="nav-icon">🏏</span> Phase 1 — Players</a>
       <a href="#sports-p2" class="phase2-link"><span class="nav-icon">🛡️</span> Phase 2 — Teams</a>
       <a href="#sports-matches" class="phase2-link"><span class="nav-icon">📊</span> Phases 3 &amp; 4 — Matches</a>
+      <a href="#scorecard-share" class="phase2-link"><span class="nav-icon">📸</span> Scorecard Share</a>
       <a href="#p2-screens" class="phase2-link"><span class="nav-icon">📺</span> Screens Map</a>
       <a href="#p2-flows" class="phase2-link"><span class="nav-icon">🔀</span> User Flows</a>
       <a href="#p2-actions" class="phase2-link"><span class="nav-icon">⚡</span> Actions Matrix</a>
@@ -2182,6 +2183,64 @@ interface MyTeamResponse {  // returned by GET /my
           <li><code>app/_layout.tsx</code> — MODIFIED (ThemeAwareStatusBar + /settings route)</li>
           <li><code>src/components/profile/GeneralInfoSection.tsx</code> — MODIFIED</li>
           <li><code>app/(tabs)/profile.tsx</code> — MODIFIED (notch colour)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── Scorecard Share ────────────────────────────────────────────────── -->
+    <section class="section" id="scorecard-share">
+      <div class="section-header">
+        <div class="section-number">📸</div>
+        <h2>Shareable Match Scorecards</h2>
+        <span class="section-tag tag-done">✓ Implemented</span>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>Objective:</strong> Render, preview, and share high-resolution custom PNG scorecard images of completed matches. Entrypoint: completed match details header. Route: <code>app/sports/cricket/matches/[id]/share-preview.tsx</code></div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📦</span> Third-Party Packages Used</h3>
+        <ul>
+          <li><strong><code>react-native-view-shot</code></strong>: Captures component layout trees off-screen and exports them as static PNG file URIs.</li>
+          <li><strong><code>expo-media-library</code></strong>: Saves exported PNG files to the user's native camera roll. Fully migrated to the new Expo SDK 56 class-based Media Library API (imported via <code>expo-media-library/legacy</code> for backward-compatible call signatures).</li>
+          <li><strong>React Native <code>Share</code></strong>: Launches the mobile OS sharing overlay to forward image URIs to external applications.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔀</span> Scorecard Templates (Registry)</h3>
+        <p style="margin-bottom: 8px; font-size: 0.85rem; color: var(--text-2);">Templates are decoupled from the preview view and mapped in a registry for seamless extensibility:</p>
+        <ul>
+          <li><strong>Highlight Card (<code>HighlightCard.tsx</code>)</strong>: Compact summary highlighting match score details, victory result banner, MVP Player of the Match, and top batting/bowling performers.</li>
+          <li><strong>My Team Scorecard (<code>TeamScorecardCard.tsx</code>)</strong>: Detailed batting/bowling statistics for the user's affiliated team. Falls back to Team A if user is a spectator or has no profile.</li>
+          <li><strong>Full Scorecard (<code>FullScorecardCard.tsx</code>)</strong>: Stacks Team A and Team B card layouts sequentially, divided by an innings separator.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🏗️</span> Core Architectural Flow</h3>
+        <ol style="margin-left: 20px; font-size: 0.85rem; color: var(--text-2); line-height: 1.6;">
+          <li style="margin-bottom: 6px;"><strong>Selection trigger</strong>: User selects a card template from the bottom sheet in the completed match detail screen.</li>
+          <li style="margin-bottom: 6px;"><strong>Immediate Feedback Overlay</strong>: A fullscreen overlay modal with a loading spinner and messages (<em>"Preparing scorecard..."</em> / <em>"Creating your shareable image"</em>) pops up immediately. Concurrently, the bottom sheet retracts.</li>
+          <li style="margin-bottom: 6px;"><strong>Safe Navigation transit</strong>: Once the bottom sheet dismisses (350ms), the app navigates to the preview screen using the <code>safeRouterPush</code> click-lock utility, preventing double-triggering. The overlay then dismisses.</li>
+          <li style="margin-bottom: 6px;"><strong>Off-Screen Capturing</strong>: The preview screen renders a scaled visible card preview. Separately, it mounts the target template off-screen at its original 360px width inside a <code>ViewShot</code> wrapper utilizing absolute offsets (<code>left: -9999</code>). This avoids rendering glitches, content cropping, or blank cards on Android.</li>
+          <li style="margin-bottom: 6px;"><strong>Save/Share Actions</strong>: User hits <em>"Save to Gallery"</em> (triggers Media Library permissions check and writes the view-shot URI to disk) or <em>"Share Scorecard"</em> (calls RN's native Share sheet with the temporary image URI).</li>
+        </ol>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📂</span> Files Created &amp; Modified</h3>
+        <ul>
+          <li><code>src/services/share/shareService.ts</code> — <strong>NEW</strong>: Capturing, permissions, saving, and sharing helper methods.</li>
+          <li><code>app/sports/cricket/matches/[id]/share-preview.tsx</code> — <strong>NEW</strong>: The preview, off-screen capturing viewport, and action orchestrations.</li>
+          <li><code>src/components/sports/matches/share/HighlightCard.tsx</code> — <strong>NEW</strong></li>
+          <li><code>src/components/sports/matches/share/TeamScorecardCard.tsx</code> — <strong>NEW</strong></li>
+          <li><code>src/components/sports/matches/share/FullScorecardCard.tsx</code> — <strong>NEW</strong></li>
+          <li><code>src/components/sports/matches/share/ShareBottomSheet.tsx</code> — <strong>NEW</strong>: Slide-up options drawer.</li>
+          <li><code>src/constants/shareOptions.ts</code> — <strong>NEW</strong></li>
+          <li><code>app/sports/cricket/matches/[id]/index.tsx</code> — MODIFIED: Share button icon wired, loading overlay Modal, and option-select handlers.</li>
         </ul>
       </div>
     </section>

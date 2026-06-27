@@ -217,7 +217,7 @@ export default function ProfileSetupScreen() {
                   {
                     backgroundColor: '#FFFFFF',
                     borderColor: nameError ? '#D32F2F' : '#E4E2DC',
-                    color: theme.colors.textPrimary,
+                    color: '#1A1A1A',
                   },
                 ]}
                 placeholder="Enter your name"
@@ -243,7 +243,7 @@ export default function ProfileSetupScreen() {
                     {
                       backgroundColor: '#FFFFFF',
                       borderColor: emailError ? '#D32F2F' : '#E4E2DC',
-                      color: theme.colors.textPrimary,
+                      color: '#1A1A1A',
                     },
                   ]}
                   placeholder="Enter your email address"
@@ -271,7 +271,7 @@ export default function ProfileSetupScreen() {
                     {
                       backgroundColor: '#FFFFFF',
                       borderColor: phoneError ? '#D32F2F' : '#E4E2DC',
-                      color: theme.colors.textPrimary,
+                      color: '#1A1A1A',
                     },
                   ]}
                   placeholder="Enter your phone number (e.g. +923001234567)"
@@ -292,7 +292,7 @@ export default function ProfileSetupScreen() {
             {/* Diaspora Switch */}
             <View style={[styles.toggleContainer, { borderColor: '#E4E2DC' }]}>
               <View style={styles.toggleTextContainer}>
-                <Text style={[styles.toggleLabel, { color: theme.colors.textPrimary }]}>
+                <Text style={[styles.toggleLabel, { color: '#1A1A1A' }]}>
                   I live outside Pakistan
                 </Text>
                 <Text style={[styles.toggleSubtext, { color: theme.colors.textSecondary }]}>

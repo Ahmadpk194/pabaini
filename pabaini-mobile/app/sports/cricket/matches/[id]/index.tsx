@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin, Trophy, Shield, Clock, Award, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ArrowLeft, Calendar, MapPin, Trophy, Shield, Clock, Award, ChevronDown, ChevronUp, Share2 } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { safeRouterPush } from '../../../../../src/navigation/safeNavigation';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
@@ -26,6 +27,7 @@ import { getTeamColor } from '../../../../../src/components/sports/teams/TeamCar
 import { formatMatchDate } from '../../../../../src/utils/format';
 import { MatchScorecard } from '../../../../../src/components/sports/matches/MatchScorecard';
 import { MatchDetailSkeleton } from '../../../../../src/components/skeletons';
+import ShareBottomSheet from '../../../../../src/components/sports/matches/share/ShareBottomSheet';
 
 export default function MatchDetailScreen() {
   const { theme } = useTheme();
@@ -33,6 +35,13 @@ export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
   const insets = useSafeAreaInsets();
+
+  // Share states
+  const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
+  // Loading overlay shown immediately after option selection while sheet dismisses
+  const [isSharePreparing, setIsSharePreparing] = useState(false);
+  // Holds pending navigation target so we can navigate after sheet is dismissed
+  const sharePendingRef = useRef<{ optionId: string; teamId: number } | null>(null);
 
   // Get current user registration & profile from Zustand
   const isRegistered = useSportsStore((state) => state.isRegistered('cricket'));
@@ -43,6 +52,53 @@ export default function MatchDetailScreen() {
   const { data: match, isLoading, error, refetch } = useMatchDetail(matchId);
   const { data: lineups, isLoading: isLoadingLineup } = useLineup(matchId);
   const acceptMutation = useAcceptMatch();
+
+  // Find user's team ID for share scorecard
+  let userTeamId: number | null = null;
+  if (myProfile && match) {
+    const myStat = match.player_stats?.find((s) => s.player_id === myProfile.id);
+    if (myStat) {
+      userTeamId = myStat.team_id;
+    } else if (lineups) {
+      const inTeamA = lineups.team_a.players.some((p) => p.player_id === myProfile.id);
+      if (inTeamA) {
+        userTeamId = match.team_a_id;
+      } else {
+        const inTeamB = lineups.team_b.players.some((p) => p.player_id === myProfile.id);
+        if (inTeamB) userTeamId = match.team_b_id;
+      }
+    }
+  }
+
+  const handleShareOptionSelect = (optionId: string) => {
+    // Stash the pending target and show overlay immediately for instant feedback
+    sharePendingRef.current = {
+      optionId,
+      teamId: userTeamId || match?.team_a_id || 0,
+    };
+    setIsShareSheetOpen(false);
+    setIsSharePreparing(true);
+  };
+
+  // Navigate once the bottom sheet has had time to dismiss (avoids animation clash)
+  useEffect(() => {
+    if (!isSharePreparing || isShareSheetOpen) return;
+    const pending = sharePendingRef.current;
+    if (!pending) return;
+    const timer = setTimeout(() => {
+      safeRouterPush(router, {
+        pathname: '/sports/cricket/matches/[id]/share-preview',
+        params: {
+          id: matchId,
+          optionId: pending.optionId,
+          teamId: pending.teamId,
+        },
+      });
+      sharePendingRef.current = null;
+      setIsSharePreparing(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [isSharePreparing, isShareSheetOpen]);
   const declineMutation = useDeclineMatch();
   const cancelMutation = useCancelMatch();
 
@@ -440,7 +496,16 @@ export default function MatchDetailScreen() {
         <Text style={[styles.headerTitle, { color: theme.colors.textPrimary, flex: 1, textAlign: 'center' }]} numberOfLines={1}>
           {match.team_a.name} vs {match.team_b.name}
         </Text>
-        <View style={{ width: 36 }} />
+        {isCompleted ? (
+          <TouchableOpacity
+            style={[styles.shareButton, { backgroundColor: theme.colors.elevated }]}
+            onPress={() => setIsShareSheetOpen(true)}
+          >
+            <Share2 color={theme.colors.textPrimary} size={20} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       {/* Scrollable content extending under the bottom safe area navigation bar */}
@@ -670,6 +735,33 @@ export default function MatchDetailScreen() {
         {/* Action button area */}
         {renderActionArea()}
       </ScrollView>
+
+      <ShareBottomSheet
+        isOpen={isShareSheetOpen}
+        onClose={() => setIsShareSheetOpen(false)}
+        onSelect={handleShareOptionSelect}
+        matchTitle={`${match.team_a.name} vs ${match.team_b.name}`}
+      />
+
+      {/* Share preparation loading overlay — shown immediately after option selection */}
+      <Modal
+        transparent
+        visible={isSharePreparing}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.shareOverlay}>
+          <View style={[styles.shareOverlayCard, { backgroundColor: theme.colors.elevated }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.shareOverlayTitle, { color: theme.colors.textPrimary }]}>
+              Preparing scorecard...
+            </Text>
+            <Text style={[styles.shareOverlaySubtitle, { color: theme.colors.textSecondary }]}>
+              Creating your shareable image
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -877,5 +969,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+  },
+  shareButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Full-screen overlay shown while share preview is being prepared
+  shareOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareOverlayCard: {
+    borderRadius: 20,
+    paddingVertical: 36,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    gap: 14,
+    minWidth: 220,
+  },
+  shareOverlayTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  shareOverlaySubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: -6,
   },
 });
