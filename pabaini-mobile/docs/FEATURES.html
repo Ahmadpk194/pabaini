@@ -1933,8 +1933,8 @@ interface MyTeamResponse {  // returned by GET /my
       <div class="feature-card">
         <h3><span class="fc-icon">⚙️</span> Config-Driven Architecture (<code>searchCategories.ts</code>)</h3>
         <ul>
-          <li>Unified search categories into a single extensible config array <code>SEARCH_CATEGORIES</code> listing tab IDs, labels, backend endpoints, empty messages, and coming soon flags.</li>
-          <li>Gated <code>users</code> category with a <code>comingSoon: true</code> flag, showing an Alert dialog instead of executing queries.</li>
+          <li>Unified search categories into a single extensible config array <code>SEARCH_CATEGORIES</code> listing tab IDs, labels, backend endpoints, and empty messages.</li>
+          <li>The <code>users</code> category is fully active, querying the backend <code>/api/v1/users</code> directory endpoint.</li>
         </ul>
       </div>
 
@@ -1957,8 +1957,16 @@ interface MyTeamResponse {  // returned by GET /my
       <div class="feature-card">
         <h3><span class="fc-icon">📚</span> Parallel Queries &amp; Recent Searches</h3>
         <ul>
-          <li><strong>All Tab:</strong> Executes parallel infinite query requests concurrently, rendering a grouped preview section (max 3 results per category) with "See all" redirects.</li>
+          <li><strong>All Tab:</strong> Executes parallel infinite query requests concurrently, rendering a grouped preview section (max 3 results per category, including Users) with "See all" redirects.</li>
           <li><strong>Search History:</strong> Stores the last 8 successful queries under the AsyncStorage key <code>pabaini_recent_searches</code>, supporting tap-to-search and clear triggers.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🖼️</span> Structured Card Shimmer Loader</h3>
+        <ul>
+          <li>Replaced the generic box loading placeholder with a structured card shimmer layout matching real result list cards.</li>
+          <li>Renders a circular avatar placeholder (<code>Shimmer width 40</code>) and two text lines of varying width (<code>Shimmer width 140</code> and <code>220</code>) utilizing the animated <code>&lt;Shimmer /&gt;</code> component.</li>
         </ul>
       </div>
 
@@ -1977,8 +1985,7 @@ interface MyTeamResponse {  // returned by GET /my
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br/>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br/>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Active Pill Check?<br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── [All] ────► Fire 4 parallel endpoints concurrently<br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── [Users] ──► Gated with "Coming Soon" Alert<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── [All] ────► Fire 5 parallel endpoints concurrently<br/>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── [Single] ─► Trigger infinite query with 30s cache<br/>
         </div>
       </div>
@@ -1987,13 +1994,21 @@ interface MyTeamResponse {  // returned by GET /my
     <section class="section" id="sports-skeletons">
       <div class="section-header">
         <div class="section-number">🏏</div>
-        <h2>Sports Loading Skeletons</h2>
+        <h2>Sports Loading Skeletons &amp; Shimmer Contrast</h2>
         <span class="section-tag tag-done">✓ Implemented</span>
       </div>
 
       <div class="callout callout-note">
         <span class="callout-icon">ℹ️</span>
-        <div><strong>Objective:</strong> Replace full-screen spinners with pulsing shimmer layouts (using SkeletonBox and SkeletonCircle) when loading match details or team profiles.</div>
+        <div><strong>Objective:</strong> Replace full-screen spinners with pulsing shimmer layouts (using SkeletonBox and SkeletonCircle) and optimize color contrast on light screens.</div>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🎨</span> Optimized Shimmer Color Contrast (<code>Shimmer.tsx</code>)</h3>
+        <ul>
+          <li>Darkened the light mode base color for the central <code>Shimmer</code> component from <code>#EEEEEE</code> to <code>#D0D5D3</code>.</li>
+          <li>This instantly boosts visibility and resolves readability issues for all skeleton layouts (Players, Matches, Teams, Comments, and Search loaders) on bright light screens.</li>
+        </ul>
       </div>
 
       <div class="feature-card">

@@ -372,7 +372,7 @@ graph TD
 
 *   **Config-Driven Architecture (`src/constants/searchCategories.ts`)**:
     *   Unified search categories into a single extensible config array `SEARCH_CATEGORIES` listing tab IDs, display labels, backend endpoints, empty states, and status flags.
-    *   The `users` category is gated with a `comingSoon: true` flag, showing a native "Coming soon" dialog instead of executing queries.
+    *   The `users` category is fully integrated and active, querying the backend `/api/v1/users` directory endpoint.
 *   **Asynchronous API Search Integration (`src/api/search.ts`)**:
     *   Wired inputs to real backend query endpoints: `GET /announcements`, `GET /users`, `GET /sports/cricket/players`, `GET /sports/cricket/teams`, and `GET /sports/cricket/matches`.
 *   **Debounced Input & Focus Indicators**:
@@ -383,11 +383,14 @@ graph TD
     *   Uses `onEndReachedThreshold: 0.3` to start fetching the next page when 30% from the bottom of the list, displaying a loading spinner in the list footer.
     *   Configures `staleTime: 30_000` (30 seconds) to cache results, allowing users to switch category pills without re-fetching.
 *   **Parallel Queries for the "All" Category**:
-    *   Tapping the **All** tab fires parallel infinite queries for announcements, players, teams, and matches.
-    *   Renders a grouped preview section (max 3 results per category) with "See all X →" links to instantly switch tabs and load full paginated results.
+    *   Tapping the **All** tab fires parallel infinite queries for announcements, users, players, teams, and matches.
+    *   Renders a grouped preview section (max 3 results per category, including Users) with "See all X →" links to instantly switch tabs and load full paginated results.
 *   **Persisted Search History Log**:
     *   Saves the last 8 successful queries in local device memory under the AsyncStorage key `pabaini_recent_searches`.
     *   Displays recent searches when the input is empty, complete with individual row deletion and a "Clear All" link.
+*   **Structured Card Shimmer Loader**:
+    *   Instead of a solid box loading placeholder, search typing/fetching displays a structured card shimmer mimicking real result list rows.
+    *   Renders a circular avatar placeholder (`Shimmer width 40`) and two text lines of varying width (`Shimmer width 140` and `220`) utilizing the animated `<Shimmer />` component.
 
 ### Search Flow Diagram
 
@@ -400,10 +403,8 @@ flowchart TD
     LengthCheck -->|Yes| SaveHistory[Save query to AsyncStorage]
     SaveHistory --> PillCheck{Selected Pill?}
     
-    PillCheck -->|All| ParallelQuery[Fire Announcements, Players, Teams, Matches queries]
-    PillCheck -->|Posts/Players/Teams/Matches| SingleQuery[Fire category-specific useInfiniteQuery]
-    PillCheck -->|Users| Gate{Is User Pill comingSoon?}
-    Gate -->|Yes| AlertToast[Show Coming Soon Alert]
+    PillCheck -->|All| ParallelQuery[Fire Announcements, Users, Players, Teams, Matches queries]
+    PillCheck -->|Single Pill| SingleQuery[Fire category-specific useInfiniteQuery]
     
     ParallelQuery --> RenderAll[Render sections with max 3 items + See all button]
     SingleQuery --> RenderFlatList[Render FlatList with infinite scroll page triggers]
@@ -411,9 +412,12 @@ flowchart TD
 
 ---
 
-## 🏏 14. Sports Loading Skeletons (Match Details & Team Profile)
-**Objective**: Enhance the user experience by replacing standard full-screen spinners with pulsing loading skeleton states when viewing match details or team profiles.
+## 🏏 14. Sports Loading Skeletons & Shimmer Contrast
+**Objective**: Enhance the user experience by replacing standard full-screen spinners with pulsing loading skeleton states when viewing match details, team profiles, or searching directories.
 
+*   **Optimized Shimmer Color Contrast (`src/components/skeletons/Shimmer.tsx`)**:
+    *   Darkened the light mode base color for the central `Shimmer` component from `#EEEEEE` to `#D0D5D3`.
+    *   This instantly boosts visibility and resolves readability issues for all skeleton layouts (Players, Matches, Teams, Comments, and Search loaders) on bright light screens.
 *   **Match Details Loading Skeleton (`src/components/skeletons/sports/MatchDetailSkeleton.tsx`)**:
     *   Designed a theme-aware shimmering layout using `SkeletonBox` and `SkeletonCircle` elements.
     *   Replicates the exact structure of the cricket Match Details screen: a top status card banner, the team versus block (with circle placeholders for logo images, team titles, and captains), the Playing XI lineups block, and three rows of match information (Date, Venue, and Scoring Mode).
