@@ -362,8 +362,7 @@ export default function AnnouncementDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
       <KeyboardAvoidingView 
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Fixed Header Bar */}
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border, paddingTop: insets.top }]}>
