@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike, Not, IsNull } from 'typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { getSupabaseClient } from '../../config/supabase.config';
@@ -8,6 +8,7 @@ import { User } from './entities/user.entity';
 import { CricketPlayersService } from '../sports/cricket/players/cricket-players.service';
 import { TeamsService } from '../sports/cricket/teams/teams.service';
 import { CricketStatsService } from '../sports/cricket/stats/cricket-stats.service';
+import { QueryUsersDto } from './dto/query-users.dto';
 
 @Injectable()
 export class UsersService {
@@ -241,5 +242,42 @@ export class UsersService {
         }
 
         return { user, cricket };
+    }
+
+    async getAllUsers(query: QueryUsersDto) {
+        const page = query.page || 1;
+        const limit = query.limit || 20;
+        const skip = (page - 1) * limit;
+
+        const where: any = {
+            name: Not(IsNull()),
+        };
+
+        if (query.search && query.search.trim() !== '') {
+            where.name = ILike(`%${query.search.trim()}%`);
+        }
+
+        const [users, total] = await this.usersRepository.findAndCount({
+            where,
+            select: {
+                id: true,
+                name: true,
+                avatar_url: true,
+                created_at: true,
+            },
+            order: { created_at: 'DESC' },
+            take: limit,
+            skip,
+        });
+
+        return {
+            data: users,
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
     }
 }

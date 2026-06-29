@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Delete, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Delete, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseAuthGuard } from 'src/common/guards/firebase-auth.guard';
 import { DbUserGuard } from 'src/common/guards/db-user.guard';
@@ -9,10 +9,18 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UserRole } from './entities/user.entity';
+import { QueryUsersDto } from './dto/query-users.dto';
 
 @Controller('users')
 export class UserController {
     constructor(private usersService: UsersService) { }
+
+    @Get()
+    @UseGuards(FirebaseAuthGuard, DbUserGuard)
+    async getAllUsers(@Query() query: QueryUsersDto) {
+        const result = await this.usersService.getAllUsers(query);
+        return { data: result, message: 'Users directory retrieved successfully' };
+    }
 
     @Get('me')
     @UseGuards(FirebaseAuthGuard, DbUserGuard)

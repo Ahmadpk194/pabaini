@@ -9,7 +9,7 @@
 | Module | Endpoints | Status |
 |---|---|---|
 | Authentication | 1 | ✅ Live |
-| Users | 7 | ✅ Live |
+| Users | 8 | ✅ Live |
 | Announcements | 13 | ✅ Live |
 | Sports — Phase 1 (Cricket Profiles) | 5 | ✅ Live |
 | Sports — Phase 2 (Cricket Teams) | 14 | ✅ Live |
@@ -18,7 +18,7 @@
 | Sports — Phase 3 (Simple Scoring Mode) | 2 | ✅ Live |
 | Sports — Phase 3 (Live Scoring) | 6 | ✅ Live |
 | Sports — Phase 3 (Leaderboard & Standings) | 2 | 🗓 Roadmap |
-| **Total** | **63** | |
+| **Total** | **64** | |
 
 ---
 
@@ -56,6 +56,7 @@ interface ApiResponse<T> {
 - [#6 — POST `/users/device-token`](#6-post-usersdevice-token) — Register FCM token
 - [#7 — DELETE `/users/device-token`](#7-delete-usersdevice-token) — Remove FCM token
 - [#46 — GET `/users/:id/profile`](#46-get-usersidprofile) — Public aggregated user profile
+- [#64 — GET `/users`](#64-get-users) — User directory (protected)
 
 ### 3. Announcements Module
 - [#8 — GET `/announcements`](#8-get-announcements) — Get all announcements
@@ -550,6 +551,65 @@ curl -X GET http://localhost:3000/api/v1/users/13/profile
 
 ---
 
+### #64 · GET `/users`
+
+Retrieves a paginated directory of registered users who have set up their names.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/users` |
+| **Access** | 🔴 Protected |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | `number` | `1` | Pagination offset |
+| `limit` | `number` | `20` | Results per page |
+| `search` | `string` | — | Plaintext search term matching display name |
+
+**cURL Example**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/users?page=1&limit=20&search=Ahmad" \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "message": "Users directory retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": 13,
+        "name": "Messi khan",
+        "avatar_url": "https://supabase-bucket/avatars/QAw15jU7SSfQncmzZvkuUOTvcv22-1781522650987.jpeg",
+        "created_at": "2026-06-15T05:34:44.325Z"
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+---
+
 ## 3. Announcements Module
 
 ### #8 · GET `/announcements`
@@ -569,11 +629,12 @@ Returns a paginated, filtered feed of village announcements. Pinned notices appe
 | `page` | `number` | `1` | Pagination offset |
 | `limit` | `number` | `10` | Results per page |
 | `category` | `string` | — | Filter: `general` · `urgent` · `event` · `jirga_decision` |
+| `search` | `string` | — | Plaintext search term matching title or content |
 
 **cURL Example**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent"
+curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent&search=water"
 ```
 
 **Response `200 OK`**
@@ -1367,7 +1428,7 @@ graph TD
 
 ### #23 · GET `/sports/cricket/teams`
 
-Lists all active cricket teams.
+Lists active cricket teams with optional pagination and name filtering.
 
 | | |
 |---|---|
@@ -1375,10 +1436,18 @@ Lists all active cricket teams.
 | **Path** | `/api/v1/sports/cricket/teams` |
 | **Access** | 🟢 Public |
 
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | `number` | `1` | Page number |
+| `limit` | `number` | `10` | Results per page |
+| `search` | `string` | — | Plaintext search matching team name |
+
 **cURL Example**
 
 ```bash
-curl -X GET http://localhost:3000/api/v1/sports/cricket/teams
+curl -X GET "http://localhost:3000/api/v1/sports/cricket/teams?page=1&limit=10&search=Pabaini"
 ```
 
 **Response `200 OK`**
@@ -1387,20 +1456,30 @@ curl -X GET http://localhost:3000/api/v1/sports/cricket/teams
 {
   "success": true,
   "status": 200,
-  "data": [
-    {
-      "id": 1,
-      "name": "Pabaini XI",
-      "logo_url": null,
-      "home_ground": "Pabaini Ground",
-      "founded_year": 2024,
-      "captain": {
+  "message": "Teams list retrieved successfully",
+  "data": {
+    "data": [
+      {
         "id": 1,
-        "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
-      },
-      "member_count": 8
+        "name": "Pabaini XI",
+        "logo_url": null,
+        "home_ground": "Pabaini Ground",
+        "founded_year": 2024,
+        "captain": {
+          "id": 1,
+          "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+        },
+        "member_count": 8,
+        "created_at": "2026-06-12T01:10:00.000Z"
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
     }
-  ]
+  }
 }
 ```
 
@@ -2214,7 +2293,7 @@ curl -X POST http://localhost:3000/api/v1/sports/cricket/matches/request \
 
 ### #41 · GET `/sports/cricket/matches`
 
-Lists all matches with optional status and team filters.
+Lists matches with optional status, team, and name/venue search filtering.
 
 | | |
 |---|---|
@@ -2229,13 +2308,14 @@ Lists all matches with optional status and team filters.
 |---|---|---|---|
 | `status` | `string` | No | Match status filter (e.g. `'pending_request'`, `'scheduled'`) |
 | `team_id` | `number` | No | Team ID filter (retrieves matches where team is team A or B) |
+| `search` | `string` | No | Plaintext search matching team names or venue |
 | `page` | `number` | No | Page number (defaults to `1`) |
 | `limit` | `number` | No | Items per page (defaults to `20`) |
 
 **cURL Example**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&page=1&limit=10"
+curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&page=1&limit=10&search=Pabaini"
 ```
 
 **Response `200 OK`**
@@ -2244,45 +2324,49 @@ curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&page=
 {
   "success": true,
   "status": 200,
-  "data": [
-    {
-      "id": 1,
-      "series_id": null,
-      "tournament_id": null,
-      "team_a_id": 1,
-      "team_b_id": 2,
-      "requested_by": 1,
-      "overs": 20,
-      "venue": "Pabaini Cricket Ground",
-      "scheduled_at": "2026-06-25T17:00:00.000Z",
-      "scoring_mode": "simple",
-      "scorer_id": null,
-      "status": "scheduled",
-      "winner_team_id": null,
-      "man_of_match_id": null,
-      "team_a_score": null,
-      "team_b_score": null,
-      "team_a_lineup_set": false,
-      "team_b_lineup_set": false,
-      "created_at": "2026-06-19T01:30:00.000Z",
-      "updated_at": "2026-06-19T01:35:00.000Z",
-      "team_a": {
+  "message": "Matches retrieved successfully",
+  "data": {
+    "data": [
+      {
         "id": 1,
-        "name": "Pabaini Kings"
-      },
-      "team_b": {
-        "id": 2,
-        "name": "Pabaini Stars"
+        "series_id": null,
+        "tournament_id": null,
+        "team_a_id": 1,
+        "team_b_id": 2,
+        "requested_by": 1,
+        "overs": 20,
+        "venue": "Pabaini Cricket Ground",
+        "scheduled_at": "2026-06-25T17:00:00.000Z",
+        "scoring_mode": "simple",
+        "scorer_id": null,
+        "status": "scheduled",
+        "winner_team_id": null,
+        "man_of_match_id": null,
+        "team_a_score": null,
+        "team_b_score": null,
+        "team_a_lineup_set": false,
+        "team_b_lineup_set": false,
+        "created_at": "2026-06-19T01:30:00.000Z",
+        "updated_at": "2026-06-19T01:35:00.000Z",
+        "team_a": {
+          "id": 1,
+          "name": "Pabaini Kings"
+        },
+        "team_b": {
+          "id": 2,
+          "name": "Pabaini Stars"
+        }
       }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
     }
-  ],
-  "meta": {
-    "page": 1,
-    "limit": 10,
-    "total": 1,
-    "totalPages": 1
   }
 }
+```
 ```
 
 ---

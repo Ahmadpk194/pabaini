@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, IsNull } from 'typeorm';
+import { Repository, Not, IsNull, Brackets } from 'typeorm';
 import { Announcement } from './entities/announcement.entity';
 import { AnnouncementLike } from './entities/announcement-like.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -22,22 +22,39 @@ export class AnnouncementsService {
     private fcmService: FCMService,
   ) { }
 
-  async findAll(user?: User, page: number = 1, limit: number = 10, category?: string): Promise<{ data: Announcement[]; total: number; page: number; limit: number; totalPages: number }> {
+  async findAll(
+    user?: User,
+    page: number = 1,
+    limit: number = 10,
+    category?: string,
+    search?: string,
+  ): Promise<{ data: Announcement[]; total: number; page: number; limit: number; totalPages: number }> {
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      is_deleted: false,
-    };
+    const qb = this.announcementsRepository.createQueryBuilder('announcement')
+      .where('announcement.is_deleted = :isDeleted', { isDeleted: false });
+
     if (category) {
-      where.category = category;
+      qb.andWhere('announcement.category = :category', { category });
     }
 
-    const [data, total] = await this.announcementsRepository.findAndCount({
-      where,
-      order: { is_pinned: 'DESC', created_at: 'DESC' },
-      skip,
-      take: limit,
-    });
+    if (search && search.trim() !== '') {
+      const searchPattern = `%${search.trim()}%`;
+      qb.andWhere(
+        new Brackets((innerQb) => {
+          innerQb.where('announcement.title ILIKE :search', { search: searchPattern })
+                 .orWhere('announcement.content ILIKE :search', { search: searchPattern });
+        }),
+      );
+    }
+
+    qb.orderBy('announcement.is_pinned', 'DESC')
+      .addOrderBy('announcement.created_at', 'DESC');
+
+    const [data, total] = await qb
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     const totalPages = Math.ceil(total / limit);
 

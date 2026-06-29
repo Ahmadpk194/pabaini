@@ -1104,6 +1104,7 @@
       <button class="nav-link" onclick="jumpToCard('card-6')"><span class="nav-method m-POST">POST</span>/device-token<span class="nav-number">#6</span></button>
       <button class="nav-link" onclick="jumpToCard('card-7')"><span class="nav-method m-DELETE">DEL</span>/device-token<span class="nav-number">#7</span></button>
       <button class="nav-link" onclick="jumpToCard('card-46')"><span class="nav-method m-GET">GET</span>/users/:id/profile<span class="nav-number">#46</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-64')"><span class="nav-method m-GET">GET</span>/users<span class="nav-number">#64</span></button>
     </div>
 
     <div class="nav-group" id="nav-announcements">
@@ -1192,9 +1193,9 @@
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-tabs">
-      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">63</span></button>
+      <button class="tab-pill active" id="tab-all" onclick="filterTab('all', this)">All <span class="tab-count">64</span></button>
       <button class="tab-pill" id="tab-auth" onclick="filterTab('auth', this)">Auth <span class="tab-count">1</span></button>
-      <button class="tab-pill" id="tab-users" onclick="filterTab('users', this)">Users <span class="tab-count">7</span></button>
+      <button class="tab-pill" id="tab-users" onclick="filterTab('users', this)">Users <span class="tab-count">8</span></button>
       <button class="tab-pill" id="tab-announcements" onclick="filterTab('announcements', this)">Announcements <span class="tab-count">13</span></button>
       <button class="tab-pill" id="tab-sports" onclick="filterTab('sports', this)">Sports <span class="tab-count">38</span></button>
       <button class="tab-pill" id="tab-notifications" onclick="filterTab('notifications', this)">Notifications <span class="tab-count">4</span></button>
@@ -1208,7 +1209,7 @@
     <p class="hero-desc">Complete developer reference for the Pabaini village community platform — Firebase authentication, PostgreSQL, Supabase Storage, and FCM push notifications.</p>
     <div class="stats-grid">
       <div class="stat-chip">
-        <div class="stat-value">63</div>
+        <div class="stat-value">64</div>
         <div class="stat-label">Total Endpoints</div>
       </div>
       <div class="stat-chip">
@@ -1216,7 +1217,7 @@
         <div class="stat-label">Auth</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-value">7</div>
+        <div class="stat-value">8</div>
         <div class="stat-label">Users</div>
       </div>
       <div class="stat-chip">
@@ -1835,6 +1836,62 @@ axios.post('/api/v1/users/me/avatar', formData, {
       </div>
     </div>
 
+    <!-- #64 -->
+    <div class="endpoint-card" id="card-64" data-category="users" data-path="/users" data-desc="get user directory paginated search">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#64</span>
+        <span class="method-tag GET">GET</span>
+        <span class="path-text">/api/v1/users</span>
+        <span class="auth-badge auth-protected">Protected</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/users')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Retrieves a paginated directory of registered users who have set up their names.</p>
+        <div class="field-label">Query Parameters</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">page</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Page number (default: 1)</td></tr>
+              <tr><td><span class="param-name">limit</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Items per page (default: 20)</td></tr>
+              <tr><td><span class="param-name">search</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Search query matching user display name</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+            <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/users?page=1&amp;limit=20&amp;search=Ahmad" -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/users', { headers: { Authorization: `Bearer ${token}` }, params: { page: 1, limit: 20, search: 'Ahmad' } });</div>
+          <div class="code-pane" data-lang="response">{
+  "success": true,
+  "status": 200,
+  "message": "Users directory retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": 13,
+        "name": "Messi khan",
+        "avatar_url": "https://supabase-bucket/avatars/QAw15jU7SSfQncmzZvkuUOTvcv22-1781522650987.jpeg",
+        "created_at": "2026-06-15T05:34:44.325Z"
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── ANNOUNCEMENTS MODULE ─── -->
     <div class="module-header" data-cat="announcements">
       <div class="module-icon">📢</div>
@@ -1864,6 +1921,7 @@ axios.post('/api/v1/users/me/avatar', formData, {
               <tr><td><span class="param-name">page</span></td><td><span class="param-type">number</span></td><td>1</td><td>Pagination offset</td></tr>
               <tr><td><span class="param-name">limit</span></td><td><span class="param-type">number</span></td><td>10</td><td>Results per page</td></tr>
               <tr><td><span class="param-name">category</span></td><td><span class="param-type">string</span></td><td>—</td><td><code>general</code> · <code>urgent</code> · <code>event</code> · <code>jirga_decision</code></td></tr>
+              <tr><td><span class="param-name">search</span></td><td><span class="param-type">string</span></td><td>—</td><td>Plaintext search matching title or content</td></tr>
             </tbody>
           </table>
         </div>
@@ -1873,9 +1931,9 @@ axios.post('/api/v1/users/me/avatar', formData, {
             <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
             <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
           </div>
-          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/announcements?page=1&limit=10&category=urgent"</div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/announcements?page=1&amp;limit=10&amp;category=urgent&amp;search=water"</div>
           <div class="code-pane" data-lang="axios">axios.get('/api/v1/announcements', {
-  params: { page: 1, limit: 10, category: 'urgent' }
+  params: { page: 1, limit: 10, category: 'urgent', search: 'water' }
 });</div>
           <div class="code-pane" data-lang="response">{
   "success": true,
@@ -2857,32 +2915,53 @@ axios.post('/api/v1/announcements/12/image', formData, {
         <span class="toggle-icon">▾</span>
       </div>
       <div class="endpoint-body">
-        <p class="endpoint-desc">Retrieves a summary list of all active cricket teams.</p>
+        <p class="endpoint-desc">Lists active cricket teams with optional pagination and name filtering.</p>
+        <div class="field-label">Query Parameters</div>
+        <div class="param-table-wrap">
+          <table class="param-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="param-name">page</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Page number (default: 1)</td></tr>
+              <tr><td><span class="param-name">limit</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Items per page (default: 10)</td></tr>
+              <tr><td><span class="param-name">search</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Search query matching team name</td></tr>
+            </tbody>
+          </table>
+        </div>
         <div class="code-panel">
           <div class="code-tabs">
             <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
             <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
             <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
           </div>
-          <div class="code-pane active" data-lang="curl">curl -X GET http://localhost:3000/api/v1/sports/cricket/teams</div>
-          <div class="code-pane" data-lang="axios">axios.get('/api/v1/sports/cricket/teams');</div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/sports/cricket/teams?page=1&amp;limit=10&amp;search=Pabaini"</div>
+          <div class="code-pane" data-lang="axios">axios.get('/api/v1/sports/cricket/teams', { params: { page: 1, limit: 10, search: 'Pabaini' } });</div>
           <div class="code-pane" data-lang="response">{
   "success": true,
   "status": 200,
-  "data": [
-    {
-      "id": 1,
-      "name": "Pabaini XI",
-      "logo_url": null,
-      "home_ground": "Pabaini Ground",
-      "founded_year": 2024,
-      "captain": {
+  "message": "Teams list retrieved successfully",
+  "data": {
+    "data": [
+      {
         "id": 1,
-        "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
-      },
-      "member_count": 8
+        "name": "Pabaini XI",
+        "logo_url": null,
+        "home_ground": "Pabaini Ground",
+        "founded_year": 2024,
+        "captain": {
+          "id": 1,
+          "user": { "id": 1, "name": "Ahmad Khan", "avatar_url": null }
+        },
+        "member_count": 8,
+        "created_at": "2026-06-12T01:10:00.000Z"
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
     }
-  ]
+  }
 }</div>
         </div>
       </div>
@@ -3812,7 +3891,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
         <span class="toggle-icon">▾</span>
       </div>
       <div class="endpoint-body">
-        <p class="endpoint-desc">Lists all matches with optional status and team filters. Ordered by newest creation date first.</p>
+        <p class="endpoint-desc">Lists matches with optional status, team, and name/venue search filtering. Ordered by newest creation date first.</p>
         <div class="field-label">Query Parameters</div>
         <div class="param-table-wrap">
           <table class="param-table">
@@ -3820,6 +3899,7 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
             <tbody>
               <tr><td><span class="param-name">status</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Match status filter (e.g. <code>'pending_request'</code>, <code>'scheduled'</code>)</td></tr>
               <tr><td><span class="param-name">team_id</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Team ID filter (matches where team is team A or B)</td></tr>
+              <tr><td><span class="param-name">search</span></td><td><span class="param-type">string</span></td><td><span class="param-required req-no">No</span></td><td>Search query matching team names or venue</td></tr>
               <tr><td><span class="param-name">page</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Page index (defaults to <code>1</code>)</td></tr>
               <tr><td><span class="param-name">limit</span></td><td><span class="param-type">number</span></td><td><span class="param-required req-no">No</span></td><td>Results limit per page (defaults to <code>20</code>)</td></tr>
             </tbody>
@@ -3831,39 +3911,42 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
             <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
             <button class="code-tab" onclick="switchTab(this, 'response')">Response 200</button>
           </div>
-          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&amp;page=1&amp;limit=10"</div>
+          <div class="code-pane active" data-lang="curl">curl -X GET "http://localhost:3000/api/v1/sports/cricket/matches?team_id=1&amp;page=1&amp;limit=10&amp;search=Pabaini"</div>
           <div class="code-pane" data-lang="axios">axios.get('/api/v1/sports/cricket/matches', {
-  params: { team_id: 1, page: 1, limit: 10 }
+  params: { team_id: 1, page: 1, limit: 10, search: 'Pabaini' }
 });</div>
           <div class="code-pane" data-lang="response">{
   "success": true,
   "status": 200,
-  "data": [
-    {
-      "id": 1,
-      "series_id": null,
-      "tournament_id": null,
-      "team_a_id": 1,
-      "team_b_id": 2,
-      "requested_by": 1,
-      "overs": 20,
-      "venue": "Pabaini Cricket Ground",
-      "scheduled_at": "2026-06-25T17:00:00.000Z",
-      "scoring_mode": "simple",
-      "status": "scheduled",
-      "winner_team_id": null,
-      "man_of_match_id": null,
-      "team_a_score": null,
-      "team_b_score": null,
-      "team_a_lineup_set": false,
-      "team_b_lineup_set": false,
-      "created_at": "2026-06-19T01:30:00.000Z",
-      "updated_at": "2026-06-19T01:35:00.000Z",
-      "team_a": { "id": 1, "name": "Pabaini Kings" },
-      "team_b": { "id": 2, "name": "Pabaini Stars" }
-    }
-  ],
-  "meta": { "page": 1, "limit": 10, "total": 1, "totalPages": 1 }
+  "message": "Matches retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "series_id": null,
+        "tournament_id": null,
+        "team_a_id": 1,
+        "team_b_id": 2,
+        "requested_by": 1,
+        "overs": 20,
+        "venue": "Pabaini Cricket Ground",
+        "scheduled_at": "2026-06-25T17:00:00.000Z",
+        "scoring_mode": "simple",
+        "status": "scheduled",
+        "winner_team_id": null,
+        "man_of_match_id": null,
+        "team_a_score": null,
+        "team_b_score": null,
+        "team_a_lineup_set": false,
+        "team_b_lineup_set": false,
+        "created_at": "2026-06-19T01:30:00.000Z",
+        "updated_at": "2026-06-19T01:35:00.000Z",
+        "team_a": { "id": 1, "name": "Pabaini Kings" },
+        "team_b": { "id": 2, "name": "Pabaini Stars" }
+      }
+    ],
+    "meta": { "page": 1, "limit": 10, "total": 1, "totalPages": 1 }
+  }
 }</div>
         </div>
       </div>

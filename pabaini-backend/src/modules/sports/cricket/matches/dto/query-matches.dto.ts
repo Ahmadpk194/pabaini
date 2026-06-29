@@ -1,4 +1,4 @@
-import { IsOptional, IsEnum, IsInt, Min } from 'class-validator';
+import { IsOptional, IsEnum, IsInt, Min, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MatchStatus } from '../enums/matches.enums';
 
@@ -11,6 +11,10 @@ export class QueryMatchesDto {
   @Type(() => Number)
   @IsOptional()
   team_id?: number;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
 
   @IsInt()
   @Min(1)

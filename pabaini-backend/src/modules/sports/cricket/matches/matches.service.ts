@@ -303,38 +303,35 @@ export class MatchesService {
   }
 
   async findAllMatches(query: QueryMatchesDto) {
-    let where: any = {};
-    if (query.status) {
-      where.status = query.status;
-    }
-    if (query.team_id) {
-      if (query.status) {
-        where = [
-          { status: query.status, team_a_id: query.team_id },
-          { status: query.status, team_b_id: query.team_id },
-        ];
-      } else {
-        where = [
-          { team_a_id: query.team_id },
-          { team_b_id: query.team_id },
-        ];
-      }
-    }
-
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.matchRepo.findAndCount({
-      where,
-      relations: {
-        team_a: true,
-        team_b: true,
-      },
-      order: { created_at: 'DESC' },
-      take: limit,
-      skip,
-    });
+    const qb = this.matchRepo.createQueryBuilder('match')
+      .leftJoinAndSelect('match.team_a', 'team_a')
+      .leftJoinAndSelect('match.team_b', 'team_b')
+      .orderBy('match.created_at', 'DESC');
+
+    if (query.status) {
+      qb.andWhere('match.status = :status', { status: query.status });
+    }
+
+    if (query.team_id) {
+      qb.andWhere('(match.team_a_id = :teamId OR match.team_b_id = :teamId)', { teamId: query.team_id });
+    }
+
+    if (query.search && query.search.trim() !== '') {
+      const searchPattern = `%${query.search.trim()}%`;
+      qb.andWhere(
+        '(team_a.name ILIKE :search OR team_b.name ILIKE :search OR match.venue ILIKE :search)',
+        { search: searchPattern }
+      );
+    }
+
+    const [data, total] = await qb
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data,

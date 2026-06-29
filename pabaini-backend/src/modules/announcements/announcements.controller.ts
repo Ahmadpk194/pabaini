@@ -9,6 +9,7 @@ import { AnnouncementsService } from './announcements.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { UserRole } from '../users/entities/user.entity';
+import { QueryAnnouncementsDto } from './dto/query-announcements.dto';
 
 @Controller('announcements')
 @UseGuards(FirebaseAuthGuard, DbUserGuard)
@@ -18,21 +19,13 @@ export class AnnouncementsController {
   @Get()
   // Public: Get all announcements ordered by newest with pagination and filtering
   async findAll(
-    @DbUser() user?: any,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('category') category?: string,
+    @DbUser() user: any,
+    @Query() query: QueryAnnouncementsDto,
   ) {
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 10;
+    const pageNum = query.page || 1;
+    const limitNum = query.limit || 10;
     
-    // Validate category if provided
-    const validCategories = ['general', 'urgent', 'event', 'jirga_decision'];
-    if (category && !validCategories.includes(category)) {
-      throw new BadRequestException(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
-    }
-    
-    const result = await this.announcementsService.findAll(user, pageNum, limitNum, category);
+    const result = await this.announcementsService.findAll(user, pageNum, limitNum, query.category, query.search);
     return { data: result.data, message: 'Announcements retrieved successfully', pagination: { total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages } };
   }
 

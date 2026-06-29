@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseAuthGuard } from 'src/common/guards/firebase-auth.guard';
@@ -21,6 +22,7 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { InvitePlayerDto } from './dto/invite-player.dto';
 import { TransferCaptainDto } from './dto/transfer-captain.dto';
+import { QueryTeamsDto } from './dto/query-teams.dto';
 
 @Controller('teams')
 export class TeamsController {
@@ -34,9 +36,9 @@ export class TeamsController {
   }
 
   @Get()
-  async getAllTeams() {
-    const teams = await this.teamsService.findAllTeams();
-    return { data: teams, message: 'Teams list retrieved successfully' };
+  async getAllTeams(@Query() query: QueryTeamsDto) {
+    const result = await this.teamsService.findAllTeams(query);
+    return { data: result, message: 'Teams list retrieved successfully' };
   }
 
   @Get('my')

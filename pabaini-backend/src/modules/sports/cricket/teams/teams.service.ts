@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, ILike } from 'typeorm';
 import { Team } from './entities/team.entity';
 import { TeamMember } from './entities/team-member.entity';
 import { CricketPlayerProfile } from '../entities/cricket-player-profile.entity';
@@ -19,6 +19,7 @@ import { TransferCaptainDto } from './dto/transfer-captain.dto';
 import { getSupabaseClient } from 'src/config/supabase.config';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from 'src/modules/notifications/enums/notification-type.enum';
+import { QueryTeamsDto } from './dto/query-teams.dto';
 
 @Injectable()
 export class TeamsService {
@@ -105,17 +106,28 @@ export class TeamsService {
     return this.findOneTeam(savedTeam.id);
   }
 
-  async findAllTeams() {
-    const teams = await this.teamRepo.find({
-      where: { is_active: true },
+  async findAllTeams(query: QueryTeamsDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = { is_active: true };
+    if (query.search && query.search.trim() !== '') {
+      where.name = ILike(`%${query.search.trim()}%`);
+    }
+
+    const [teams, total] = await this.teamRepo.findAndCount({
+      where,
       relations: {
         captain: { user: true },
         members: true,
       },
       order: { created_at: 'DESC' },
+      take: limit,
+      skip,
     });
 
-    return teams.map((t) => ({
+    const mappedTeams = teams.map((t) => ({
       id: t.id,
       name: t.name,
       logo_url: t.logo_url,
@@ -132,6 +144,16 @@ export class TeamsService {
       member_count: t.members.filter((m) => m.status === TeamMemberStatus.ACTIVE).length,
       created_at: t.created_at,
     }));
+
+    return {
+      data: mappedTeams,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findMyTeams(userId: number) {
