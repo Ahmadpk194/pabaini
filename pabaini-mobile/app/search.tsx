@@ -64,7 +64,7 @@ interface MappedTeam {
 }
 
 export default function SearchScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
 
   const [inputValue, setInputValue] = useState('');
@@ -490,7 +490,7 @@ export default function SearchScreen() {
         <View
           style={[
             styles.genericSkeleton,
-            { backgroundColor: theme.colors.border, marginTop: 12 },
+            { backgroundColor: mode === 'dark' ? '#2A2A2A' : '#E6EAE8', marginTop: 12 },
           ]}
         />
       </View>
@@ -1047,6 +1047,5 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 14,
     marginBottom: 8,
-    opacity: 0.2,
   },
 });
