@@ -32,7 +32,7 @@ export default function Shimmer({ width, height, borderRadius = 0, style }: Shim
     ).start();
   }, [opacity]);
 
-  const baseColor = mode === 'dark' ? '#2A2A2A' : '#EEEEEE';
+  const baseColor = mode === 'dark' ? '#2A2A2A' : '#D0D5D3';
 
   return (
     <Animated.View style={[styles.container, { width, height, borderRadius, backgroundColor: baseColor, opacity } as ViewStyle, style]} />

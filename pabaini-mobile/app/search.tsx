@@ -26,6 +26,7 @@ import {
   AnnouncementCardSkeleton,
   PlayerCardSkeleton,
   TeamCardSkeleton,
+  Shimmer,
 } from '../src/components/skeletons';
 
 import { SEARCH_CATEGORIES, SearchCategory } from '../src/constants/searchCategories';
@@ -489,10 +490,32 @@ export default function SearchScreen() {
       <View style={styles.skeletonsContainer}>
         <View
           style={[
-            styles.genericSkeleton,
-            { backgroundColor: mode === 'dark' ? '#2A2A2A' : '#E6EAE8', marginTop: 12 },
+            styles.resultCardSkeleton,
+            {
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surface,
+            },
           ]}
-        />
+        >
+          <Shimmer
+            width={40}
+            height={40}
+            borderRadius={20}
+            style={{ marginRight: 12 }}
+          />
+          <View style={{ flex: 1, gap: 8 }}>
+            <Shimmer
+              width={140}
+              height={13}
+              borderRadius={6}
+            />
+            <Shimmer
+              width={220}
+              height={10}
+              borderRadius={5}
+            />
+          </View>
+        </View>
       </View>
     );
   };
@@ -1043,9 +1066,14 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
   },
-  genericSkeleton: {
-    height: 76,
+  resultCardSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
     borderRadius: 14,
+    borderWidth: 0.5,
     marginBottom: 8,
+    marginTop: 12,
+    marginHorizontal: 12,
   },
 });
