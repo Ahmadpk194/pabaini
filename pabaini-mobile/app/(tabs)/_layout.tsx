@@ -21,12 +21,12 @@ export default function TabsLayout() {
             borderTopColor: theme.colors.border,
             borderTopWidth: 0.5,
             height: Platform.OS === 'ios'
-              ? 46 + insets.bottom
-              : 50 + (insets.bottom > 0 ? insets.bottom : 0),
+              ? 50 + insets.bottom
+              : 58 + (insets.bottom > 0 ? insets.bottom : 0),
             paddingBottom: Platform.OS === 'ios'
-              ? (insets.bottom > 0 ? insets.bottom - 4 : 4)
-              : 4 + (insets.bottom > 0 ? insets.bottom : 0),
-            paddingTop: 2,
+              ? (insets.bottom > 0 ? insets.bottom - 2 : 8)
+              : 8 + (insets.bottom > 0 ? insets.bottom : 0),
+            paddingTop: 4,
             elevation: 4,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -2 },
@@ -37,7 +37,7 @@ export default function TabsLayout() {
             fontSize: 10,
             fontWeight: '600',
             marginTop: 1,
-            marginBottom: Platform.OS === 'ios' ? 0 : 2,
+            marginBottom: Platform.OS === 'ios' ? 0 : 4,
             letterSpacing: 0.2,
           },
         }}
