@@ -102,3 +102,42 @@ We choose **React Query (`useQuery` and `useMutation`)** cache manipulation for 
 | **Zero Latency**: UI updates immediately after sending, providing a snappy experience. | **Mock Overhead**: Requires generating dummy date/ID objects in the client logic. |
 | **Robust Error Recovery**: Handles automatic rollbacks, eliminating stale loading states. | **Code Complexity**: Demands strict handler synchronization during cache overrides. |
 | **Atomic Cache Sync**: Keeps notice feed stats and details page comments counts synced. | |
+
+---
+
+## 🔍 Global Search Screen Feature Integration (Wired to Backend)
+
+Global search unifies discoverability across Pabaini's modules (Announcements, Users, Matches, Players, Teams).
+
+### Approach Choice: TanStack Query Infinite Queries
+
+We use **TanStack Query (`useInfiniteQuery` v5)** to query the backend database for list pages. This approach automatically coordinates offset skip values and retains local result caching when switching between tabs.
+
+#### Full Flow Lifecycle:
+
+1. **Keypress Debouncing (300ms)**:
+   - Typing triggers a `300ms` self-healing `setTimeout` lock.
+   - If the user keeps typing, the pending request is cancelled.
+   - This prevents intermediate keystrokes from spamming the backend.
+2. **Minimum Length Threshold**:
+   - Search triggers only when query length is **2 or more characters**.
+   - Single-character inputs render a *"Keep typing..."* reminder.
+3. **Query Log Persistence (AsyncStorage)**:
+   - Successful queries are appended to the front of a history log array (max 8 entries) and written to the `pabaini_recent_searches` key.
+   - Tapping an item populates the input and executes search instantly.
+4. **Infinite Scroll Pagination**:
+   - FlatList `onEndReached` callback is triggered at a `0.3` threshold.
+   - It calls React Query's `fetchNextPage` wrapper.
+   - Extends the local query cache atomically, appending new pages without full-list refetches.
+5. **Parallel Category Aggregation ("All" category)**:
+   - Activating the **All** pill runs 4 parallel search requests concurrently.
+   - Shows a sectioned preview overview (max 3 items per category).
+   - Zero-result sections are hidden, and tapping *"See all"* switches tabs.
+
+#### Pros and Cons:
+
+| **Pros** | **Cons** |
+|---|---|
+| **Performance**: Caches tab results for 30s (`staleTime: 30_000`), reducing redundant network payload roundtrips. | **Concurrent Queries Overhead**: The "All" tab runs 4 queries concurrently, increasing server request volume. |
+| **UX Shimmer Layouts**: Reuses native card skeletons matching card heights instead of standard indicators. | **State Complexity**: Manages two inputs (live `inputValue` and debounced `searchQuery`) to prevent stuttering. |
+| **Extensible Architecture**: Adding tabs requires only a config entry in `SEARCH_CATEGORIES`. | |

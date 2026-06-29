@@ -1927,40 +1927,60 @@ interface MyTeamResponse {  // returned by GET /my
 
       <div class="callout callout-note">
         <span class="callout-icon">ℹ️</span>
-        <div><strong>Objective:</strong> Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams) under a unified screen. File: <code>app/search.tsx</code></div>
+        <div><strong>Objective:</strong> Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams, matches) under a unified screen using real backend APIs. File: <code>app/search.tsx</code></div>
       </div>
 
       <div class="feature-card">
-        <h3><span class="fc-icon">🌍</span> Renamed Route &amp; Global Context</h3>
+        <h3><span class="fc-icon">⚙️</span> Config-Driven Architecture (<code>searchCategories.ts</code>)</h3>
         <ul>
-          <li>Migrated the route from <code>/announcement-search</code> to <code>/search</code> and renamed the component to <code>SearchScreen</code>.</li>
-          <li>Updated the search input placeholder (<code>Search posts, players, teams...</code>) and initial empty state text (<code>Search Pabaini</code> / <code>Search posts, players, teams and more</code>) to present a global search layout.</li>
+          <li>Unified search categories into a single extensible config array <code>SEARCH_CATEGORIES</code> listing tab IDs, labels, backend endpoints, empty messages, and coming soon flags.</li>
+          <li>Gated <code>users</code> category with a <code>comingSoon: true</code> flag, showing an Alert dialog instead of executing queries.</li>
         </ul>
       </div>
 
       <div class="feature-card">
-        <h3><span class="fc-icon">📱</span> Unified Header Entry Points</h3>
+        <h3><span class="fc-icon">🔄</span> Debounced Input &amp; Visual Feedback</h3>
         <ul>
-          <li><strong>Home Screen:</strong> Included a Search button next to the Bell icon in the compact layout (<code>paddingLeft: 12</code> to align with card boundaries).</li>
-          <li><strong>Sports Screen:</strong> Unified the Sports tab header to use the exact same compact Search button and custom Notification Bell (complete with unread badge rendering) as the Home tab header.</li>
+          <li>Keypresses are debounced by exactly <code>300ms</code> using <code>useRef</code> timeouts to prevent spamming search requests.</li>
+          <li>Active inputs receive visual focus feedback by drawing a border matching <code>theme.colors.primary</code>.</li>
         </ul>
       </div>
 
       <div class="feature-card">
-        <h3><span class="fc-icon">🔍</span> Interactive Multi-Category Search</h3>
+        <h3><span class="fc-icon">⚡</span> React Query Caching &amp; Infinite Scroll</h3>
         <ul>
-          <li><strong>Posts tab:</strong> Filters local mock announcements matching titles, body text, locations, or authors.</li>
-          <li><strong>Users tab:</strong> Searches residents, admins, mods, and diaspora profiles. Shows a green <code>Player</code> badge if they are a registered cricket player. Tapping a card routes to <code>/profile/[id]</code>.</li>
-          <li><strong>Players tab:</strong> Filters only users registered as active cricket players (displays cricket roles). Tapping a card routes to <code>/profile/[id]</code>.</li>
-          <li><strong>Teams tab:</strong> Searches teams by name, home ground, or captain name. Shows member counts. Tapping a card routes to <code>/sports/cricket/teams/[id]</code>.</li>
+          <li>Uses <code>useInfiniteQuery</code> (TanStack Query v5) to load pages dynamically, tracking next-page availability via returned page meta fields (<code>meta.page &lt; meta.totalPages</code>).</li>
+          <li>Employs <code>onEndReachedThreshold: 0.3</code> to fetch next pages, showing loading spinners in the list footer, and caching results for 30 seconds (<code>staleTime: 30_000</code>).</li>
         </ul>
       </div>
 
       <div class="feature-card">
-        <h3><span class="fc-icon">⏳</span> Debounced Loader State</h3>
+        <h3><span class="fc-icon">📚</span> Parallel Queries &amp; Recent Searches</h3>
         <ul>
-          <li>Typing in the search input triggers an immediate loading state displaying 3 pulsing shimmer cards (<code>AnnouncementCardSkeleton</code>), executing a <code>500ms</code> setTimeout delay before showing matches, empty search screen, or no results.</li>
+          <li><strong>All Tab:</strong> Executes parallel infinite query requests concurrently, rendering a grouped preview section (max 3 results per category) with "See all" redirects.</li>
+          <li><strong>Search History:</strong> Stores the last 8 successful queries under the AsyncStorage key <code>pabaini_recent_searches</code>, supporting tap-to-search and clear triggers.</li>
         </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📊</span> Search Execution Flowchart</h3>
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; line-height: 1.6; border: 1px solid #e9ecef; margin-top: 10px;">
+          User Types <br/>
+          &nbsp;&nbsp;│<br/>
+          &nbsp;&nbsp;▼<br/>
+          Debounce (300ms Timeout)<br/>
+          &nbsp;&nbsp;│<br/>
+          &nbsp;&nbsp;▼<br/>
+          Validation: Length &gt;= 2?<br/>
+          &nbsp;&nbsp;├── [No] ──► Idle (Show Skeletons / Keep typing... / Recents)<br/>
+          &nbsp;&nbsp;└── [Yes] ─► Save query to AsyncStorage history (max 8)<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Active Pill Check?<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── [All] ────► Fire 4 parallel endpoints concurrently<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── [Users] ──► Gated with "Coming Soon" Alert<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── [Single] ─► Trigger infinite query with 30s cache<br/>
+        </div>
       </div>
     </section>
     <!-- ─── Sports Loading Skeletons ──────────────────────────────────────── -->

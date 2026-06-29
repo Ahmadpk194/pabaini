@@ -8,7 +8,7 @@
 > * **Authentication Engine**: Custom Firebase JWT validation. The mobile client obtains a token from Firebase Auth and attaches it as a Bearer header. The backend validates it in `FirebaseAuthGuard` (binds `request.authUser`) and resolves the PostgreSQL user in `DbUserGuard` (binds `request.dbUser`).
 > * **Standard Response Envelope**: Every backend response is wrapped in a global interceptor outputting `{ success: boolean, status: number, message?: string, data: T }`. Error filters capture Nest `HttpException` objects and map them to `{ success: false, status: number, message: string, errors?: string[], data: null }`.
 > * **Notice Board (Announcements)**: CRUD operations on the announcements feed with focus-based automatic background polling (20-second interval) that automatically stops when the screen is blurred. Admins and moderators can post, pin, and edit notices. Categories like `urgent` and `jirga_decision` trigger global push notifications via Firebase Cloud Messaging (FCM). Includes Comments V1, allowing users to comment on announcements, complete with transaction-safe atomic count updates, soft deletion, and frontend-friendly permission flags.
-> * **Global Search**: Unifies search capabilities across the app under a single `/search` path. Accessed from compact matching header buttons (Search & Bell) on both the Home notice feed and Sports hub. Features interactive sub-category filtering (Posts, Users, Players, Teams) with simulated debounced loading states and visual card renderers.
+> * **Global Search**: Unifies search capabilities across the app under a single `/search` path. Accessed from compact matching header buttons (Search & Bell) on both the Home notice feed and Sports hub. Driven by a config-driven categories array (`SEARCH_CATEGORIES`), 300ms debouncing, custom TanStack Query infinite scroll hooks (`useSearch.ts`), and AsyncStorage-based query log storage (max 8 recent searches).
 > * **Sports Hub (Cricket)**: Features player registration, searchable player discover directory (name search, pull-to-refresh, infinite scroll), team squad management (invites/requests), match scheduling request lifecycle, Playing XI declarations, and two scoring modes: Simple (retroactive scorecards with a 24-hour edit lock, collapsible team scorecard stats, guest player "Man of the Match" support, and real-time player statistics calculation) and Live (real-time ball-by-ball scoring console with bowler consecutive over validation, confirmation overrides, selection double-tap locks, strike rotation, innings transition, dismissed batsmen dropdown filtering, auto-closing console modals on match completion, undo features, and optimized pre-computed polling views). Post-match detail features a premium, tabbed `MatchScorecard` interface detailing batsman strike rates, bowler maidens, opponent extras, and chronological fall of wickets (FoW) timelines calculated dynamically from live events or simple records. Completed matches render with a styled victory badge displaying the winning margin on match cards, alongside a **Shareable Scorecard Engine** that enables captains and spectators to share beautiful customized PNG cards (Highlights, My Team, and Full Match formats) directly to social apps or download them to their local camera rolls. Includes theme-aware shimmering loading skeletons (`MatchDetailSkeleton` and `TeamProfileSkeleton`) to replace fullscreen spinners on match details and team profiles, alongside refined segmented tab buttons.
 > * **Safe Navigation Architecture**: Implemented a global wrapper layer (`safeRouterPush` and `safeRouterReplace`) to intercept multiple rapid screen taps within a 500ms self-healing lock window and duplicate route pushes (e.g. pushing a route matching the current path, filtering query parameters). Tied reactively to route updates via a `<PathnameTracker />` component in the root layout.
 > * **State Management & Caching**: TanStack React Query manages mobile data caches, while Zustand stores manage transient/persisted UI state (auth session, sports registrations, unread notification badges).
@@ -803,6 +803,37 @@ pabaini-mobile/
     }
     ```
 
+#### GET `/users`
+*   **Route**: `/api/v1/users`
+*   **Auth Required**: 🔐 Yes (Resident / Moderator / Admin)
+*   **Query Params**: `search` (optional search keyword), `page` (default 1), `limit` (default 20)
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "success": true,
+      "status": 200,
+      "data": {
+        "data": [
+          {
+            "id": 1,
+            "name": "Muhammad Khan",
+            "avatar_url": null,
+            "role": "admin",
+            "village": "Pabaini",
+            "is_diaspora": false,
+            "created_at": "2026-06-29T07:00:00.000Z"
+          }
+        ],
+        "meta": {
+          "page": 1,
+          "limit": 20,
+          "total": 1,
+          "totalPages": 1
+        }
+      }
+    }
+    ```
+
 ---
 
 ### Announcements Module
@@ -810,7 +841,7 @@ pabaini-mobile/
 #### GET `/announcements`
 *   **Route**: `/api/v1/announcements`
 *   **Auth Required**: 🟢 No
-*   **Query Params**: `page` (default 1), `limit` (default 10), `category` (optional)
+*   **Query Params**: `page` (default 1), `limit` (default 10), `category` (optional), `search` (optional)
 *   **Success Response (`200 OK`)**:
     ```json
     {
@@ -982,7 +1013,7 @@ graph TD
 #### GET `/sports/cricket/matches`
 *   **Route**: `/api/v1/sports/cricket/matches`
 *   **Auth Required**: 🟢 No (Public)
-*   **Query Params**: `status` (optional), `team_id` (optional), `page` (default 1), `limit` (default 20)
+*   **Query Params**: `status` (optional), `team_id` (optional), `search` (optional), `page` (default 1), `limit` (default 20)
 *   **Success Response (`200 OK`)**:
     ```json
     {
@@ -1426,8 +1457,14 @@ sequenceDiagram
 ### 9. Scorer Console Dashboard (`sports/cricket/matches/[id]/score.tsx`)
 *   **Purpose**: Dynamic scoring console for the designated scorer during live matches. Displays runs, legal over boundaries, wicket dismissals, rotates batsman strike, validates consecutive bowlers, triggers second innings setups, handles undos, and redirects to full scorecards upon automatic match completion.
 
-### 10. Spectator Live Viewer (`sports/cricket/matches/[id]/live.tsx`)
-*   **Purpose**: Read-only scoreboard polling `GET /live` every 5 seconds for spectators/diaspora. Displays pulsing live indicator badges, run rates, batsman/bowler scorecard matrices, and ball timeline details.
+### 11. Search Screen (`app/search.tsx`)
+*   **Purpose**: Global search interface for announcements, users, cricket players, teams, and matches.
+*   **Route**: `/search`
+*   **Logic**:
+    *   Map categories from a static `SEARCH_CATEGORIES` config.
+    *   Fires debounced (300ms) search query parameters to the backend using `useInfiniteQuery`.
+    *   Displays recent search histories saved under the `pabaini_recent_searches` AsyncStorage key.
+    *   Provides infinite scrolling and lazy loading per category, and an aggregated preview overview under the "All" tab.
 
 ---
 

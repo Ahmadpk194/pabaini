@@ -368,21 +368,46 @@ graph TD
 ---
 
 ## 🔍 13. Global Search Screen (`app/search.tsx`)
-**Objective**: Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams) under a unified screen.
+**Objective**: Enable users to search Pabaini's entire ecosystem (announcements, users, players, teams, matches) under a unified screen using real backend APIs.
 
-*   **Renamed Route & Global Context**:
-    *   Migrated the route from `/announcement-search` to `/search` and renamed the component to `SearchScreen`.
-    *   Updated the search input placeholder (`Search posts, players, teams...`) and initial empty state text (`Search Pabaini` / `Search posts, players, teams and more`) to present a global search layout.
-*   **Header Entries**:
-    *   **Home Screen**: Included a Search button next to the Bell icon in the compact layout (`paddingLeft: 12` to align with card boundaries).
-    *   **Sports Screen**: Unified the Sports tab header to use the exact same compact Search button and custom Notification Bell (complete with unread badge rendering) as the Home tab header.
-*   **Interactive Multi-Category Search**:
-    *   **Posts tab**: Filters local mock announcements matching titles, body text, locations, or authors.
-    *   **Users tab**: Searches residents, admins, mods, and diaspora profiles. Shows a green `Player` badge if they are a registered cricket player. Tapping a card routes to `/profile/[id]`.
-    *   **Players tab**: Filters only users registered as active cricket players (displays cricket roles). Tapping a card routes to `/profile/[id]`.
-    *   **Teams tab**: Searches teams by name, home ground, or captain name. Shows member counts. Tapping a card routes to `/sports/cricket/teams/[id]`.
-*   **Debounced Loader State**:
-    *   Typing in the search input triggers an immediate loading state displaying 3 pulsing shimmer cards (`AnnouncementCardSkeleton`), executing a `500ms` setTimeout delay before showing matches, empty search screen, or no results.
+*   **Config-Driven Architecture (`src/constants/searchCategories.ts`)**:
+    *   Unified search categories into a single extensible config array `SEARCH_CATEGORIES` listing tab IDs, display labels, backend endpoints, empty states, and status flags.
+    *   The `users` category is gated with a `comingSoon: true` flag, showing a native "Coming soon" dialog instead of executing queries.
+*   **Asynchronous API Search Integration (`src/api/search.ts`)**:
+    *   Wired inputs to real backend query endpoints: `GET /announcements`, `GET /users`, `GET /sports/cricket/players`, `GET /sports/cricket/teams`, and `GET /sports/cricket/matches`.
+*   **Debounced Input & Focus Indicators**:
+    *   Input keypresses are debounced by exactly `300ms` using `useRef` timeouts to minimize API load.
+    *   Active inputs receive visual focus feedback by drawing a border matching `theme.colors.primary`.
+*   **React Query Caching & Infinite Scroll (`src/hooks/useSearch.ts`)**:
+    *   Utilizes TanStack Query `useInfiniteQuery` (v5) to load pages dynamically, tracking next-page availability via returned page meta fields (`meta.page < meta.totalPages`).
+    *   Uses `onEndReachedThreshold: 0.3` to start fetching the next page when 30% from the bottom of the list, displaying a loading spinner in the list footer.
+    *   Configures `staleTime: 30_000` (30 seconds) to cache results, allowing users to switch category pills without re-fetching.
+*   **Parallel Queries for the "All" Category**:
+    *   Tapping the **All** tab fires parallel infinite queries for announcements, players, teams, and matches.
+    *   Renders a grouped preview section (max 3 results per category) with "See all X →" links to instantly switch tabs and load full paginated results.
+*   **Persisted Search History Log**:
+    *   Saves the last 8 successful queries in local device memory under the AsyncStorage key `pabaini_recent_searches`.
+    *   Displays recent searches when the input is empty, complete with individual row deletion and a "Clear All" link.
+
+### Search Flow Diagram
+
+```mermaid
+flowchart TD
+    Input[User enters search term] --> Debounce{Wait 300ms}
+    Debounce -->|Interrupted by typing| Input
+    Debounce -->|Timeout completes| LengthCheck{Length >= 2?}
+    LengthCheck -->|No| Idle[Show Keep typing... or Recent Searches]
+    LengthCheck -->|Yes| SaveHistory[Save query to AsyncStorage]
+    SaveHistory --> PillCheck{Selected Pill?}
+    
+    PillCheck -->|All| ParallelQuery[Fire Announcements, Players, Teams, Matches queries]
+    PillCheck -->|Posts/Players/Teams/Matches| SingleQuery[Fire category-specific useInfiniteQuery]
+    PillCheck -->|Users| Gate{Is User Pill comingSoon?}
+    Gate -->|Yes| AlertToast[Show Coming Soon Alert]
+    
+    ParallelQuery --> RenderAll[Render sections with max 3 items + See all button]
+    SingleQuery --> RenderFlatList[Render FlatList with infinite scroll page triggers]
+```
 
 ---
 
