@@ -419,19 +419,19 @@ export default function AnnouncementDetailScreen() {
             {/* Author Row */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => router.push(`/profile/${announcement.author.id}`)}
+              onPress={() => announcement.author?.id && router.push(`/profile/${announcement.author.id}`)}
               style={styles.authorRow}
             >
-              {announcement.author.avatar_url ? (
+              {announcement.author?.avatar_url ? (
                 <Image source={{ uri: announcement.author.avatar_url }} style={styles.avatarCircle} />
               ) : (
                 <View style={[styles.avatarCircle, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.avatarInitials}>{getInitials(announcement.author.name)}</Text>
+                  <Text style={styles.avatarInitials}>{getInitials(announcement.author?.name || 'System')}</Text>
                 </View>
               )}
               <View style={styles.authorInfo}>
                 <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
-                  {announcement.author.name}
+                  {announcement.author?.name || 'System'}
                 </Text>
                 <Text style={[styles.timestamp, { color: theme.colors.textSecondary }]}>
                   {formatDate(announcement.created_at)} · {timeAgo}

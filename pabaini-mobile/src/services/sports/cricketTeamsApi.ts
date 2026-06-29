@@ -13,9 +13,15 @@ export async function createTeam(payload: CreateTeamPayload): Promise<TeamFull> 
   return response.data.data;
 }
 
-export async function getAllTeams(): Promise<TeamSummary[]> {
-  const response = await client.get('/sports/cricket/teams');
-  return response.data.data;
+export async function getAllTeams(search?: string): Promise<TeamSummary[]> {
+  const response = await client.get('/sports/cricket/teams', { params: { search } });
+  if (response.data?.data && Array.isArray(response.data.data.data)) {
+    return response.data.data.data;
+  }
+  if (Array.isArray(response.data?.data)) {
+    return response.data.data;
+  }
+  return [];
 }
 
 export async function getMyTeams(): Promise<MyTeamResponse[]> {

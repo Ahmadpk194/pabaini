@@ -125,12 +125,14 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
                   });
                   return;
                 }
-                safeRouterPush(router, `/profile/${announcement.author.id}`);
+                if (announcement.author?.id) {
+                  safeRouterPush(router, `/profile/${announcement.author.id}`);
+                }
               }}
               style={styles.authorClickable}
             >
               {/* Avatar Circle */}
-              {announcement.author.avatar_url ? (
+              {announcement.author?.avatar_url ? (
                 <Image
                   source={{ uri: announcement.author.avatar_url }}
                   style={[styles.avatar, { borderWidth: 1.5, borderColor: theme.colors.primaryLight }]}
@@ -138,7 +140,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
               ) : (
                 <View style={[styles.avatar, { backgroundColor: avatarBg, borderWidth: 1.5, borderColor: theme.colors.primaryLight }]}>
                   <Text style={[styles.avatarText, { color: avatarTextColor }]}>
-                    {getInitials(announcement.author.name)}
+                    {getInitials(announcement.author?.name || 'System')}
                   </Text>
                 </View>
               )}
@@ -146,7 +148,7 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
               {/* Author Info */}
               <View style={styles.headerInfo}>
                 <Text style={[styles.authorName, { color: theme.colors.textPrimary }]}>
-                  {announcement.author.name}
+                  {announcement.author?.name || 'System'}
                 </Text>
                 <View style={styles.subtitleRow}>
                   {announcement.is_pinned ? (

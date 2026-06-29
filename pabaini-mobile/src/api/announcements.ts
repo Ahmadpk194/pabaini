@@ -51,11 +51,13 @@ export interface PaginatedResponse<T> {
 export async function getAll(
   page: number = 1,
   limit: number = 10,
-  category?: Category
+  category?: Category,
+  search?: string
 ): Promise<PaginatedResponse<Announcement>> {
   try {
     const params: any = { page, limit };
     if (category) params.category = category;
+    if (search) params.search = search;
     
     const response = await client.get('/announcements', { params });
     

@@ -18,6 +18,12 @@ import { AnnouncementCard } from '../src/components/notice/AnnouncementCard';
 import { Pill } from '../src/components/ui/Pill';
 import { AnnouncementCardSkeleton } from '../src/components/skeletons';
 
+// API Imports
+import { getAll as getAllAnnouncements } from '../src/api/announcements';
+import { getAllUsers } from '../src/services/usersApi';
+import { getCricketPlayers } from '../src/api/sports';
+import { getAllTeams } from '../src/services/sports/cricketTeamsApi';
+
 interface MockUser {
   id: number;
   name: string;
@@ -183,48 +189,50 @@ export default function SearchScreen() {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    searchTimeoutRef.current = setTimeout(() => {
-      const query = searchQuery.toLowerCase();
-      
-      if (selectedPill === 'posts') {
-        const filtered = MOCK_ANNOUNCEMENTS.filter((announcement) => {
-          return (
-            announcement.title.toLowerCase().includes(query) ||
-            announcement.content.toLowerCase().includes(query) ||
-            (announcement.location && announcement.location.toLowerCase().includes(query)) ||
-            announcement.author.name.toLowerCase().includes(query)
-          );
-        });
-        setResults(filtered);
-      } else if (selectedPill === 'users') {
-        const filtered = MOCK_USERS.filter((user) => {
-          return (
-            user.name.toLowerCase().includes(query) ||
-            user.role.toLowerCase().includes(query) ||
-            user.village.toLowerCase().includes(query)
-          );
-        });
-        setResults(filtered);
-      } else if (selectedPill === 'players') {
-        const filtered = MOCK_USERS.filter((user) => user.isPlayer).filter((player) => {
-          return (
-            player.name.toLowerCase().includes(query) ||
-            (player.playerRole && player.playerRole.toLowerCase().includes(query))
-          );
-        });
-        setResults(filtered);
-      } else if (selectedPill === 'teams') {
-        const filtered = MOCK_TEAMS.filter((team) => {
-          return (
-            team.name.toLowerCase().includes(query) ||
-            team.home_ground.toLowerCase().includes(query) ||
-            team.captain.toLowerCase().includes(query)
-          );
-        });
-        setResults(filtered);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (selectedPill === 'posts') {
+          const response = await getAllAnnouncements(1, 30, undefined, searchQuery);
+          setResults(response.data || []);
+        } else if (selectedPill === 'users') {
+          const response = await getAllUsers(1, 30, searchQuery);
+          const mapped = (response.data || []).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            avatar_url: u.avatar_url,
+            role: u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Resident',
+            village: u.village || 'Pabaini',
+            is_diaspora: !!u.is_diaspora,
+            isPlayer: false, // dedicated players tab handles player searches
+          }));
+          setResults(mapped);
+        } else if (selectedPill === 'players') {
+          const response = await getCricketPlayers(1, 30, searchQuery);
+          const mapped = (response.data || []).map((p: any) => ({
+            id: p.user?.id || p.id,
+            name: p.user?.name || 'Player',
+            avatar_url: p.user?.avatar_url || null,
+            playerRole: p.role ? (p.role.charAt(0).toUpperCase() + p.role.slice(1).replace('_', ' ')) : 'Player',
+          }));
+          setResults(mapped);
+        } else if (selectedPill === 'teams') {
+          const response = await getAllTeams(searchQuery);
+          const mapped = (response || []).map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            logo_url: t.logo_url,
+            home_ground: t.home_ground || 'Pabaini Cricket Ground',
+            captain: t.captain?.user?.name || 'Unknown',
+            member_count: t.member_count || 0,
+          }));
+          setResults(mapped);
+        }
+      } catch (error) {
+        console.error('Search query error:', error);
+        setResults([]);
+      } finally {
+        setIsSearching(false);
       }
-      
-      setIsSearching(false);
     }, 500);
 
     return () => {

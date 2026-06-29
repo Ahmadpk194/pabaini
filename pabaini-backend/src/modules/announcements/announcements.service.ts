@@ -32,6 +32,7 @@ export class AnnouncementsService {
     const skip = (page - 1) * limit;
 
     const qb = this.announcementsRepository.createQueryBuilder('announcement')
+      .leftJoinAndSelect('announcement.author', 'author')
       .where('announcement.is_deleted = :isDeleted', { isDeleted: false });
 
     if (category) {

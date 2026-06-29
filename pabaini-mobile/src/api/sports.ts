@@ -42,11 +42,12 @@ export async function createCricketProfile(
 
 export async function getCricketPlayers(
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
+  search?: string
 ): Promise<{ data: CricketPlayerProfile[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
   try {
     const response = await client.get('/sports/cricket/players', {
-      params: { page, limit },
+      params: { page, limit, search },
     });
     const result = response.data?.data;
     if (result) {
