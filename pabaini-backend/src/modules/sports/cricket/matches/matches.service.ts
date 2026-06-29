@@ -1703,6 +1703,10 @@ export class MatchesService {
       throw new NotFoundException('Last ball event not found');
     }
 
+    if (ballEvent.innings !== match.current_innings) {
+      throw new BadRequestException('Cannot undo a delivery from a completed innings');
+    }
+
     await this.matchRepo.manager.transaction(async (manager) => {
       const totalRunsThisBall = ballEvent.runs + ballEvent.extra_runs;
       if (match.current_innings === 1) {

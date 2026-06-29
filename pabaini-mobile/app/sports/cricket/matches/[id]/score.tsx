@@ -515,8 +515,13 @@ export default function ScorerScreen() {
     return currentRuns;
   };
 
+  const isUndoDisabled =
+    !match.last_ball_event_id ||
+    undoLastBallMutation.isPending ||
+    (liveData.overs === '0.0' && (!liveData.this_over || liveData.this_over.length === 0));
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.replace(`/sports/cricket/matches/${matchId}`)}>
@@ -528,7 +533,7 @@ export default function ScorerScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Score Panel */}
         <View style={[styles.scoreCard, { backgroundColor: '#1A2E1A', borderColor: theme.colors.border }]}>
           <View style={styles.scoreHeader}>
@@ -688,15 +693,15 @@ export default function ScorerScreen() {
                 styles.undoBtn,
                 {
                   borderRadius: theme.radius.sm,
-                  opacity: (!match.last_ball_event_id || undoLastBallMutation.isPending) ? 0.4 : 1,
+                  opacity: isUndoDisabled ? 0.4 : 1,
                   flexDirection: 'row',
                 }
               ]}
               onPress={handleUndo}
-              disabled={!match.last_ball_event_id || undoLastBallMutation.isPending}
+              disabled={isUndoDisabled}
             >
-              <RotateCcw size={14} color={!match.last_ball_event_id ? '#999999' : '#666666'} style={{ marginRight: 4 }} />
-              <Text style={[styles.undoBtnText, !match.last_ball_event_id && { color: '#999999' }]}>Undo</Text>
+              <RotateCcw size={14} color={isUndoDisabled ? '#999999' : '#666666'} style={{ marginRight: 4 }} />
+              <Text style={[styles.undoBtnText, isUndoDisabled && { color: '#999999' }]}>Undo</Text>
             </TouchableOpacity>
 
             {/* Record Wicket Button */}
