@@ -185,7 +185,7 @@ export default function SearchScreen() {
   );
   const usersQuery = useSearchUsers(
     searchQuery,
-    queryEnabled && selectedPill === 'users' // Excluded from all since users is comingSoon
+    queryEnabled && (selectedPill === 'users' || selectedPill === 'all')
   );
 
   // Active query accessor helper
@@ -272,7 +272,8 @@ export default function SearchScreen() {
       ? postsQuery.isLoading ||
         playersQuery.isLoading ||
         teamsQuery.isLoading ||
-        matchesQuery.isLoading
+        matchesQuery.isLoading ||
+        usersQuery.isLoading
       : !!activeQuery?.isLoading);
 
   const handlePillPress = (pillId: SearchCategory['id']) => {
@@ -549,7 +550,8 @@ export default function SearchScreen() {
       allPosts.length > 0 ||
       allPlayers.length > 0 ||
       allTeams.length > 0 ||
-      allMatches.length > 0;
+      allMatches.length > 0 ||
+      allUsers.length > 0;
     if (!hasResults) return null;
 
     return (
@@ -573,6 +575,8 @@ export default function SearchScreen() {
             onPress={() => safeRouterPush(router, `/sports/cricket/matches/${item.id}`)}
           />
         ))}
+
+        {renderAllSection('Users', 'users', allUsers, (item) => renderUserCard(item))}
       </ScrollView>
     );
   };
@@ -706,7 +710,8 @@ export default function SearchScreen() {
         ? allPosts.length > 0 ||
           allPlayers.length > 0 ||
           allTeams.length > 0 ||
-          allMatches.length > 0
+          allMatches.length > 0 ||
+          allUsers.length > 0
         : activeItems.length > 0;
 
     if (hasResults) return null;

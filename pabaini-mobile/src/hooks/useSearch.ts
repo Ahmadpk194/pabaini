@@ -120,6 +120,7 @@ export const useSearchAll = (query: string, enabled: boolean) => {
   const players = useSearchPlayers(query, enabled);
   const teams = useSearchTeams(query, enabled);
   const matches = useSearchMatches(query, enabled);
+  const users = useSearchUsers(query, enabled);
 
-  return { posts, players, teams, matches };
+  return { posts, players, teams, matches, users };
 };

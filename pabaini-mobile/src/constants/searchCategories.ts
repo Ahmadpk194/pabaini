@@ -49,6 +49,5 @@ export const SEARCH_CATEGORIES: SearchCategory[] = [
     endpoint: '/users',
     searchFields: 'name',
     emptyMessage: 'No users found',
-    comingSoon: true,  // flip to false when backend is confirmed ready
   },
 ];
