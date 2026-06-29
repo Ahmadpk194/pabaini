@@ -194,53 +194,59 @@ export function CricketSection({ cricket, isOwnProfile }: CricketSectionProps) {
       </View>
 
       {/* ── Teams Card ───────────────────────────────────── */}
-      {hasTeams && (
-        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <Users size={16} color={theme.colors.primary} />
-              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>Teams</Text>
-            </View>
+      <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <Users size={16} color={theme.colors.primary} />
+            <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>Teams</Text>
           </View>
+        </View>
 
-          {current_teams.length > 0 && (
-            <>
-              <Text style={[styles.teamSubHeading, { color: theme.colors.textSecondary }]}>ACTIVE</Text>
-              {current_teams.map((t) => (
-                <TeamChip
-                  key={`current-${t.id}`}
-                  team={t}
-                  subtitle={t.role === 'captain' ? 'Captain' : t.role === 'vice_captain' ? 'Vice Captain' : 'Player'}
-                  onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
-                />
-              ))}
-            </>
-          )}
-
-          {past_teams.length > 0 && (
-            <>
-              <Text style={[styles.teamSubHeading, { color: theme.colors.textSecondary, marginTop: current_teams.length > 0 ? 14 : 0 }]}>
-                PAST
-              </Text>
-              {past_teams.map((t) => {
-                const leftDate = t.left_at ? new Date(t.left_at) : null;
-                const subtitle = leftDate && !isNaN(leftDate.getTime())
-                  ? `Left ${leftDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
-                  : 'Left team';
-                return (
+        {!hasTeams ? (
+          <Text style={[styles.noTeamsText, { color: theme.colors.textSecondary }]}>
+            Not in any team currently
+          </Text>
+        ) : (
+          <>
+            {current_teams.length > 0 && (
+              <>
+                <Text style={[styles.teamSubHeading, { color: theme.colors.textSecondary }]}>ACTIVE</Text>
+                {current_teams.map((t) => (
                   <TeamChip
-                    key={`past-${t.id}`}
+                    key={`current-${t.id}`}
                     team={t}
-                    subtitle={subtitle}
-                    muted={true}
+                    subtitle={t.role === 'captain' ? 'Captain' : t.role === 'vice_captain' ? 'Vice Captain' : 'Player'}
                     onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
                   />
-                );
-              })}
-            </>
-          )}
-        </View>
-      )}
+                ))}
+              </>
+            )}
+
+            {past_teams.length > 0 && (
+              <>
+                <Text style={[styles.teamSubHeading, { color: theme.colors.textSecondary, marginTop: current_teams.length > 0 ? 14 : 0 }]}>
+                  PAST
+                </Text>
+                {past_teams.map((t) => {
+                  const leftDate = t.left_at ? new Date(t.left_at) : null;
+                  const subtitle = leftDate && !isNaN(leftDate.getTime())
+                    ? `Left ${leftDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+                    : 'Left team';
+                  return (
+                    <TeamChip
+                      key={`past-${t.id}`}
+                      team={t}
+                      subtitle={subtitle}
+                      muted={true}
+                      onPress={() => router.push(`/sports/cricket/teams/${t.id}`)}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </>
+        )}
+      </View>
 
       {/* ── Trophies Card ────────────────────────────────── */}
       {hasTrophies && (
@@ -427,5 +433,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.8,
     marginBottom: 10,
+  },
+  noTeamsText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    paddingVertical: 4,
   },
 });

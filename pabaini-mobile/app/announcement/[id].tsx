@@ -374,6 +374,7 @@ export default function AnnouncementDetailScreen() {
         <ScrollView 
           ref={scrollViewRef}
           style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -656,6 +657,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   content: {
     paddingHorizontal: 14,
