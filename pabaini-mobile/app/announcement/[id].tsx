@@ -30,15 +30,22 @@ export default function AnnouncementDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const likeMutation = useLikeMutation();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
+      (e) => {
+        setKeyboardVisible(true);
+        setKeyboardHeight(e.endCoordinates.height);
+      }
     );
     const hideSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
+      () => {
+        setKeyboardVisible(false);
+        setKeyboardHeight(0);
+      }
     );
 
     return () => {
@@ -362,7 +369,7 @@ export default function AnnouncementDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
       <KeyboardAvoidingView 
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Fixed Header Bar */}
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border, paddingTop: insets.top }]}>
@@ -554,6 +561,7 @@ export default function AnnouncementDetailScreen() {
             backgroundColor: theme.colors.surface, 
             borderTopColor: theme.colors.border,
             borderTopWidth: 0.5,
+            marginBottom: Platform.OS === 'android' ? keyboardHeight : 0,
           }
         ]}>
           {isGuest && (
@@ -583,9 +591,7 @@ export default function AnnouncementDetailScreen() {
           <View style={[
             styles.commentInputBar, 
             { 
-              paddingBottom: Platform.OS === 'ios'
-                ? (insets.bottom > 0 && !keyboardVisible ? insets.bottom : 12)
-                : 12
+              paddingBottom: (insets.bottom > 0 && !keyboardVisible) ? insets.bottom : 12
             }
           ]}>
             {user?.avatar_url ? (
