@@ -30,22 +30,15 @@ export default function AnnouncementDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const likeMutation = useLikeMutation();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardVisible(true);
-        setKeyboardHeight(e.endCoordinates.height);
-      }
+      () => setKeyboardVisible(true)
     );
     const hideSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardVisible(false);
-        setKeyboardHeight(0);
-      }
+      () => setKeyboardVisible(false)
     );
 
     return () => {
@@ -366,11 +359,7 @@ export default function AnnouncementDetailScreen() {
   const timeAgo = getTimeAgo(announcement.created_at);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* Fixed Header Bar */}
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border, paddingTop: insets.top }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
@@ -555,15 +544,18 @@ export default function AnnouncementDetailScreen() {
         </ScrollView>
 
         {/* Sticky Comment Input Bar */}
-        <View style={[
-          styles.commentInputContainer, 
-          { 
-            backgroundColor: theme.colors.surface, 
-            borderTopColor: theme.colors.border,
-            borderTopWidth: 0.5,
-            marginBottom: Platform.OS === 'android' ? keyboardHeight : 0,
-          }
-        ]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : (keyboardVisible ? 'padding' : undefined)}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <View style={[
+            styles.commentInputContainer, 
+            { 
+              backgroundColor: theme.colors.surface, 
+              borderTopColor: theme.colors.border,
+              borderTopWidth: 0.5,
+            }
+          ]}>
           {isGuest && (
             <TouchableOpacity
               activeOpacity={0.8}
@@ -633,7 +625,7 @@ export default function AnnouncementDetailScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
