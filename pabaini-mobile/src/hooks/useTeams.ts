@@ -4,7 +4,7 @@ import { getAllTeams, getTeamById } from '../services/sports/cricketTeamsApi';
 export function useAllTeams() {
   return useQuery({
     queryKey: ['teams', 'list'],
-    queryFn: getAllTeams,
+    queryFn: () => getAllTeams(),
     staleTime: 1000 * 30, // 30 seconds
   });
 }
