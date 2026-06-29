@@ -2640,7 +2640,7 @@ curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/cancel \
 
 ### #48 · POST `/sports/cricket/matches/:id/lineup`
 
-Declares a team's playing XI (11 players). Only available to the captains of Team A or Team B. Match status must be `scheduled`.
+Declares a team's playing lineup (6 to 11 players). Only available to the captains of Team A or Team B. Match status must be `scheduled`.
 
 | | |
 |---|---|
@@ -2660,7 +2660,7 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `players` | `array` | ✅ Yes | Array containing exactly 11 player objects |
+| `players` | `array` | ✅ Yes | Array containing between 6 and 11 player objects |
 
 **Lineup Player Object**
 
@@ -2668,7 +2668,7 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 |---|---|---|---|
 | `player_id` | `number` | No | Member profile ID (if registered, must be an active squad member) |
 | `guest_name` | `string` | No | Display name (if unregistered guest player) |
-| `batting_order` | `number` | ✅ Yes | Order rank index between 1 and 11 (must be unique) |
+| `batting_order` | `number` | ✅ Yes | Order rank index between 1 and the total player count (must be unique) |
 
 *Note: Either `player_id` or `guest_name` must be set, but not both.*
 

@@ -911,8 +911,8 @@ export class MatchesService {
 
     const teamId = isTeamACaptain ? match.team_a_id : match.team_b_id;
 
-    if (dto.players.length !== 11) {
-      throw new BadRequestException('Playing XI must have exactly 11 players');
+    if (dto.players.length < 6 || dto.players.length > 11) {
+      throw new BadRequestException('Playing XI must have between 6 and 11 players');
     }
 
     for (const player of dto.players) {
@@ -941,12 +941,12 @@ export class MatchesService {
 
     const battingOrders = dto.players.map((p) => p.batting_order);
     const uniqueOrders = new Set(battingOrders);
-    if (uniqueOrders.size !== 11) {
+    if (uniqueOrders.size !== dto.players.length) {
       throw new BadRequestException('Each player must have a unique batting order');
     }
     for (const order of battingOrders) {
-      if (order < 1 || order > 11) {
-        throw new BadRequestException('Batting order must be between 1 and 11');
+      if (order < 1 || order > dto.players.length) {
+        throw new BadRequestException(`Batting order must be between 1 and ${dto.players.length}`);
       }
     }
 
@@ -969,8 +969,10 @@ export class MatchesService {
 
       if (isTeamACaptain) {
         match.team_a_lineup_set = true;
+        match.team_a_player_count = dto.players.length;
       } else {
         match.team_b_lineup_set = true;
+        match.team_b_player_count = dto.players.length;
       }
       await manager.save(CricketMatch, match);
 
@@ -1126,6 +1128,9 @@ export class MatchesService {
       match.current_batting_team_id = dto.batting_first_team_id;
       match.innings_1_batting_team_id = dto.batting_first_team_id;
       match.innings_2_batting_team_id = bowlingTeamId;
+
+      match.team_a_max_wickets = (match.team_a_player_count ?? 11) - 1;
+      match.team_b_max_wickets = (match.team_b_player_count ?? 11) - 1;
 
       match.striker_id = dto.opening_striker_id || null as any;
       match.striker_guest_name = dto.opening_striker_guest_name || null as any;
@@ -1535,7 +1540,10 @@ export class MatchesService {
         throw new BadRequestException('Wicket type is required when is_wicket is true');
       }
 
-      const willNeedNextBatsman = currentWickets < 9;
+      const maxWickets = match.current_batting_team_id === match.team_a_id
+        ? (match.team_a_max_wickets ?? 10)
+        : (match.team_b_max_wickets ?? 10);
+      const willNeedNextBatsman = currentWickets < (maxWickets - 1);
       if (willNeedNextBatsman) {
         if (!dto.next_batsman_id && (!dto.next_batsman_guest_name || !dto.next_batsman_guest_name.trim())) {
           throw new BadRequestException('Next batsman is required for wicket event');
@@ -1621,7 +1629,10 @@ export class MatchesService {
 
       if (isWicket) {
         const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
-        if (finalWickets >= 10) {
+        const maxWickets = match.current_batting_team_id === match.team_a_id
+          ? (match.team_a_max_wickets ?? 10)
+          : (match.team_b_max_wickets ?? 10);
+        if (finalWickets >= maxWickets) {
           match.striker_id = null as any;
           match.striker_guest_name = null as any;
         } else {
@@ -1645,7 +1656,10 @@ export class MatchesService {
       await manager.save(CricketMatch, match);
 
       const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
-      const isEndConditions = finalWickets >= 10 || match.current_over >= match.overs;
+      const maxWickets = match.current_batting_team_id === match.team_a_id
+        ? (match.team_a_max_wickets ?? 10)
+        : (match.team_b_max_wickets ?? 10);
+      const isEndConditions = finalWickets >= maxWickets || match.current_over >= match.overs;
 
       if (match.current_innings === 1 && isEndConditions) {
         await this.transitionInnings(match, manager);

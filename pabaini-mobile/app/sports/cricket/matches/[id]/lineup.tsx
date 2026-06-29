@@ -44,6 +44,9 @@ interface LocalLineupEntry {
   avatar_url?: string | null;
 }
 
+const MIN_PLAYERS = 6;
+const MAX_PLAYERS = 11;
+
 export default function DeclarePlayingXIScreen() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -106,8 +109,8 @@ export default function DeclarePlayingXIScreen() {
     if (isPicked) {
       setPickedPlayers((prev) => prev.filter((p) => p.player_id !== player.id));
     } else {
-      if (pickedPlayers.length >= 11) {
-        Alert.alert('Roster Full', 'You can only declare exactly 11 players in the Playing XI.');
+      if (pickedPlayers.length >= MAX_PLAYERS) {
+        Alert.alert('Roster Full', `You can only declare up to ${MAX_PLAYERS} players in the Playing XI.`);
         return;
       }
       const newEntry: LocalLineupEntry = {
@@ -126,8 +129,8 @@ export default function DeclarePlayingXIScreen() {
       Alert.alert('Invalid Name', 'Guest name cannot be empty.');
       return;
     }
-    if (pickedPlayers.length >= 11) {
-      Alert.alert('Roster Full', 'You can only declare exactly 11 players in the Playing XI.');
+    if (pickedPlayers.length >= MAX_PLAYERS) {
+      Alert.alert('Roster Full', `You can only declare up to ${MAX_PLAYERS} players in the Playing XI.`);
       return;
     }
 
@@ -174,8 +177,8 @@ export default function DeclarePlayingXIScreen() {
   // Form submission
   const handleSubmit = async () => {
     if (isGuest) return;
-    if (pickedPlayers.length !== 11) {
-      Alert.alert('Lineup Error', 'Playing XI must have exactly 11 players.');
+    if (pickedPlayers.length < MIN_PLAYERS || pickedPlayers.length > MAX_PLAYERS) {
+      Alert.alert('Lineup Error', `Playing XI must have between ${MIN_PLAYERS} and ${MAX_PLAYERS} players.`);
       return;
     }
 
@@ -252,20 +255,31 @@ export default function DeclarePlayingXIScreen() {
             <Users color={theme.colors.primary} size={28} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.counterTitle, { color: theme.colors.textPrimary }]}>
-                Selected Players: {pickedPlayers.length}/11
+                Selected Players: {pickedPlayers.length}/11 (min 6)
               </Text>
-              <Text style={[styles.counterDesc, { color: theme.colors.textSecondary }]}>
-                {pickedPlayers.length === 11
-                  ? 'Lineup complete. Rearrange batting order below if needed.'
-                  : `Please select ${11 - pickedPlayers.length} more player(s) to submit.`}
+              <Text style={[styles.counterDesc, { color: theme.colors.textSecondary, marginBottom: 4 }]}>
+                Village cricket — between 6 and 11 players
               </Text>
+              {pickedPlayers.length < 6 ? (
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#D32F2F' }}>
+                  Need {6 - pickedPlayers.length} more to start
+                </Text>
+              ) : pickedPlayers.length < 11 ? (
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#2E7D32' }}>
+                  Ready · add more if available
+                </Text>
+              ) : (
+                <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.primary }}>
+                  Full squad
+                </Text>
+              )}
             </View>
           </View>
 
           {/* Batting Lineup List (Reordering Area) */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-              Batting Order (1 - 11)
+              Batting Order {pickedPlayers.length > 0 ? `(1 - ${pickedPlayers.length})` : ''}
             </Text>
             {pickedPlayers.length === 0 ? (
               <View style={[styles.emptyPicked, { borderColor: theme.colors.border, borderRadius: theme.radius.sm }]}>
@@ -420,17 +434,17 @@ export default function DeclarePlayingXIScreen() {
             style={[
               styles.submitButton,
               {
-                backgroundColor: pickedPlayers.length === 11 && !declareMutation.isPending ? theme.colors.primary : theme.colors.border,
+                backgroundColor: pickedPlayers.length >= MIN_PLAYERS && pickedPlayers.length <= MAX_PLAYERS && !declareMutation.isPending ? theme.colors.primary : theme.colors.border,
                 borderRadius: theme.radius.sm,
               },
             ]}
             onPress={handleSubmit}
-            disabled={pickedPlayers.length !== 11 || declareMutation.isPending}
+            disabled={pickedPlayers.length < MIN_PLAYERS || pickedPlayers.length > MAX_PLAYERS || declareMutation.isPending}
           >
             {declareMutation.isPending ? (
               <ActivityIndicator size="small" color={theme.colors.onPrimary} />
             ) : (
-              <Text style={[styles.submitButtonText, { color: pickedPlayers.length === 11 ? theme.colors.onPrimary : theme.colors.textSecondary }]}>
+              <Text style={[styles.submitButtonText, { color: pickedPlayers.length >= MIN_PLAYERS ? theme.colors.onPrimary : theme.colors.textSecondary }]}>
                 Submit Playing XI
               </Text>
             )}

@@ -119,9 +119,13 @@ export default function ScorerScreen() {
         currentOversCompleted = parseInt(liveData.overs.split('.')[0], 10) || 0;
       }
 
-      const isFirstInningsEnd = liveData.current_innings === 1 && (currentWickets >= 10 || currentOversCompleted >= match.overs);
+      const maxWickets = liveData.current_innings === 1
+        ? (match.innings_1_batting_team_id === match.team_a_id ? (match.team_a_max_wickets ?? 10) : (match.team_b_max_wickets ?? 10))
+        : (match.innings_1_batting_team_id === match.team_a_id ? (match.team_b_max_wickets ?? 10) : (match.team_a_max_wickets ?? 10));
+
+      const isFirstInningsEnd = liveData.current_innings === 1 && (currentWickets >= maxWickets || currentOversCompleted >= match.overs);
       const isSecondInningsEnd = liveData.current_innings === 2 && (
-        currentWickets >= 10 ||
+        currentWickets >= maxWickets ||
         currentOversCompleted >= match.overs ||
         (liveData.target && currentRuns >= liveData.target)
       );

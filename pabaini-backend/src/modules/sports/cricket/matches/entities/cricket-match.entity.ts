@@ -213,6 +213,18 @@ export class CricketMatch {
   @Column({ type: 'timestamp', nullable: true, name: 'result_locked_at' })
   result_locked_at?: Date;
 
+  @Column({ type: 'int', nullable: true, name: 'team_a_player_count' })
+  team_a_player_count?: number;
+
+  @Column({ type: 'int', nullable: true, name: 'team_b_player_count' })
+  team_b_player_count?: number;
+
+  @Column({ type: 'int', nullable: true, default: 10, name: 'team_a_max_wickets' })
+  team_a_max_wickets?: number;
+
+  @Column({ type: 'int', nullable: true, default: 10, name: 'team_b_max_wickets' })
+  team_b_max_wickets?: number;
+
   @CreateDateColumn()
   created_at!: Date;
 

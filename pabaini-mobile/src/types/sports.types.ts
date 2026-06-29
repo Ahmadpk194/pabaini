@@ -150,6 +150,10 @@ export interface CricketMatch {
   team_b_score: string | null;
   team_a_lineup_set: boolean;
   team_b_lineup_set: boolean;
+  team_a_player_count?: number | null;
+  team_b_player_count?: number | null;
+  team_a_max_wickets?: number | null;
+  team_b_max_wickets?: number | null;
   result_submitted_at: string | null;
   result_locked_at: string | null;
   created_at: string;

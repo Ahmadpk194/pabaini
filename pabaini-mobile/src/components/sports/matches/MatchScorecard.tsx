@@ -177,10 +177,13 @@ export function MatchScorecard({ match, lineups }: MatchScorecardProps) {
           return `${winner} won by ${runsDiff} run${runsDiff > 1 ? 's' : ''}`;
         }
       } else if (match.winner_team_id === secondBattingId) {
+        const storedMaxWickets = match.winner_team_id === match.team_a_id
+          ? match.team_a_max_wickets
+          : match.team_b_max_wickets;
         const lineupCount = match.winner_team_id === match.team_a_id 
           ? lineups?.team_a?.players?.length 
           : lineups?.team_b?.players?.length;
-        const maxWickets = lineupCount && lineupCount > 1 ? lineupCount - 1 : 10;
+        const maxWickets = storedMaxWickets ?? (lineupCount && lineupCount > 1 ? lineupCount - 1 : 10);
         const wicketsDiff = maxWickets - scoreSecond.wickets;
         if (wicketsDiff > 0) {
           return `${winner} won by ${wicketsDiff} wicket${wicketsDiff > 1 ? 's' : ''}`;
