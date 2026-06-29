@@ -276,6 +276,15 @@ export default function SearchScreen() {
         usersQuery.isLoading
       : !!activeQuery?.isLoading);
 
+  const isFetchingAny =
+    postsQuery.isFetching ||
+    playersQuery.isFetching ||
+    teamsQuery.isFetching ||
+    matchesQuery.isFetching ||
+    usersQuery.isFetching;
+
+  const isQueryLoading = isSearching || isCurrentlyLoading || isFetchingAny;
+
   const handlePillPress = (pillId: SearchCategory['id']) => {
     setSelectedPill(pillId);
   };
@@ -477,30 +486,14 @@ export default function SearchScreen() {
   // Render skeletons during initial page load
   const renderSkeletons = () => {
     return (
-      <ScrollView
-        style={styles.resultsScroll}
-        contentContainerStyle={styles.resultsScrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.skeletonsContainer}>
-          {[0, 1, 2, 3, 4].map((index) => {
-            if (selectedPill === 'posts') {
-              return <AnnouncementCardSkeleton key={index} index={index} />;
-            } else if (selectedPill === 'players') {
-              return <PlayerCardSkeleton key={index} />;
-            } else if (selectedPill === 'teams') {
-              return <TeamCardSkeleton key={index} />;
-            } else {
-              return (
-                <View
-                  key={index}
-                  style={[styles.genericSkeleton, { backgroundColor: theme.colors.border }]}
-                />
-              );
-            }
-          })}
-        </View>
-      </ScrollView>
+      <View style={styles.skeletonsContainer}>
+        <View
+          style={[
+            styles.genericSkeleton,
+            { backgroundColor: theme.colors.border, marginTop: 12 },
+          ]}
+        />
+      </View>
     );
   };
 
@@ -542,7 +535,7 @@ export default function SearchScreen() {
   const renderAllCategoryResults = () => {
     if (selectedPill !== 'all') return null;
     if (searchQuery.trim().length < 2) return null;
-    if (isCurrentlyLoading || isSearching) {
+    if (isQueryLoading) {
       return renderSkeletons();
     }
 
@@ -585,7 +578,7 @@ export default function SearchScreen() {
   const renderSingleCategoryResults = () => {
     if (selectedPill === 'all') return null;
     if (searchQuery.trim().length < 2) return null;
-    if (isCurrentlyLoading || isSearching) {
+    if (isQueryLoading) {
       return renderSkeletons();
     }
     if (activeItems.length === 0) return null;
@@ -702,7 +695,7 @@ export default function SearchScreen() {
   // No Results State
   const renderNoResultsState = () => {
     if (inputValue.trim().length < 2) return null;
-    if (isCurrentlyLoading || isSearching) return null;
+    if (isQueryLoading) return null;
 
     const categoryConfig = SEARCH_CATEGORIES.find((c) => c.id === selectedPill);
     const hasResults =
