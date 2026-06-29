@@ -528,8 +528,12 @@ export default function ScorerScreen() {
           <ArrowLeft color={theme.colors.textPrimary} size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scoring Console</Text>
-        <TouchableOpacity style={styles.backButton} onPress={handleUndo} disabled={undoLastBallMutation.isPending}>
-          <RotateCcw color={theme.colors.primary} size={20} />
+        <TouchableOpacity
+          style={[styles.backButton, isUndoDisabled && { opacity: 0.4 }]}
+          onPress={handleUndo}
+          disabled={isUndoDisabled}
+        >
+          <RotateCcw color={isUndoDisabled ? '#999999' : theme.colors.primary} size={20} />
         </TouchableOpacity>
       </View>
 
