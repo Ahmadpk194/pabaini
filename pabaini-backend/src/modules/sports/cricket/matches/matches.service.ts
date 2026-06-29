@@ -1887,14 +1887,15 @@ export class MatchesService {
     const oversString = `${match.current_over}.${match.current_ball}`;
 
     let lastBowler: any = null;
-    if (match.last_ball_event_id) {
-      const lastBall = allEvents.find(e => e.id === match.last_ball_event_id);
-      if (lastBall) {
-        lastBowler = {
-          id: lastBall.bowler_id || null,
-          name: lastBall.bowler_guest_name || null,
-        };
-      }
+    const previousOverEvents = allEvents.filter(
+      e => e.innings === currentInnings && e.over_number === currentOver - 1
+    );
+    if (previousOverEvents.length > 0) {
+      const sampleBall = previousOverEvents[0];
+      lastBowler = {
+        id: sampleBall.bowler_id || null,
+        name: sampleBall.bowler_guest_name || null,
+      };
     }
 
     const dismissedPlayers = allEvents

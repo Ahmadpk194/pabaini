@@ -335,7 +335,7 @@ export default function HomeScreen() {
           activeOpacity={1}
           onPress={handleCloseMenu}
         >
-          <View style={[styles.drawerContainer, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.drawerContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             {/* Grab Handle */}
             <View style={styles.dragHandle} />
 

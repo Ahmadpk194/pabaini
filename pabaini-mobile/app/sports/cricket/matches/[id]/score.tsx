@@ -10,7 +10,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, RotateCcw, ShieldAlert, Award } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
@@ -40,6 +40,7 @@ export default function ScorerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
   const { isGuest } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // Zustand Store Profile
   const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
@@ -79,6 +80,7 @@ export default function ScorerScreen() {
 
   // Other runs selection modal
   const [otherRunsModalVisible, setOtherRunsModalVisible] = useState(false);
+  const [partnershipModalVisible, setPartnershipModalVisible] = useState(false);
 
   // Scorer Auth Check & Redirect
   useEffect(() => {
@@ -490,6 +492,29 @@ export default function ScorerScreen() {
     return theme.colors.border; // Theme border color
   };
 
+  // Calculate current partnership
+  const getPartnershipRuns = () => {
+    if (!liveData || !liveData.score) return 0;
+    
+    let currentRuns = 0;
+    if (typeof liveData.score === 'string') {
+      const parts = liveData.score.split('/');
+      currentRuns = parseInt(parts[0], 10) || 0;
+    }
+    
+    const currentInnings = liveData.current_innings || 1;
+    const currentInningsFow = match.fall_of_wickets?.filter((f) => f.innings === currentInnings) || [];
+    
+    if (currentInningsFow.length > 0) {
+      // Sort to get the last wicket fall
+      const sortedFow = [...currentInningsFow].sort((a, b) => b.score_at_wicket - a.score_at_wicket);
+      const lastWicket = sortedFow[0];
+      return Math.max(0, currentRuns - lastWicket.score_at_wicket);
+    }
+    
+    return currentRuns;
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       {/* Header Bar */}
@@ -524,7 +549,11 @@ export default function ScorerScreen() {
 
         {/* Batsmen & Bowler Cards */}
         <View style={styles.rosterSection}>
-          <View style={[styles.playerTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.playerTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => setPartnershipModalVisible(true)}
+          >
             <View style={styles.batsmanRow}>
               <Text style={[styles.playerLabel, { color: theme.colors.textPrimary, fontWeight: '700' }]}>
                 🏏 {liveData.striker?.name || 'No Striker'} *
@@ -541,7 +570,7 @@ export default function ScorerScreen() {
                 {liveData.non_striker?.runs || 0} ({liveData.non_striker?.balls || 0}b)
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
@@ -721,6 +750,14 @@ export default function ScorerScreen() {
                   (lastBowler.name && item.guest_name === lastBowler.name)
                 );
 
+                const stats = match?.player_stats?.find(
+                  (s) =>
+                    (item.player_id && s.player_id === item.player_id) ||
+                    (item.guest_name && s.guest_name === item.guest_name)
+                );
+                const oversBowled = stats?.overs_bowled;
+                const showOvers = oversBowled && Number(oversBowled) > 0;
+
                 return (
                   <TouchableOpacity
                     style={[
@@ -738,6 +775,12 @@ export default function ScorerScreen() {
                   >
                     <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>
                       {item.name}
+                      {showOvers && (
+                        <Text style={{ color: theme.colors.textSecondary, fontSize: 12, fontWeight: '500' }}>
+                          {' '}
+                          ({oversBowled} ov)
+                        </Text>
+                      )}
                     </Text>
                     {isConsecutive && (
                       <View style={{ backgroundColor: '#FFEBEB', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FFCDD2' }}>
@@ -1055,6 +1098,126 @@ export default function ScorerScreen() {
           </View>
         </View>
       </Modal>
+      {/* MODAL: Current Partnership Details (Bottom Sheet Style) */}
+      <Modal
+        visible={partnershipModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPartnershipModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.drawerBackdrop}
+          activeOpacity={1}
+          onPress={() => setPartnershipModalVisible(false)}
+        >
+          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+            {/* Grab Handle */}
+            <View style={styles.drawerDragHandle} />
+
+            {/* Title */}
+            <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
+              Current Partnership
+            </Text>
+
+            <View style={{ alignItems: 'center', marginVertical: 12 }}>
+              <Text style={{ fontSize: 36, fontWeight: '800', color: theme.colors.primary }}>
+                {getPartnershipRuns()} Runs
+              </Text>
+              <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 4 }}>
+                Active Partnership Runs
+              </Text>
+            </View>
+
+            {/* Progress Bar comparison */}
+            {(() => {
+              const strikerRuns = liveData?.striker?.runs || 0;
+              const nonStrikerRuns = liveData?.non_striker?.runs || 0;
+              const totalRuns = strikerRuns + nonStrikerRuns;
+              
+              const strikerPercent = totalRuns > 0 ? (strikerRuns / totalRuns) * 100 : 50;
+              const nonStrikerPercent = totalRuns > 0 ? (nonStrikerRuns / totalRuns) * 100 : 50;
+              
+              return (
+                <View style={{ marginVertical: 12, width: '100%' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary, marginBottom: 8, textAlign: 'center' }}>
+                    Innings Contribution Comparison
+                  </Text>
+                  
+                  {/* The Progress Bar */}
+                  <View style={{ height: 10, width: '100%', flexDirection: 'row', borderRadius: 5, overflow: 'hidden', backgroundColor: theme.colors.border }}>
+                    <View style={{ width: `${strikerPercent}%`, backgroundColor: theme.colors.primary }} />
+                    <View style={{ width: `${nonStrikerPercent}%`, backgroundColor: '#81C784' }} />
+                  </View>
+
+                  {/* Labels and contribution values */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.textPrimary }}>
+                        {liveData?.striker?.name || 'Striker'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
+                        {strikerRuns} runs ({strikerPercent.toFixed(0)}%)
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '500', color: theme.colors.textSecondary }}>
+                        {liveData?.non_striker?.name || 'Non-Striker'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
+                        {nonStrikerRuns} runs ({nonStrikerPercent.toFixed(0)}%)
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, width: '100%', marginVertical: 12 }} />
+
+            <View style={{ gap: 8, width: '100%' }}>
+              {/* Striker detailed row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.textPrimary }}>
+                  🏏 {liveData?.striker?.name || 'No Striker'} *
+                </Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
+                  {liveData?.striker?.runs || 0} runs ({liveData?.striker?.balls || 0}b)
+                </Text>
+              </View>
+
+              {/* Non-Striker detailed row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '500', color: theme.colors.textSecondary }}>
+                  {liveData?.non_striker?.name || 'No Non-Striker'}
+                </Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
+                  {liveData?.non_striker?.runs || 0} runs ({liveData?.non_striker?.balls || 0}b)
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.drawerCloseBtn,
+                {
+                  borderColor: theme.colors.border,
+                  borderWidth: 1,
+                  marginTop: 20,
+                  width: '100%',
+                  height: 48,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: theme.radius.sm,
+                },
+              ]}
+              onPress={() => setPartnershipModalVisible(false)}
+            >
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1368,5 +1531,36 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     width: '100%',
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  drawerContentContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 34,
+    paddingTop: 10,
+    width: '100%',
+  },
+  drawerDragHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CCCCCC',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  drawerTitleText: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  drawerCloseBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
