@@ -362,7 +362,7 @@ export default function AnnouncementDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={[]}>
       <KeyboardAvoidingView 
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
       >
         {/* Fixed Header Bar */}
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border, paddingTop: insets.top }]}>
@@ -583,9 +583,11 @@ export default function AnnouncementDetailScreen() {
           <View style={[
             styles.commentInputBar, 
             { 
-            paddingBottom: (insets.bottom > 0 && !keyboardVisible) ? insets.bottom : 12
-          }
-        ]}>
+              paddingBottom: Platform.OS === 'ios'
+                ? (insets.bottom > 0 && !keyboardVisible ? insets.bottom : 12)
+                : 12
+            }
+          ]}>
             {user?.avatar_url ? (
               <Image source={{ uri: user.avatar_url }} style={styles.myAvatar} />
             ) : (
