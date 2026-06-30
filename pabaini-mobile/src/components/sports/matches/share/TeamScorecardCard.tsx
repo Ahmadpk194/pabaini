@@ -29,10 +29,6 @@ const CARD_COLORS = {
  * TeamScorecardCard Component
  *
  * Renders the detailed batting and bowling score sheets for a single team.
- *
- * DESIGN FEATURES:
- * - Pure presentational view. Receives all data via the `data` prop.
- * - Supports modular parameters `hideHeader` and `hideFooter` to allow clean stacking inside FullScorecardCard.
  */
 export default function TeamScorecardCard({
   data,
@@ -45,11 +41,11 @@ export default function TeamScorecardCard({
 
   return (
     <View style={[styles.cardContainer, hideHeader && hideFooter && styles.cardContainerNoBorder]}>
-      {/* Green Header Bar */}
+      {/* Header Bar */}
       {!hideHeader && (
         <View style={styles.headerBar}>
           <View style={styles.headerLeft}>
-            <PabainiLogo size={18} color="#FFFFFF" />
+            <PabainiLogo size={22} />
             <Text style={styles.headerWordmark}>Pabaini</Text>
           </View>
           <Text style={styles.headerRightText}>MATCH SCORECARD</Text>
@@ -59,7 +55,9 @@ export default function TeamScorecardCard({
       {/* Match title + subtitle */}
       <View style={styles.titleSection}>
         <Text style={styles.matchTitle}>{data.matchTitle}</Text>
-        <Text style={styles.teamSubtitle}>{data.teamSubtitle} — {data.scoreStr}</Text>
+        <Text style={styles.teamSubtitle}>
+          {data.teamSubtitle} — <Text style={{ color: CARD_COLORS.primaryText }}>{data.scoreStr}</Text>
+        </Text>
       </View>
 
       {/* Batting Table */}
@@ -78,15 +76,8 @@ export default function TeamScorecardCard({
           </View>
         ) : (
           sortedBatsmen.map((player, index) => {
-            const isAlt = index % 2 === 1;
             return (
-              <View
-                key={index}
-                style={[
-                  styles.tableRow,
-                  { backgroundColor: isAlt ? CARD_COLORS.elevated : CARD_COLORS.surface }
-                ]}
-              >
+              <View key={index} style={styles.tableRow}>
                 <View style={{ flex: 3.5, justifyContent: 'center' }}>
                   <Text style={styles.playerName} numberOfLines={1}>{player.name}</Text>
                   <Text style={styles.dismissalText}>{player.dismissal}</Text>
@@ -118,15 +109,8 @@ export default function TeamScorecardCard({
           </View>
         ) : (
           activeBowlers.map((player, index) => {
-            const isAlt = index % 2 === 1;
             return (
-              <View
-                key={index}
-                style={[
-                  styles.tableRow,
-                  { backgroundColor: isAlt ? CARD_COLORS.elevated : CARD_COLORS.surface }
-                ]}
-              >
+              <View key={index} style={styles.tableRow}>
                 <Text style={[styles.playerName, { flex: 3.5 }]} numberOfLines={1}>{player.name}</Text>
                 <Text style={[styles.td, styles.colRight, { flex: 0.9, color: CARD_COLORS.textPrimary }]}>{player.overs}</Text>
                 <Text style={[styles.td, styles.colRight, { flex: 0.9 }]}>{player.maidens}</Text>
@@ -172,73 +156,78 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerBar: {
-    height: 32,
-    backgroundColor: CARD_COLORS.primary,
+    height: 44,
+    backgroundColor: '#0F0F0F',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1F1F1F',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   headerWordmark: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '500',
+    fontSize: 14,
   },
   headerRightText: {
-    color: '#E5E7EB',
-    fontWeight: '600',
-    fontSize: 9,
-    letterSpacing: 0.5,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    fontSize: 10,
+    letterSpacing: 1,
   },
   titleSection: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10,
+    paddingTop: 20,
+    paddingBottom: 14,
     alignItems: 'center',
   },
   matchTitle: {
-    color: CARD_COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
+    color: CARD_COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     textAlign: 'center',
   },
   teamSubtitle: {
-    color: CARD_COLORS.primaryText,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 4,
+    color: CARD_COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 6,
     textAlign: 'center',
   },
   table: {
     width: '100%',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
   tableHeader: {
     flexDirection: 'row',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    backgroundColor: CARD_COLORS.elevated,
-    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F1F',
     marginBottom: 4,
   },
   th: {
-    color: CARD_COLORS.textSecondary,
+    color: CARD_COLORS.textMuted,
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1F1F1F',
     alignItems: 'center',
-    marginBottom: 2,
   },
   td: {
     color: CARD_COLORS.textSecondary,
@@ -267,11 +256,11 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   extrasRow: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 0.5,
-    borderTopColor: CARD_COLORS.border,
-    marginTop: 12,
+    borderTopColor: '#1F1F1F',
+    marginTop: 8,
   },
   extrasText: {
     color: CARD_COLORS.textSecondary,
@@ -285,7 +274,6 @@ const styles = StyleSheet.create({
     borderTopColor: CARD_COLORS.border,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginTop: 8,
   },
   footerLeft: {
     color: CARD_COLORS.textMuted,

@@ -34,10 +34,10 @@ const CARD_COLORS = {
 export default function FullScorecardCard({ data }: FullScorecardCardProps) {
   return (
     <View style={styles.cardContainer}>
-      {/* Green Header Bar (Single, at the top) */}
+      {/* Header Bar */}
       <View style={styles.headerBar}>
         <View style={styles.headerLeft}>
-          <PabainiLogo size={18} color="#FFFFFF" />
+          <PabainiLogo size={22} />
           <Text style={styles.headerWordmark}>Pabaini</Text>
         </View>
         <Text style={styles.headerRightText}>MATCH SCORECARD</Text>
@@ -60,7 +60,7 @@ export default function FullScorecardCard({ data }: FullScorecardCardProps) {
         hideFooter
       />
 
-      {/* Footer (Single, at the bottom) */}
+      {/* Footer */}
       <View style={styles.footerRow}>
         <Text style={styles.footerLeft}>Recorded on Pabaini App</Text>
         <Text style={styles.footerRight}>pabaini.app</Text>
@@ -79,33 +79,35 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   headerBar: {
-    height: 32,
-    backgroundColor: CARD_COLORS.primary,
+    height: 44,
+    backgroundColor: '#0F0F0F',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1F1F1F',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   headerWordmark: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '500',
+    fontSize: 14,
   },
   headerRightText: {
-    color: '#E5E7EB',
-    fontWeight: '600',
-    fontSize: 9,
-    letterSpacing: 0.5,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    fontSize: 10,
+    letterSpacing: 1,
   },
   divider: {
-    height: 1,
-    backgroundColor: CARD_COLORS.border,
-    marginVertical: 8,
+    height: 0.5,
+    backgroundColor: '#1F1F1F',
+    marginVertical: 12,
   },
   footerRow: {
     flexDirection: 'row',
@@ -115,7 +117,6 @@ const styles = StyleSheet.create({
     borderTopColor: CARD_COLORS.border,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginTop: 8,
   },
   footerLeft: {
     color: CARD_COLORS.textMuted,

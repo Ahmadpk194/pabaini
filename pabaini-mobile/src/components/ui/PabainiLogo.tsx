@@ -1,50 +1,50 @@
-/**
- * PabainiLogo
- * Bold, clean, and mathematically centered "P" monogram.
- * Uses react-native-svg.
- */
 import React from 'react';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Rect, Line, Circle } from 'react-native-svg';
 
 interface PabainiLogoProps {
   size?: number;
-  color?: string;
+  color?: string; // Kept for compatibility
 }
 
-export function PabainiLogo({ size = 56, color = '#FFFFFF' }: PabainiLogoProps) {
+export function PabainiLogo({ size = 56, color }: PabainiLogoProps) {
+  // Use the brand green as the background
+  const bgFill = color || '#16A34A';
   return (
-    <Svg width={size} height={size} viewBox="0 0 56 56">
-      {/*
-       * Bold stroke "P" — large and mathematically centered.
-       * 
-       * Bounding box calculations:
-       *   Stem: x=17, y=8 → y=48 (thickness = 6)
-       *   Bowl: top at y=8, bottom at y=30, radius=11
-       *         starts at x=17, goes right to x=28, curves out to x=39, returns to x=17
-       * 
-       *   Outer left boundary  = 17 - (6 / 2) = 14
-       *   Outer right boundary = 39 + (6 / 2) = 42
-       *   Center = (14 + 42) / 2 = 28 (exact midpoint of 56px canvas ✓)
-       */}
-
-      {/* P stem */}
-      <Path
-        d="M 17,8 L 17,48"
-        stroke={color}
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Rect x="0" y="0" width="100" height="100" rx="24" fill={bgFill} />
+      {/* Connection lines */}
+      <Line
+        x1="50"
+        y1="30"
+        x2="27"
+        y2="67"
+        stroke="#DCFCE7"
         strokeWidth="6"
         strokeLinecap="round"
-        fill="none"
       />
-
-      {/* P bowl — clean D-arc */}
-      <Path
-        d="M 17,8 L 28,8 A 11,11 0 0,1 28,30 L 17,30"
-        stroke={color}
+      <Line
+        x1="50"
+        y1="30"
+        x2="73"
+        y2="67"
+        stroke="#DCFCE7"
         strokeWidth="6"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
       />
+      <Line
+        x1="27"
+        y1="67"
+        x2="73"
+        y2="67"
+        stroke="#DCFCE7"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      {/* Nodes */}
+      <Circle cx="50" cy="30" r="11" fill="#FFFFFF" />
+      <Circle cx="27" cy="67" r="11" fill="#FFFFFF" />
+      <Circle cx="73" cy="67" r="11" fill="#FFFFFF" />
     </Svg>
   );
 }
+

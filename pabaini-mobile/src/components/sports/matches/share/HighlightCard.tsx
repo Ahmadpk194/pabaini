@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Trophy, Award } from 'lucide-react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import { Trophy, Star } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PabainiLogo } from '../../../ui/PabainiLogo';
-import { Avatar } from '../../../ui/Avatar';
 import { HighlightCardData } from './shareMappers';
 
 interface HighlightCardProps {
@@ -25,22 +25,84 @@ const CARD_COLORS = {
   warning: '#F59E0B',
 };
 
+interface HighlightAvatarProps {
+  uri?: string | null;
+  size?: number;
+  name?: string;
+}
+
+function HighlightAvatar({ uri, size = 24, name }: HighlightAvatarProps) {
+  const initials = name ? name.charAt(0).toUpperCase() : '?';
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#14532D',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            resizeMode: 'cover',
+          }}
+        />
+      ) : (
+        <Text
+          style={{
+            fontSize: size * 0.45,
+            color: '#86EFAC',
+            fontWeight: '700',
+          }}
+        >
+          {initials}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const parseScoreAndOvers = (scoreStr: string) => {
+  if (!scoreStr) return { score: '0/0', overs: '' };
+  const match = scoreStr.match(/^([^\s(]+)(?:\s*\(([^)]+)\))?/);
+  if (match) {
+    const score = match[1];
+    const overs = match[2] ? `${match[2]} ov` : '';
+    return { score, overs };
+  }
+  return { score: scoreStr, overs: '' };
+};
+
 /**
  * HighlightCard Component
  *
  * Renders a compact, visually rich dark-mode summary card designed for image export/sharing.
  * Displays match scores, final result, Player of the Match, and top batting/bowling performers.
- *
- * NOTE: Colors are intentionally hardcoded (independent of the active theme) to ensure
- * consistent dark-themed high-contrast rendering when converted into sharing images.
  */
 export default function HighlightCard({ data }: HighlightCardProps) {
+  const { score: scoreA, overs: oversA } = parseScoreAndOvers(data.teamAScore);
+  const { score: scoreB, overs: oversB } = parseScoreAndOvers(data.teamBScore);
+
+  const isTeamAWinner = data.winnerMessage?.includes(data.teamAName);
+  const isTeamBWinner = data.winnerMessage?.includes(data.teamBName);
+
+  const scoreAColor = isTeamBWinner ? CARD_COLORS.textSecondary : CARD_COLORS.textPrimary;
+  const scoreBColor = isTeamAWinner ? CARD_COLORS.textSecondary : CARD_COLORS.textPrimary;
+
   return (
     <View style={styles.cardContainer}>
-      {/* Green Header Bar */}
+      {/* Header Bar */}
       <View style={styles.headerBar}>
         <View style={styles.headerLeft}>
-          <PabainiLogo size={18} color="#FFFFFF" />
+          <PabainiLogo size={22} />
           <Text style={styles.headerWordmark}>Pabaini</Text>
         </View>
         <Text style={styles.headerRightText}>MATCH SCORECARD</Text>
@@ -56,32 +118,39 @@ export default function HighlightCard({ data }: HighlightCardProps) {
 
       {/* Scores Row */}
       <View style={styles.scoresRow}>
-        <View style={styles.scoreBlock}>
+        <View style={styles.scoreColumn}>
           <Text style={styles.teamLabel} numberOfLines={1}>{data.teamAName}</Text>
-          <Text style={styles.scoreValue}>{data.teamAScore}</Text>
+          <Text style={[styles.scoreValue, { color: scoreAColor }]}>{scoreA}</Text>
+          {!!oversA && <Text style={styles.oversValue}>{oversA}</Text>}
         </View>
         <View style={styles.vsCircle}>
           <Text style={styles.vsText}>vs</Text>
         </View>
-        <View style={styles.scoreBlock}>
+        <View style={styles.scoreColumn}>
           <Text style={styles.teamLabel} numberOfLines={1}>{data.teamBName}</Text>
-          <Text style={styles.scoreValue}>{data.teamBScore}</Text>
+          <Text style={[styles.scoreValue, { color: scoreBColor }]}>{scoreB}</Text>
+          {!!oversB && <Text style={styles.oversValue}>{oversB}</Text>}
         </View>
       </View>
 
       {/* Winner Banner */}
       {data.winnerMessage && (
-        <View style={styles.winnerBanner}>
-          <Trophy size={14} color="#D4A700" />
+        <LinearGradient
+          colors={['#14532D', '#166534']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.winnerBanner}
+        >
+          <Trophy size={14} color="#86EFAC" />
           <Text style={styles.winnerBannerText}>{data.winnerMessage}</Text>
-        </View>
+        </LinearGradient>
       )}
 
       {/* Man of the Match Row */}
       {data.hasManOfMatch && data.momName && (
         <View style={styles.momRow}>
-          <Award size={14} color={CARD_COLORS.warning} />
-          <Text style={styles.momLabel}>PLAYER OF THE MATCH: </Text>
+          <Star size={14} color="#F59E0B" fill="#F59E0B" />
+          <Text style={styles.momLabel}>Player of the match: </Text>
           <Text style={styles.momName}>{data.momName}</Text>
         </View>
       )}
@@ -96,7 +165,7 @@ export default function HighlightCard({ data }: HighlightCardProps) {
           <View style={styles.performerRow}>
             {data.topBatsmanA ? (
               <>
-                <Avatar uri={data.topBatsmanA.avatarUrl} size={24} name={data.topBatsmanA.name} />
+                <HighlightAvatar uri={data.topBatsmanA.avatarUrl} size={24} name={data.topBatsmanA.name} />
                 <View style={styles.performerDetails}>
                   <Text style={styles.performerName} numberOfLines={1}>{data.topBatsmanA.name}</Text>
                   <Text style={styles.performerTeam} numberOfLines={1}>{data.topBatsmanA.teamName}</Text>
@@ -114,7 +183,7 @@ export default function HighlightCard({ data }: HighlightCardProps) {
           <View style={styles.performerRow}>
             {data.topBatsmanB ? (
               <>
-                <Avatar uri={data.topBatsmanB.avatarUrl} size={24} name={data.topBatsmanB.name} />
+                <HighlightAvatar uri={data.topBatsmanB.avatarUrl} size={24} name={data.topBatsmanB.name} />
                 <View style={styles.performerDetails}>
                   <Text style={styles.performerName} numberOfLines={1}>{data.topBatsmanB.name}</Text>
                   <Text style={styles.performerTeam} numberOfLines={1}>{data.topBatsmanB.teamName}</Text>
@@ -131,6 +200,9 @@ export default function HighlightCard({ data }: HighlightCardProps) {
         </View>
       </View>
 
+      {/* Divider between sections */}
+      <View style={styles.sectionDivider} />
+
       {/* Top Bowling Section */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionHeading}>TOP BOWLING</Text>
@@ -138,7 +210,7 @@ export default function HighlightCard({ data }: HighlightCardProps) {
           <View style={styles.performerRow}>
             {data.topBowlerA ? (
               <>
-                <Avatar uri={data.topBowlerA.avatarUrl} size={24} name={data.topBowlerA.name} />
+                <HighlightAvatar uri={data.topBowlerA.avatarUrl} size={24} name={data.topBowlerA.name} />
                 <View style={styles.performerDetails}>
                   <Text style={styles.performerName} numberOfLines={1}>{data.topBowlerA.name}</Text>
                   <Text style={styles.performerTeam} numberOfLines={1}>{data.topBowlerA.teamName}</Text>
@@ -158,7 +230,7 @@ export default function HighlightCard({ data }: HighlightCardProps) {
           <View style={styles.performerRow}>
             {data.topBowlerB ? (
               <>
-                <Avatar uri={data.topBowlerB.avatarUrl} size={24} name={data.topBowlerB.name} />
+                <HighlightAvatar uri={data.topBowlerB.avatarUrl} size={24} name={data.topBowlerB.name} />
                 <View style={styles.performerDetails}>
                   <Text style={styles.performerName} numberOfLines={1}>{data.topBowlerB.name}</Text>
                   <Text style={styles.performerTeam} numberOfLines={1}>{data.topBowlerB.teamName}</Text>
@@ -196,39 +268,41 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   headerBar: {
-    height: 32,
-    backgroundColor: CARD_COLORS.primary,
+    height: 44,
+    backgroundColor: '#0F0F0F',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1F1F1F',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   headerWordmark: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '500',
+    fontSize: 14,
   },
   headerRightText: {
-    color: '#E5E7EB',
-    fontWeight: '600',
-    fontSize: 9,
-    letterSpacing: 0.5,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    fontSize: 10,
+    letterSpacing: 1,
   },
   matchTitleSection: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10,
+    paddingTop: 20,
+    paddingBottom: 16,
     alignItems: 'center',
   },
   matchTitle: {
     color: CARD_COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '500',
     textAlign: 'center',
   },
   matchMeta: {
@@ -240,19 +314,14 @@ const styles = StyleSheet.create({
   scoresRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginVertical: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    marginVertical: 16,
   },
-  scoreBlock: {
+  scoreColumn: {
     flex: 1,
-    backgroundColor: CARD_COLORS.surface,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    borderColor: CARD_COLORS.border,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   teamLabel: {
     color: CARD_COLORS.textSecondary,
@@ -260,43 +329,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     marginBottom: 4,
+    textAlign: 'center',
   },
   scoreValue: {
-    color: CARD_COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  oversValue: {
+    color: CARD_COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: 'center',
   },
   vsCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: CARD_COLORS.elevated,
+    backgroundColor: '#1E1E1E',
     borderWidth: 0.5,
-    borderColor: CARD_COLORS.border,
+    borderColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 16,
   },
   vsText: {
     color: CARD_COLORS.textMuted,
     fontSize: 11,
-    fontWeight: '700',
-    fontStyle: 'italic',
+    fontWeight: '600',
+    textTransform: 'lowercase',
   },
   winnerBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: CARD_COLORS.primaryDark,
     paddingVertical: 8,
     paddingHorizontal: 12,
     marginHorizontal: 16,
     borderRadius: 8,
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   winnerBannerText: {
-    color: CARD_COLORS.primaryText,
+    color: '#86EFAC',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -304,31 +379,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: CARD_COLORS.surface,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: CARD_COLORS.border,
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   momLabel: {
-    color: CARD_COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '700',
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontWeight: '400',
   },
   momName: {
-    color: CARD_COLORS.warning,
+    color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   sectionDivider: {
     height: 0.5,
-    backgroundColor: CARD_COLORS.border,
+    backgroundColor: '#1F1F1F',
     marginHorizontal: 16,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   sectionContainer: {
     paddingHorizontal: 16,
@@ -342,16 +410,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   performersList: {
-    gap: 8,
+    gap: 10,
   },
   performerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: CARD_COLORS.surface,
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: CARD_COLORS.border,
+    paddingVertical: 6,
   },
   performerDetails: {
     flex: 1,
@@ -415,3 +479,4 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
 });
+
