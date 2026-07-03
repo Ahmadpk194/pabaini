@@ -62,7 +62,7 @@ interface ApiResponse<T> {
 - [#8 — GET `/announcements`](#8-get-announcements) — Get all announcements
 - [#9 — GET `/announcements/author/:authorId`](#9-get-announcementsauthorauthorid) — By author
 - [#10 — GET `/announcements/:id`](#10-get-announcementsid) — Single announcement
-- [#11 — POST `/announcements`](#11-post-announcements) — Create *(Admin/Mod)*
+- [#11 — POST `/announcements`](#11-post-announcements) — Create *(Admin/Mod or Team Captain for match results)*
 - [#12 — PATCH `/announcements/:id`](#12-patch-announcementsid) — Update *(Author/Admin/Mod)*
 - [#13 — PATCH `/announcements/:id/soft-delete`](#13-patch-announcementsidsoft-delete) — Soft-delete *(Author/Admin)*
 - [#14 — DELETE `/announcements/:id`](#14-delete-announcementsid) — Hard-delete *(Admin only)*
@@ -629,7 +629,7 @@ Returns a paginated, filtered feed of village announcements. Pinned notices appe
 |---|---|---|---|
 | `page` | `number` | `1` | Pagination offset |
 | `limit` | `number` | `10` | Results per page |
-| `category` | `string` | — | Filter: `general` · `urgent` · `event` · `jirga_decision` |
+| `category` | `string` | — | Filter: `general` · `urgent` · `event` · `jirga_decision` · `match_result` |
 | `search` | `string` | — | Plaintext search term matching title or content |
 
 **cURL Example**
@@ -703,16 +703,17 @@ Fetch the full details of a single announcement by its database ID.
 
 ### #11 · POST `/announcements`
 
-Creates a new announcement. Restricted to `admin` and `moderator` roles.
+Creates a new announcement. Restricted to `admin` and `moderator` roles **or** team captains posting a `match_result` for their own match.
 
 | | |
 |---|---|
 | **Method** | `POST` |
 | **Path** | `/api/v1/announcements` |
-| **Access** | 🔴 Protected *(Admin / Mod)* |
+| **Access** | 🔴 Protected *(Admin / Mod — or Team Captain for `match_result` category)* |
 
 > [!NOTE]
-> Standard residents cannot create announcements. Requires `admin` or `moderator` role.
+> Standard residents cannot create announcements. Admins and Moderators may post any category.
+> Team captains are granted the additional privilege to post a `match_result` announcement by supplying their `match_id`. The service validates that the calling user's cricket player profile is the captain of either `team_a` or `team_b` in the referenced match.
 
 **Headers**
 
@@ -727,9 +728,10 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 |---|---|---|---|
 | `title` | `string` | ✅ Yes | Notice title (3–100 characters) |
 | `content` | `string` | ✅ Yes | Full description (10–500 characters) |
-| `category` | `string` | ✅ Yes | `general` · `urgent` · `event` · `jirga_decision` |
+| `category` | `string` | ✅ Yes | `general` · `urgent` · `event` · `jirga_decision` · `match_result` |
 | `location` | `string` | No | Optional landmark or place name |
 | `image_url` | `string` | No | Direct URL to an uploaded image |
+| `match_id` | `number` | No | Cricket match ID — required when `category` is `match_result`. Triggers captain validation. |
 
 **cURL Example**
 

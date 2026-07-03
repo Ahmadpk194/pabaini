@@ -40,7 +40,7 @@ This document provides a comprehensive overview of all features implemented in t
     *   If unread notifications exist, renders a small red dot badge (8px) at the top-right of the bell.
     *   Notch background color flows into the header by setting the root `SafeAreaView` background to `surface`, wrapping everything below the header in a View with the page's grayish `background` color.
 *   **Filter Bar & Pills**:
-    *   Horizontal scrolling bar with custom pills to filter posts by category: `General`, `Urgent`, `Event`, and `Jirga Decisions`.
+    *   Horizontal scrolling bar with custom pills to filter posts by category: `General`, `Urgent`, `Event`, `Jirga Decisions`, and `Match Result`.
     *   Refined container padding: 16px horizontal, 10px vertical, styled with `surface` background and a `0.5px` solid border bottom.
     *   Active pill uses `primary` background with white (`onPrimary`) text, 13px font size, and medium weight (`500`).
     *   Inactive pill uses `elevated` background with `textSecondary` color, regular weight, and no border outline.
@@ -62,7 +62,10 @@ This document provides a comprehensive overview of all features implemented in t
     *   Icon: plus icon (`Plus` from lucide-react-native, size 22, color "#FFFFFF").
     *   Label: Removed (icon-only FAB).
     *   Position: absolute `bottom: 80` (above the tab bar) and `right: 16` with a subtle shadow (elevation 4).
-    *   Gating: Only visible to users with admin or moderator role.
+    *   Gating: Only visible to users with admin or moderator role. Team captains access the creation flow directly from the completed match details screen.
+*   **Embedded Match Cards**:
+    *   Announcement cards with a `match_result` category and a `match_id` reference render an interactive `MatchCard` component directly inside the post, showing live/completed team scores and match status.
+    *   Tapping the embedded card navigates directly to the match detail screen.
 *   **Liking System**:
     *   Interactive heart buttons on each card.
     *   Uses TanStack Query mutation with **optimistic UI updates** and bounce scaling animation.
@@ -92,13 +95,19 @@ This document provides a comprehensive overview of all features implemented in t
 ---
 
 ## 📝 5. Create Announcement Screen (`app/announcement/create.tsx`)
-**Objective**: Enable authorized leaders to publish posts with categories and media.
+**Objective**: Enable authorized leaders and team captains to publish posts with categories and media.
 
 *   **Header Bar**: Features Cancel (left) + "New Announcement" (center) + loading-capable Post (right). Disabled if title is under 3 characters or content is under 10.
 *   **Image Attachment**: Attaches a high-quality picture using `expo-image-picker`, rendering a full-width preview with a close (X) overlay.
 *   **Content Limits**: Title input (100 char limit) + Textarea (500 char limit with reactive counter).
 *   **Landmark Location Input**: Styled text entry field to specify landmark details.
-*   **Gatekeeping**: Routes return Access Denied if a standard resident account attempts to load the creation page.
+*   **Captain Match Result Flow**:
+    *   When navigated to with a `?matchId=<id>` query parameter (from the Match Details screen), the screen automatically fetches the match and:
+        *   Sets the category to `match_result`.
+        *   Pre-fills the title with "Match Update: Team A vs Team B".
+        *   Pre-fills the content with a generated result summary (winner, final score).
+    *   The access guard is bypassed for the authenticated captain of either team in the referenced match. All other users continue to be blocked unless they are Admin or Moderator.
+*   **Gatekeeping**: Routes return Access Denied if a standard resident (not a team captain) attempts to load the creation page without a valid match context.
 
 ---
 
@@ -115,6 +124,7 @@ This document provides a comprehensive overview of all features implemented in t
 
 *   **Paginated Listing**: Fetches and renders announcement comments oldest first.
 *   **Loading & Empty States**: Displays an inline loading indicator while comments load. Shows a friendly placeholder (*"No comments yet. Be the first to comment."*) if there are no comments.
+*   **Embedded Match Card**: If the announcement has a `match_id` set, a live `MatchCard` is rendered below the post content in the detail view, showing the referenced match's current status, scores, and a tap-to-navigate link.
 *   **Optimistic Creation Flow**: Inserts new comments into the UI immediately with a temporary ID and 0.6 opacity (`isPending: true`), sending the API request in the background. On success, the local comment is replaced by the server response; on failure, the comment is removed and a native alert error message is shown.
 *   **Inline Edit Flow**: Authorized owners (where `canEdit` is true) can tap "Edit" next to the timestamp, which loads the text into the input field and displays an editing banner with a "Cancel" button.
 *   **Soft Deletion Flow**: Gated by `canDelete: true`. Displays a confirmation prompt before calling the deletion API, immediately removing the comment from the screen and decrementing parent announcement badges.
