@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock, RefreshCw, Trophy } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useMatchDetail, useLiveMatch } from '../../../../../src/hooks/useMatches';
 
@@ -105,6 +106,14 @@ export default function LiveViewerScreen() {
     return currentRuns;
   };
 
+  const currentBattingTeamId = liveData?.current_innings === 1
+    ? match?.innings_1_batting_team_id
+    : (match?.innings_1_batting_team_id === match?.team_a_id ? match?.team_b_id : match?.team_a_id);
+
+  const battingTeamName = currentBattingTeamId === match?.team_a_id
+    ? match?.team_a?.name
+    : match?.team_b?.name;
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
@@ -153,10 +162,20 @@ export default function LiveViewerScreen() {
         </View>
 
         {/* Score Panel */}
-        <View style={[styles.scoreCard, { backgroundColor: '#1A2E1A', borderColor: theme.colors.border }]}>
+        <LinearGradient
+          colors={['#0E331B', '#071A0E']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.scoreCard, { borderColor: theme.colors.border }]}
+        >
           <View style={styles.scoreHeader}>
             <Text style={styles.inningsLabel}>
-              {isCompleted ? 'MATCH COMPLETED' : `INNINGS ${liveData.current_innings}`}
+              {isCompleted ? 'MATCH COMPLETED' : (
+                <>
+                  {battingTeamName ? `${battingTeamName.toUpperCase()} · ` : ''}
+                  {liveData.current_innings === 1 ? '1ST INNINGS' : '2ND INNINGS'}
+                </>
+              )}
             </Text>
             {liveData.target && <Text style={styles.targetLabel}>TARGET: {liveData.target}</Text>}
           </View>
@@ -165,12 +184,16 @@ export default function LiveViewerScreen() {
             <Text style={styles.oversText}> ({liveData.overs} ov)</Text>
           </Text>
           <View style={styles.runRateRow}>
-            <Text style={styles.rrText}>CRR: {liveData.current_run_rate?.toFixed(2) || '0.00'}</Text>
+            <View style={[styles.rrBadge, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
+              <Text style={styles.rrText}>CRR: {liveData.current_run_rate?.toFixed(2) || '0.00'}</Text>
+            </View>
             {liveData.required_run_rate && (
-              <Text style={styles.rrText}>RRR: {liveData.required_run_rate?.toFixed(2)}</Text>
+              <View style={[styles.rrBadge, { backgroundColor: 'rgba(255, 165, 0, 0.15)' }]}>
+                <Text style={[styles.rrText, { color: '#FFA500' }]}>RRR: {liveData.required_run_rate?.toFixed(2)}</Text>
+              </View>
             )}
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Active Batsmen & Bowler Cards */}
         {!isCompleted && (
@@ -479,10 +502,15 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   scoreHeader: {
     flexDirection: 'row',
@@ -491,18 +519,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inningsLabel: {
-    color: '#A0DCA0',
+    color: '#81C784',
     fontSize: 12,
     fontWeight: '800',
+    letterSpacing: 0.8,
   },
   targetLabel: {
-    color: '#FFA500',
+    color: '#FFB74D',
     fontSize: 12,
     fontWeight: '800',
+    letterSpacing: 0.8,
   },
   scoreText: {
     color: '#FFF',
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '800',
   },
   oversText: {
@@ -512,22 +542,32 @@ const styles = StyleSheet.create({
   },
   runRateRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 8,
+    gap: 12,
+    marginTop: 10,
+  },
+  rrBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   rrText: {
-    color: '#DDD',
-    fontSize: 13,
-    fontWeight: '600',
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   rosterSection: {
     gap: 10,
   },
   playerTile: {
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
-    borderRadius: 6,
-    gap: 8,
+    borderRadius: 10,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   batsmanRow: {
     flexDirection: 'row',
