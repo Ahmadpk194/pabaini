@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,32 +13,48 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Image as ImageIcon, X, MapPin, Globe, AlertTriangle, Calendar, Scale } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, X, MapPin, Globe, AlertTriangle, Calendar, Scale, Trophy } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/hooks/useAuth';
 import { create, uploadImage } from '../../src/api/announcements';
 import { Category } from '../../src/types';
 import { queryKeys } from '../../src/constants/queryKeys';
 import { Avatar } from '../../src/components/ui/Avatar';
+import { useMatchDetail } from '../../src/hooks/useMatches';
+import { useSportsStore } from '../../src/store/sports/sportsStore';
 
-const CATEGORIES: Category[] = ['general', 'urgent', 'event', 'jirga_decision'];
+const CATEGORIES: Category[] = ['general', 'urgent', 'event', 'jirga_decision', 'match_result'];
 
 const CATEGORY_ICONS = {
   general: Globe,
   urgent: AlertTriangle,
   event: Calendar,
   jirga_decision: Scale,
+  match_result: Trophy,
 };
 
 export default function CreateAnnouncementScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+
+  const parsedMatchId = matchId ? Number(matchId) : null;
+  const { data: match } = useMatchDetail(parsedMatchId || 0);
+  const myProfile = useSportsStore((state) => state.registrations['cricket']?.profile);
+
+  const isCaptain = !!(
+    myProfile &&
+    match &&
+    (myProfile.id === match.team_a.captain?.id || myProfile.id === match.team_b.captain?.id)
+  );
+
+  const isAuthorized = user?.role === 'admin' || user?.role === 'moderator' || isCaptain;
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -47,8 +63,29 @@ export default function CreateAnnouncementScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Auto pre-fill match details if provided
+  useEffect(() => {
+    if (match) {
+      setCategory('match_result');
+      setTitle(`Match Update: ${match.team_a.name} vs ${match.team_b.name}`);
+
+      let summary = '';
+      if (match.status === 'completed') {
+        if (match.winner_team) {
+          summary = `🎉 ${match.winner_team.name} won the match! `;
+        } else {
+          summary = `Match finished in a tie! `;
+        }
+        summary += `Final score: ${match.team_a.name} (${match.team_a_score || '0/0'}) vs ${match.team_b.name} (${match.team_b_score || '0/0'}).\n\n`;
+      } else {
+        summary = `Match is currently ${match.status.toUpperCase()}.\n\n`;
+      }
+      setContent(summary);
+    }
+  }, [match]);
+
   // Check if user has permission
-  if (user?.role !== 'admin' && user?.role !== 'moderator') {
+  if (!isAuthorized) {
     return (
       <View style={[styles.safeArea, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
         <View style={styles.accessDeniedContainer}>
@@ -143,6 +180,7 @@ export default function CreateAnnouncementScreen() {
         content: content.trim(),
         category,
         location: location.trim() ? location.trim() : undefined,
+        match_id: parsedMatchId || undefined,
       });
 
       // 2. Upload image if one was picked

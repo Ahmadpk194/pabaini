@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,8 @@ import { Announcement, Category } from '../../types';
 import { useLikeMutation } from '../../hooks/useLikeMutation';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthPromptStore } from '../../store/authPromptStore';
+import { useMatchDetail } from '../../hooks/useMatches';
+import { MatchCard } from '../sports/matches/MatchCard';
 
 interface AnnouncementCardProps {
   announcement: Announcement;
@@ -54,6 +56,8 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
         return { backgroundColor: theme.colors.dangerLight, color: theme.colors.dangerText };
       case 'event':
         return { backgroundColor: theme.colors.infoLight, color: theme.colors.infoText };
+      case 'match_result':
+        return { backgroundColor: '#EBFBEF', color: '#2E7D32' };
       case 'general':
       default:
         return { backgroundColor: theme.colors.elevated, color: theme.colors.textSecondary };
@@ -68,6 +72,8 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
         return 'Event';
       case 'jirga_decision':
         return 'Jirga';
+      case 'match_result':
+        return 'Match';
       case 'general':
       default:
         return 'General';
@@ -214,13 +220,20 @@ export function AnnouncementCard({ announcement, onShare, onSettingsPress }: Ann
             </Text>
           </View>
           
+          {/* Embedded Match Card */}
+          {!!announcement.match_id && (
+            <View style={styles.embeddedMatchContainer}>
+              <EmbeddedAnnouncementMatchCard matchId={announcement.match_id} />
+            </View>
+          )}
+          
           {/* Image */}
           {announcement.image_url && (
             <Image 
               source={{ uri: announcement.image_url }} 
               style={[
                 styles.image,
-                { marginTop: (announcement.title || announcement.content) ? 10 : 0 }
+                { marginTop: (announcement.title || announcement.content || announcement.match_id) ? 10 : 0 }
               ]} 
               resizeMode="cover" 
             />
@@ -405,4 +418,42 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
   },
+  embeddedMatchContainer: {
+    marginTop: 10,
+    marginBottom: 6,
+    paddingHorizontal: 14,
+  },
+  matchLoading: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: '#e0e0e0',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
 });
+
+function EmbeddedAnnouncementMatchCard({ matchId }: { matchId: number }) {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const { data: match, isLoading } = useMatchDetail(matchId);
+
+  if (isLoading) {
+    return (
+      <View style={styles.matchLoading}>
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (!match) return null;
+
+  return (
+    <MatchCard
+      match={match}
+      onPress={() => {
+        safeRouterPush(router, `/sports/cricket/matches/${matchId}`);
+      }}
+    />
+  );
+}

@@ -17,6 +17,8 @@ import { useLikeMutation } from '../../src/hooks/useLikeMutation';
 import { queryKeys } from '../../src/constants/queryKeys';
 import { useAuthPromptStore } from '../../src/store/authPromptStore';
 import { getComments, createComment, updateComment, deleteComment, CommentsListResponse } from '../../src/api/comments';
+import { useMatchDetail } from '../../src/hooks/useMatches';
+import { MatchCard } from '../../src/components/sports/matches/MatchCard';
 
 export default function AnnouncementDetailScreen() {
   const { theme } = useTheme();
@@ -442,6 +444,13 @@ export default function AnnouncementDetailScreen() {
             <Text style={[styles.bodyText, { color: theme.colors.textSecondary }]}>
               {announcement.content}
             </Text>
+
+            {/* Embedded Match Card */}
+            {!!announcement.match_id && (
+              <View style={styles.embeddedMatchContainer}>
+                <EmbeddedAnnouncementMatchCard matchId={announcement.match_id} />
+              </View>
+            )}
 
             {/* Location chip */}
             {announcement.location && (
@@ -910,4 +919,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  embeddedMatchContainer: {
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  matchLoading: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: '#e0e0e0',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
 });
+
+function EmbeddedAnnouncementMatchCard({ matchId }: { matchId: number }) {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const { data: match, isLoading } = useMatchDetail(matchId);
+
+  if (isLoading) {
+    return (
+      <View style={styles.matchLoading}>
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (!match) return null;
+
+  return (
+    <MatchCard
+      match={match}
+      onPress={() => {
+        router.push(`/sports/cricket/matches/${matchId}`);
+      }}
+    />
+  );
+}

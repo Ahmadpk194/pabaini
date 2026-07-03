@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, IsNull, Brackets } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, Not, IsNull, Brackets, EntityManager } from 'typeorm';
 import { Announcement } from './entities/announcement.entity';
 import { AnnouncementLike } from './entities/announcement-like.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -9,6 +9,8 @@ import { User } from '../users/entities/user.entity';
 import { getSupabaseClient } from 'src/config/supabase.config';
 import { FCMService } from 'src/config/fcm.service';
 import { AnnouncementCategory } from './entities/announcement.entity';
+import { CricketMatch } from '../sports/cricket/matches/entities/cricket-match.entity';
+import { CricketPlayerProfile } from '../sports/cricket/entities/cricket-player-profile.entity';
 
 @Injectable()
 export class AnnouncementsService {
@@ -20,6 +22,8 @@ export class AnnouncementsService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private fcmService: FCMService,
+    @InjectEntityManager()
+    private entityManager: EntityManager,
   ) { }
 
   async findAll(
@@ -126,6 +130,35 @@ export class AnnouncementsService {
   }
 
   async create(createAnnouncementDto: CreateAnnouncementDto, author: User): Promise<Announcement> {
+    if (author.role !== 'admin' && author.role !== 'moderator') {
+      if (createAnnouncementDto.category !== AnnouncementCategory.MATCH_RESULT || !createAnnouncementDto.match_id) {
+        throw new ForbiddenException('Only admins and moderators can create announcements.');
+      }
+
+      const playerProfile = await this.entityManager.findOne(CricketPlayerProfile, {
+        where: { user_id: author.id },
+      });
+
+      if (!playerProfile) {
+        throw new ForbiddenException('Only team captains of this match are authorized to post match results.');
+      }
+
+      const matchObj = await this.entityManager.findOne(CricketMatch, {
+        where: { id: createAnnouncementDto.match_id },
+        relations: { team_a: true, team_b: true },
+      });
+
+      if (!matchObj) {
+        throw new NotFoundException('Match not found.');
+      }
+
+      const isCaptain = matchObj.team_a?.captain_id === playerProfile.id || matchObj.team_b?.captain_id === playerProfile.id;
+
+      if (!isCaptain) {
+        throw new ForbiddenException('Only team captains of this match are authorized to post match results.');
+      }
+    }
+
     const announcement = this.announcementsRepository.create({
       ...createAnnouncementDto,
       author_id: author.id,

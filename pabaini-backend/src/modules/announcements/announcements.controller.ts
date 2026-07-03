@@ -44,9 +44,7 @@ export class AnnouncementsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
-  // Admin/Moderator only: Create new announcement
+  // Authenticated: Create new announcement (Admins, Moderators, or Match Team Captains)
   async create(@Body() createAnnouncementDto: CreateAnnouncementDto, @DbUser() user: any) {
     const announcement = await this.announcementsService.create(createAnnouncementDto, user);
     return { data: announcement, message: 'Announcement created successfully' };

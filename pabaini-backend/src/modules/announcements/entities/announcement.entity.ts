@@ -18,6 +18,7 @@ export enum AnnouncementCategory {
     URGENT = 'urgent',
     EVENT = 'event',
     JIRGA_DECISION = 'jirga_decision',
+    MATCH_RESULT = 'match_result',
 }
 
 @Entity('announcements')
@@ -40,6 +41,9 @@ export class Announcement {
 
     @Column({ nullable: true })
     image_url!: string;
+
+    @Column({ type: 'int', nullable: true })
+    match_id!: number | null;
 
     // Denormalized counter — avoids COUNT(*) on every list fetch
     @Column({ default: 0 })

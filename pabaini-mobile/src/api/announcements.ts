@@ -1,12 +1,13 @@
 import client from './client';
 
-export type Category = 'general' | 'urgent' | 'event' | 'jirga_decision';
+export type Category = 'general' | 'urgent' | 'event' | 'jirga_decision' | 'match_result';
 
 export interface Announcement {
   id: number;
   title: string;
   content: string;
   category: Category;
+  match_id?: number | null;
   image_url: string | null;
   location: string | null;
   likes_count: number;
@@ -29,6 +30,7 @@ export interface CreateAnnouncementDto {
   category?: Category;
   image_url?: string;
   location?: string;
+  match_id?: number;
 }
 
 export interface UpdateAnnouncementDto {

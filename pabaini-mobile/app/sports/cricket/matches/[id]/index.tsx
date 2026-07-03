@@ -465,15 +465,30 @@ export default function MatchDetailScreen() {
 
     // completed status
     if (match.status === 'completed') {
-      if (match.is_result_editable && isEitherCaptain) {
+      if (isEitherCaptain) {
         return (
-          <View style={styles.actionContainer}>
+          <View style={[styles.actionContainer, styles.rowButtons]}>
+            {match.is_result_editable && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.halfBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+                onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/result`)}
+              >
+                <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Edit Result</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[styles.actionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
-              onPress={() => safeRouterPush(router, `/sports/cricket/matches/${match.id}/result`)}
+              style={[
+                match.is_result_editable ? styles.halfBtn : styles.actionBtn,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary, borderWidth: 1, borderRadius: theme.radius.sm }
+              ]}
+              onPress={() => safeRouterPush(router, {
+                pathname: '/announcement/create',
+                params: { matchId: match.id },
+              })}
             >
-              <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Edit Result</Text>
+              <Text style={[styles.actionBtnText, { color: theme.colors.primary }]}>Share Match Update</Text>
             </TouchableOpacity>
           </View>
         );

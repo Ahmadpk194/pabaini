@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsUrl, MinLength } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsUrl, MinLength, IsInt } from 'class-validator';
 import { AnnouncementCategory } from '../entities/announcement.entity';
 
 export class CreateAnnouncementDto {
@@ -21,4 +21,8 @@ export class CreateAnnouncementDto {
     @IsOptional()
     @IsString()
     location?: string;
+
+    @IsOptional()
+    @IsInt()
+    match_id?: number;
 }
