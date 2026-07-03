@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RotateCcw, ShieldAlert, Award } from 'lucide-react-native';
+import { ArrowLeft, RotateCcw, ShieldAlert, Award, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
 import {
@@ -23,6 +23,7 @@ import {
   useChangeBowler,
   useStartSecondInnings,
   useUndoLastBall,
+  useRotateStrike,
 } from '../../../../../src/hooks/useMatches';
 import { useAuth } from '../../../../../src/hooks/useAuth';
 import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
@@ -54,6 +55,7 @@ export default function ScorerScreen() {
   const changeBowlerMutation = useChangeBowler();
   const startSecondInningsMutation = useStartSecondInnings();
   const undoLastBallMutation = useUndoLastBall();
+  const rotateStrikeMutation = useRotateStrike();
 
   // Local state for recording a ball
   const [selectedRuns, setSelectedRuns] = useState<number>(0);
@@ -85,6 +87,7 @@ export default function ScorerScreen() {
   // Scorer Auth Check & Redirect
   useEffect(() => {
     if (isGuest) return;
+    if (myProfile === undefined) return;
     if (match && !isLoadingMatch) {
       const isScorer = myProfile && match.scorer_id === myProfile.id;
       if (!isScorer) {
@@ -164,7 +167,7 @@ export default function ScorerScreen() {
     }
   }, [liveData, match]);
 
-  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || isLoadingLive);
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || isLoadingLive || myProfile === undefined);
 
   if (isLoading) {
     return (
@@ -458,6 +461,15 @@ export default function ScorerScreen() {
         },
       },
     ]);
+  };
+
+  // Rotate strike manually
+  const handleRotateStrike = async () => {
+    try {
+      await rotateStrikeMutation.mutateAsync(matchId);
+    } catch (err: any) {
+      Alert.alert('Strike Rotation Error', err.response?.data?.message || err.message);
+    }
   };
 
   // Formatting this over symbols
@@ -1203,6 +1215,39 @@ export default function ScorerScreen() {
                   {liveData?.non_striker?.runs || 0} runs ({liveData?.non_striker?.balls || 0}b)
                 </Text>
               </View>
+
+              {/* Swap Strike button */}
+              {liveData?.striker && liveData?.non_striker && (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={[
+                    styles.primaryBtn,
+                    {
+                      backgroundColor: theme.colors.primary,
+                      borderRadius: theme.radius.sm,
+                      height: 44,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginTop: 12,
+                      flexDirection: 'row',
+                      gap: 8,
+                    }
+                  ]}
+                  onPress={handleRotateStrike}
+                  disabled={rotateStrikeMutation.isPending}
+                >
+                  {rotateStrikeMutation.isPending ? (
+                    <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                  ) : (
+                    <>
+                      <RefreshCw size={16} color={theme.colors.onPrimary} />
+                      <Text style={{ color: theme.colors.onPrimary, fontWeight: '700', fontSize: 14 }}>
+                        Swap Strike (Rotate)
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             <TouchableOpacity

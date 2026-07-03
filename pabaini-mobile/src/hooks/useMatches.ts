@@ -18,6 +18,7 @@ import {
   startSecondInnings,
   undoLastBall,
   getLiveMatchDetails,
+  rotateStrike,
 } from '../services/sports/cricketMatchesApi';
 import {
   RequestMatchPayload,
@@ -245,6 +246,7 @@ export function useStartLiveMatch() {
       };
     }) => startLiveMatch(id, payload),
     onSuccess: (data, variables) => {
+      queryClient.setQueryData(queryKeys.matches.detail(variables.id), data);
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.all });
     },
@@ -750,6 +752,51 @@ export function useUndoLastBall() {
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(numericId) });
       queryClient.invalidateQueries({ queryKey: ['matches', 'live', numericId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.all });
+    },
+  });
+}
+
+export function useRotateStrike() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => rotateStrike(id),
+    onMutate: async (id) => {
+      const numericId = Number(id);
+      await queryClient.cancelQueries({ queryKey: ['matches', 'live', numericId] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.matches.detail(numericId) });
+
+      const previousLive = queryClient.getQueryData(['matches', 'live', numericId]);
+      const previousMatch = queryClient.getQueryData(queryKeys.matches.detail(numericId));
+
+      // Optimistically swap strike in the live cache
+      if (previousLive) {
+        queryClient.setQueryData(['matches', 'live', numericId], (old: any) => {
+          if (!old) return old;
+          const tempStriker = old.striker;
+          return {
+            ...old,
+            striker: old.non_striker,
+            non_striker: tempStriker,
+          };
+        });
+      }
+
+      return { previousLive, previousMatch };
+    },
+    onError: (err, id, context) => {
+      const numericId = Number(id);
+      if (context?.previousLive) {
+        queryClient.setQueryData(['matches', 'live', numericId], context.previousLive);
+      }
+      if (context?.previousMatch) {
+        queryClient.setQueryData(queryKeys.matches.detail(numericId), context.previousMatch);
+      }
+    },
+    onSettled: (data, error, id) => {
+      const numericId = Number(id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(numericId) });
+      queryClient.invalidateQueries({ queryKey: ['matches', 'live', numericId] });
     },
   });
 }

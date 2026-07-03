@@ -183,6 +183,16 @@ export class MatchesController {
     return { data: match, message: 'Last ball undone successfully' };
   }
 
+  @Patch(':id/strike/rotate')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async rotateStrike(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+  ) {
+    const match = await this.matchesService.rotateStrike(id, user.id);
+    return { data: match, message: 'Strike rotated successfully' };
+  }
+
   @Get(':id/live')
   async getLiveView(@Param('id', ParseIntPipe) id: number) {
     const liveView = await this.matchesService.getLiveView(id);

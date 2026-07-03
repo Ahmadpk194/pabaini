@@ -234,6 +234,11 @@ export async function undoLastBall(id: number): Promise<CricketMatch> {
   return response.data.data;
 }
 
+export async function rotateStrike(id: number): Promise<CricketMatch> {
+  const response = await client.patch(`/sports/cricket/matches/${id}/strike/rotate`);
+  return response.data.data;
+}
+
 export async function getLiveMatchDetails(id: number): Promise<any> {
   const response = await client.get(`/sports/cricket/matches/${id}/live`);
   return response.data.data;

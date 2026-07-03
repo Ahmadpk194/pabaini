@@ -238,8 +238,8 @@ graph TD
 *   **Simple Result Entry ([result.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/result.tsx))**: Retroactive form to log completed matches: winner selection card, final score inputs, Man of the Match, and per-player statistics accordions (batting and bowling metrics).
     *   *Man of the Match picker*: Lists both registered players and guest players (with a `(Guest)` label), and includes a "None / Clear" option at the top of the picker.
     *   *24-Hour Edit Lock Window*: Results are editable for 24 hours post-submission (Rule 44). After 24 hours, the form locks, edit actions disappear, and a locked padlock icon is displayed.
-*   **Initialize Match ([start.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/start.tsx))**: Pre-match start configuration screen for captains: toss details, batting first team, opening batsmen (striker & non-striker), opening bowler, and assigned scorer.
-*   **Scorer Console ([score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx))**: Scorer-exclusive write-enabled interface to input ball events:
+*   **Initialize Match ([start.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/start.tsx))**: Pre-match start configuration screen for captains: toss details, batting first team, opening batsmen (striker & non-striker), opening bowler, and assigned scorer. Protected against Zustand profile hydration delay (renders loader until `myProfile` state is resolved).
+*   **Scorer Console ([score.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/score.tsx))**: Scorer-exclusive write-enabled interface to input ball events. Protected against Zustand profile hydration delay.
     *   *Double-Tap Locks*: Prevents duplicate requests during bowler selections.
     *   *Normal Ball / Extras*: Fast-tap buttons to submit runs, extra type overlays (Wide, No Ball, Bye, Leg Bye), and wickets.
     *   *Wicket flow*: Prompts a modal to record dismissal type and choose the next batsman. The next batsman selection list filters dynamically to only display Playing XI players who have not been dismissed yet.
@@ -247,6 +247,7 @@ graph TD
     *   *Match Auto-Completion*: Auto-dismisses active console modals when the match is completed.
     *   *Innings transition wizard*: Prompts when 10 wickets fall or overs finish, prompting the scorer to set Innings 2 openers and bowler.
     *   *Undo ball*: Calls `PATCH /balls/undo` to revert the single most recent delivery.
+    *   *Manual Strike Rotation*: Allows the scorer to manually swap the batsman currently on strike with the non-striker (via the **Swap Strike (Rotate)** button in the Current Partnership drawer modal) utilizing the `PATCH /sports/cricket/matches/:id/strike/rotate` endpoint with optimistic UI cache updates.
 *   **Live Spectator Viewer ([live.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/live.tsx))**: Public read-only feed polling the pre-computed match state every 5 seconds (`refetchInterval: 5000`). Renders live scorecard, active batsman run counts, active bowler stats, and over timeline widgets.
 
 ### 📊 Step-by-Step Flowchart

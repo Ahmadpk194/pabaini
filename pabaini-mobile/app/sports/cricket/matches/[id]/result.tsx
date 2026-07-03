@@ -104,6 +104,7 @@ export default function MatchResultFormScreen() {
   // Auth Guard & Redirects
   useEffect(() => {
     if (isGuest) return;
+    if (myProfile === undefined) return;
     if (match && !isLoadingMatch) {
       const isTeamACaptain = myProfile && match.team_a.captain?.id === myProfile.id;
       const isTeamBCaptain = myProfile && match.team_b.captain?.id === myProfile.id;
@@ -274,7 +275,7 @@ export default function MatchResultFormScreen() {
   };
 
   const isPending = submitResultMutation.isPending || editResultMutation.isPending;
-  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || !isInitialized);
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || !isInitialized || myProfile === undefined);
 
   if (isLoading) {
     return (

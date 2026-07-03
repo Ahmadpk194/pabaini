@@ -1177,6 +1177,7 @@
       <button class="nav-link" onclick="jumpToCard('card-54')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/bowler<span class="nav-number">#54</span></button>
       <button class="nav-link" onclick="jumpToCard('card-55')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/innings/start<span class="nav-number">#55</span></button>
       <button class="nav-link" onclick="jumpToCard('card-56')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/balls/undo<span class="nav-number">#56</span></button>
+      <button class="nav-link" onclick="jumpToCard('card-56b')"><span class="nav-method m-PATCH">PATCH</span>/matches/:id/strike/rotate<span class="nav-number">#56b</span></button>
       <button class="nav-link" onclick="jumpToCard('card-57')"><span class="nav-method m-GET">GET</span>/matches/:id/live<span class="nav-number">#57</span></button>
     </div>
     <div class="nav-group" id="nav-matches-planned">
@@ -4763,6 +4764,36 @@ axios.post('/api/v1/sports/cricket/teams/1/logo', formData, {
           <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/balls/undo \
   -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
           <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/balls/undo', {}, {
+  headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- #56b -->
+    <div class="endpoint-card" id="card-56b" data-category="sports" data-path="/sports/cricket/matches/:id/strike/rotate" data-desc="patch manually rotate swap striker non striker scorer only">
+      <div class="endpoint-header" onclick="toggleCard(this)">
+        <span class="endpoint-number">#56b</span>
+        <span class="method-tag PATCH">PATCH</span>
+        <span class="path-text">/api/v1/sports/cricket/matches/:id/strike/rotate</span>
+        <span class="auth-badge auth-protected" style="background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.2);">Protected · Scorer</span>
+        <div class="endpoint-actions"><button class="btn-copy" onclick="copyPath(event, '/api/v1/sports/cricket/matches/:id/strike/rotate')">Copy</button></div>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Manually rotates/swaps the striker and non-striker currently active in the live match.</p>
+        <div class="field-label">Required Headers</div>
+        <div class="headers-block">
+          <div class="header-row"><span class="header-key">Authorization:</span><span class="header-val">Bearer &lt;YOUR_FIREBASE_ID_TOKEN&gt;</span></div>
+        </div>
+        <div class="code-panel">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab(this, 'axios')">Axios</button>
+          </div>
+          <div class="code-pane active" data-lang="curl">curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/strike/rotate \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"</div>
+          <div class="code-pane" data-lang="axios">axios.patch('/api/v1/sports/cricket/matches/1/strike/rotate', {}, {
   headers: { Authorization: 'Bearer YOUR_FIREBASE_ID_TOKEN' }
 });</div>
         </div>

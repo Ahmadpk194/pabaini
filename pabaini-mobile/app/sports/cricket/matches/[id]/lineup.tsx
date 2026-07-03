@@ -79,11 +79,12 @@ export default function DeclarePlayingXIScreen() {
   // Auth Guard
   useEffect(() => {
     if (isGuest) return;
+    if (myProfile === undefined) return;
     if (match && !isLoadingMatch && !isEitherCaptain) {
       Alert.alert('Access Denied', 'Only the captain of either team can declare lineups.');
       router.back();
     }
-  }, [match, isLoadingMatch, isEitherCaptain, isGuest]);
+  }, [match, isLoadingMatch, isEitherCaptain, isGuest, myProfile]);
 
   // Pre-fill lineups if edit mode / already set
   const captainLineup = isTeamACaptain ? currentLineups?.team_a : currentLineups?.team_b;
@@ -203,7 +204,7 @@ export default function DeclarePlayingXIScreen() {
     }
   };
 
-  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineups || isLoadingTeam);
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineups || isLoadingTeam || myProfile === undefined);
 
   if (isLoading) {
     return (

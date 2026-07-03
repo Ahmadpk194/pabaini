@@ -123,6 +123,7 @@ interface ApiResponse<T> {
 - [#54 — PATCH `/sports/cricket/matches/:id/bowler`](#54-patch-sportscricketmatchesidbowler) — Select bowler for new over
 - [#55 — PATCH `/sports/cricket/matches/:id/innings/start`](#55-patch-sportscricketmatchesidinningsstart) — Start second innings
 - [#56 — PATCH `/sports/cricket/matches/:id/balls/undo`](#56-patch-sportscricketmatchesidballsundo) — Undo last ball
+- [#56b — PATCH `/sports/cricket/matches/:id/strike/rotate`](#56b-patch-sportscricketmatchesidstrikerotate) — Rotate strike manually
 - [#57 — GET `/sports/cricket/matches/:id/live`](#57-get-sportscricketmatchesidlive) — Public live scoring view
 
 ### 10. Sports Module — Phase 3 (Leaderboard & Standings) 🗓 Roadmap
@@ -3082,6 +3083,32 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 
 ```bash
 curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/balls/undo \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
+```
+
+---
+
+### #56b · PATCH `/sports/cricket/matches/:id/strike/rotate`
+
+Manually rotates/swaps the striker and non-striker currently active in the live match.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/strike/rotate` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/strike/rotate \
   -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN"
 ```
 

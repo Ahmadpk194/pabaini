@@ -1775,6 +1775,38 @@ export class MatchesService {
     return this.findOneMatch(match.id);
   }
 
+  async rotateStrike(matchId: number, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can rotate the strike');
+    }
+
+    const tempStrikerId = match.striker_id;
+    const tempStrikerGuest = match.striker_guest_name;
+
+    match.striker_id = match.non_striker_id;
+    match.striker_guest_name = match.non_striker_guest_name;
+
+    match.non_striker_id = tempStrikerId;
+    match.non_striker_guest_name = tempStrikerGuest;
+
+    await this.matchRepo.save(match);
+
+    return this.findOneMatch(match.id);
+  }
+
   async getLiveView(matchId: number): Promise<any> {
     const match = await this.matchRepo.findOne({
       where: { id: matchId },

@@ -1672,6 +1672,7 @@ interface MyTeamResponse {  // returned by GET /my
         <ul>
           <li><strong>Toss &amp; Openers:</strong> Initialize Match wizard to record toss winner, batting first team, opening batsmen, opening bowler, and assigned scorer.</li>
           <li><strong>Exclusive Console:</strong> Designated scorer gets exclusive write access to enter runs, wickets, and extras. Others are redirected to the public Live Viewer.</li>
+          <li><strong>Zustand Hydration Protection:</strong> Protects match start, scoring, lineup, and result screens against Zustand persisted store profile loading delays by keeping loaders active until <code>myProfile</code> is hydrated.</li>
           <li><strong>Automated Logic:</strong> Legal ball counters, strike rotation on runs/overs, target updates, and auto-completion.</li>
           <li><strong>Double-Tap Locks:</strong> Prevents duplicate API requests during bowler and batsman selections.</li>
           <li><strong>Wickets Modal:</strong> Input box for dismissal types (caught, bowled, run-out) and choosing the next incoming batsman. The selection list filters dynamically to exclude already-dismissed players.</li>
@@ -1679,6 +1680,7 @@ interface MyTeamResponse {  // returned by GET /my
           <li><strong>Match Auto-Completion:</strong> Automatically completes the match when the target is reached or all overs/wickets are exhausted, auto-dismissing active console modals to prevent errors on final-ball inputs.</li>
           <li><strong>Innings Break Wizard:</strong> Sets openers and bowling details for Innings 2.</li>
           <li><strong>One-Ball Undo:</strong> Reverts the single most recently entered delivery.</li>
+          <li><strong>Manual Strike Rotation:</strong> Allows the scorer to manually swap the batsman currently on strike with the non-striker (via the <strong>Swap Strike (Rotate)</strong> button in the Current Partnership drawer modal) utilizing the <code>PATCH /sports/cricket/matches/:id/strike/rotate</code> endpoint with optimistic UI cache updates.</li>
         </ul>
       </div>
 

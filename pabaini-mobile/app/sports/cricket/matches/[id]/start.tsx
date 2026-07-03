@@ -82,6 +82,7 @@ export default function StartMatchScreen() {
   // Auth & Status Guard
   useEffect(() => {
     if (isGuest) return;
+    if (myProfile === undefined) return;
     if (match && !isLoadingMatch) {
       const isTeamACaptain = myProfile && match.team_a.captain?.id === myProfile.id;
       const isTeamBCaptain = myProfile && match.team_b.captain?.id === myProfile.id;
@@ -123,7 +124,7 @@ export default function StartMatchScreen() {
     }
   }, [myProfile, scorerId]);
 
-  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup);
+  const isLoading = !isGuest && (isLoadingMatch || isLoadingLineup || myProfile === undefined);
 
   if (isLoading) {
     return (
