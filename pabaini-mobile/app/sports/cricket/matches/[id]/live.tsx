@@ -177,7 +177,7 @@ export default function LiveViewerScreen() {
                 </>
               )}
             </Text>
-            {liveData.target && <Text style={styles.targetLabel}>TARGET: {liveData.target}</Text>}
+            {!!liveData.target && <Text style={styles.targetLabel}>TARGET: {liveData.target}</Text>}
           </View>
           <Text style={styles.scoreText}>
             {liveData.score}
@@ -187,7 +187,7 @@ export default function LiveViewerScreen() {
             <View style={[styles.rrBadge, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
               <Text style={styles.rrText}>CRR: {liveData.current_run_rate?.toFixed(2) || '0.00'}</Text>
             </View>
-            {liveData.required_run_rate && (
+            {!!liveData.required_run_rate && (
               <View style={[styles.rrBadge, { backgroundColor: 'rgba(255, 165, 0, 0.15)' }]}>
                 <Text style={[styles.rrText, { color: '#FFA500' }]}>RRR: {liveData.required_run_rate?.toFixed(2)}</Text>
               </View>
