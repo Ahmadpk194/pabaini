@@ -83,6 +83,17 @@ export default function LiveViewerScreen() {
     return '#616161';
   };
 
+  const getBallBorderColor = (ball: any) => {
+    if (ball.is_wicket) return '#FFCDD2';
+    if (ball.extra_type) return '#FFE082';
+    if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9';
+    return '#BDBDBD'; // clearly visible border for normal/dot balls
+  };
+
+  const legalBallsThisOver = (liveData.this_over || []).filter(
+    (b: any) => b.extra_type !== 'wide' && b.extra_type !== 'no_ball'
+  ).length;
+
   // Calculate current partnership
   const getPartnershipRuns = () => {
     if (!liveData || !liveData.score) return 0;
@@ -235,13 +246,16 @@ export default function LiveViewerScreen() {
         {/* This Over Tracker */}
         {!isCompleted && (
           <View style={styles.trackerSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ballsRow}>
+            <View style={styles.trackerTitleRow}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
+              <Text style={[styles.overCountText, { color: theme.colors.textSecondary }]}>{legalBallsThisOver}/6</Text>
+            </View>
+            <View style={styles.ballsRow}>
               {liveData.this_over && liveData.this_over.length > 0 ? (
                 liveData.this_over.map((ball: any, idx: number) => (
                   <View
                     key={idx}
-                    style={[styles.ballBadge, { backgroundColor: getBallBadgeColor(ball) }]}
+                    style={[styles.ballBadge, { backgroundColor: getBallBadgeColor(ball), borderColor: getBallBorderColor(ball) }]}
                   >
                     <Text style={[styles.ballText, { color: getBallTextColor(ball) }]}>
                       {formatOverBallSymbol(ball)}
@@ -253,7 +267,7 @@ export default function LiveViewerScreen() {
                   Starting new over...
                 </Text>
               )}
-            </ScrollView>
+            </View>
           </View>
         )}
 
@@ -588,9 +602,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  trackerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overCountText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   ballsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
     paddingVertical: 4,
   },
@@ -598,6 +622,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },

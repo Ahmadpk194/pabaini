@@ -341,7 +341,13 @@ export default function ScorerScreen() {
     const payload = {
       runs: selectedExtra === 'wide' || selectedExtra === 'bye' || selectedExtra === 'leg_bye' ? 0 : selectedRuns,
       extra_type: selectedExtra === 'none' ? undefined : selectedExtra,
-      extra_runs: selectedExtra !== 'none' ? selectedRuns : 0,
+      extra_runs: selectedExtra === 'wide'
+        ? selectedRuns + 1
+        : selectedExtra === 'no_ball'
+          ? 1
+          : selectedExtra !== 'none'
+            ? selectedRuns
+            : 0,
       is_wicket: isWicket,
     };
 
@@ -499,32 +505,36 @@ export default function ScorerScreen() {
   };
 
   const getBallBorderColor = (ball: any) => {
-    if (ball.is_wicket) return '#FFCDD2'; // Red border
-    if (ball.extra_type) return '#FFE082'; // Amber border
-    if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9'; // Green border
-    return theme.colors.border; // Theme border color
+    if (ball.is_wicket) return '#FFCDD2';
+    if (ball.extra_type) return '#FFE082';
+    if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9';
+    return theme.colors.border;
   };
+
+  const legalBallsThisOver = (liveData.this_over || []).filter(
+    (ball: any) => ball.extra_type !== 'wide' && ball.extra_type !== 'no_ball'
+  ).length;
 
   // Calculate current partnership
   const getPartnershipRuns = () => {
     if (!liveData || !liveData.score) return 0;
-    
+
     let currentRuns = 0;
     if (typeof liveData.score === 'string') {
       const parts = liveData.score.split('/');
       currentRuns = parseInt(parts[0], 10) || 0;
     }
-    
+
     const currentInnings = liveData.current_innings || 1;
     const currentInningsFow = match.fall_of_wickets?.filter((f) => f.innings === currentInnings) || [];
-    
+
     if (currentInningsFow.length > 0) {
       // Sort to get the last wicket fall
       const sortedFow = [...currentInningsFow].sort((a, b) => b.score_at_wicket - a.score_at_wicket);
       const lastWicket = sortedFow[0];
       return Math.max(0, currentRuns - lastWicket.score_at_wicket);
     }
-    
+
     return currentRuns;
   };
 
@@ -558,7 +568,7 @@ export default function ScorerScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={[styles.contentArea, { backgroundColor: theme.colors.background }]}>
         {/* Score Panel */}
         <LinearGradient
           colors={['#0E331B', '#071A0E']}
@@ -630,8 +640,11 @@ export default function ScorerScreen() {
 
         {/* This Over Tracker */}
         <View style={styles.trackerSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ballsRow}>
+          <View style={styles.trackerTitleRow}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
+            <Text style={[styles.overCountText, { color: theme.colors.textSecondary }]}>{legalBallsThisOver}/6</Text>
+          </View>
+          <View style={styles.ballsRow}>
             {liveData.this_over && liveData.this_over.length > 0 ? (
               liveData.this_over.map((ball: any, idx: number) => (
                 <View
@@ -648,12 +661,11 @@ export default function ScorerScreen() {
                 Starting new over...
               </Text>
             )}
-          </ScrollView>
+          </View>
         </View>
 
         {/* Scoring Action Buttons */}
-        <View style={[styles.scoringPanel, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.panelHeader, { color: theme.colors.textSecondary }]}>RECORD EVENT</Text>
+        <View style={[styles.scoringPanel, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flex: 1 }]}>
 
           {/* Extras Toggle Selection */}
           <View style={styles.extraSelectorRow}>
@@ -685,7 +697,7 @@ export default function ScorerScreen() {
             ))}
           </View>
 
-          {/* Quick Runs Rows */}
+          {/* Quick Runs Rows - 6 uniform buttons: 0 1 2 3 4 6 */}
           <View style={styles.runsGrid}>
             {[0, 1, 2, 3, 4, 6].map((run) => (
               <TouchableOpacity
@@ -712,33 +724,16 @@ export default function ScorerScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.runCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={() => setOtherRunsModalVisible(true)}
-            >
-              <Text style={[styles.runCardText, { color: theme.colors.textPrimary, fontSize: 13 }]}>Other</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.mainActionsRow}>
-            {/* Undo Last Ball Button */}
+            {/* Other Runs Button */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[
-                styles.actionBtn,
-                styles.undoBtn,
-                {
-                  borderRadius: theme.radius.sm,
-                  opacity: isUndoDisabled ? 0.4 : 1,
-                  flexDirection: 'row',
-                }
-              ]}
-              onPress={handleUndo}
-              disabled={isUndoDisabled}
+              style={[styles.actionBtn, styles.otherBtn, { borderRadius: theme.radius.sm }]}
+              onPress={() => setOtherRunsModalVisible(true)}
             >
-              <RotateCcw size={14} color={isUndoDisabled ? '#999999' : '#666666'} style={{ marginRight: 4 }} />
-              <Text style={[styles.undoBtnText, isUndoDisabled && { color: '#999999' }]}>Undo</Text>
+              <Text style={styles.otherBtnText}>Other</Text>
             </TouchableOpacity>
 
             {/* Record Wicket Button */}
@@ -765,7 +760,7 @@ export default function ScorerScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
 
       {/* MODAL: Bowler Selector */}
       <Modal visible={bowlerModalVisible} transparent={true} animationType="fade">
@@ -1153,142 +1148,116 @@ export default function ScorerScreen() {
           onPress={() => setPartnershipModalVisible(false)}
         >
           <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
-            {/* Grab Handle */}
             <View style={styles.drawerDragHandle} />
 
-            {/* Title */}
-            <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
-              Current Partnership
-            </Text>
-
-            <View style={{ alignItems: 'center', marginVertical: 12 }}>
-              <Text style={{ fontSize: 36, fontWeight: '800', color: theme.colors.primary }}>
-                {getPartnershipRuns()} Runs
-              </Text>
-              <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 4 }}>
-                Active Partnership Runs
+            {/* Title + partnership runs */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>Partnership</Text>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.primary }}>
+                {getPartnershipRuns()} runs
               </Text>
             </View>
 
-            {/* Progress Bar comparison */}
+            {/* Slim contribution bar */}
             {(() => {
-              const strikerRuns = liveData?.striker?.runs || 0;
-              const nonStrikerRuns = liveData?.non_striker?.runs || 0;
-              const totalRuns = strikerRuns + nonStrikerRuns;
-              
-              const strikerPercent = totalRuns > 0 ? (strikerRuns / totalRuns) * 100 : 50;
-              const nonStrikerPercent = totalRuns > 0 ? (nonStrikerRuns / totalRuns) * 100 : 50;
-              
+              const sR = liveData?.striker?.runs || 0;
+              const nsR = liveData?.non_striker?.runs || 0;
+              const total = sR + nsR;
+              const sPct = total > 0 ? (sR / total) * 100 : 50;
+              const nsPct = 100 - sPct;
               return (
-                <View style={{ marginVertical: 12, width: '100%' }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary, marginBottom: 8, textAlign: 'center' }}>
-                    Innings Contribution Comparison
-                  </Text>
-                  
-                  {/* The Progress Bar */}
-                  <View style={{ height: 10, width: '100%', flexDirection: 'row', borderRadius: 5, overflow: 'hidden', backgroundColor: theme.colors.border }}>
-                    <View style={{ width: `${strikerPercent}%`, backgroundColor: theme.colors.primary }} />
-                    <View style={{ width: `${nonStrikerPercent}%`, backgroundColor: '#81C784' }} />
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ height: 6, flexDirection: 'row', borderRadius: 3, overflow: 'hidden', backgroundColor: theme.colors.border }}>
+                    <View style={{ width: `${sPct}%`, backgroundColor: theme.colors.primary }} />
+                    <View style={{ width: `${nsPct}%`, backgroundColor: '#81C784' }} />
                   </View>
-
-                  {/* Labels and contribution values */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                    <View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.textPrimary }}>
-                        {liveData?.striker?.name || 'Striker'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
-                        {strikerRuns} runs ({strikerPercent.toFixed(0)}%)
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '500', color: theme.colors.textSecondary }}>
-                        {liveData?.non_striker?.name || 'Non-Striker'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
-                        {nonStrikerRuns} runs ({nonStrikerPercent.toFixed(0)}%)
-                      </Text>
-                    </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
+                    <Text style={{ fontSize: 11, color: theme.colors.primary, fontWeight: '600' }}>
+                      {liveData?.striker?.name?.split(' ')[0]} · {sPct.toFixed(0)}%
+                    </Text>
+                    <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
+                      {liveData?.non_striker?.name?.split(' ')[0]} · {nsPct.toFixed(0)}%
+                    </Text>
                   </View>
                 </View>
               );
             })()}
 
-            <View style={{ height: 0.5, backgroundColor: theme.colors.border, width: '100%', marginVertical: 12 }} />
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginBottom: 12 }} />
 
-            <View style={{ gap: 8, width: '100%' }}>
-              {/* Striker detailed row */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.textPrimary }}>
-                  🏏 {liveData?.striker?.name || 'No Striker'} *
-                </Text>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
-                  {liveData?.striker?.runs || 0} runs ({liveData?.striker?.balls || 0}b)
+            {/* Player rows */}
+            <View style={{ gap: 10 }}>
+              {/* Striker */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: theme.colors.primary }} />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.textPrimary }}>
+                    {liveData?.striker?.name || 'Striker'} *
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary }}>
+                  {liveData?.striker?.runs || 0} ({liveData?.striker?.balls || 0}b)
                 </Text>
               </View>
 
-              {/* Non-Striker detailed row */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '500', color: theme.colors.textSecondary }}>
-                  {liveData?.non_striker?.name || 'No Non-Striker'}
-                </Text>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
-                  {liveData?.non_striker?.runs || 0} runs ({liveData?.non_striker?.balls || 0}b)
+              {/* Non-striker */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: theme.colors.border }} />
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.textSecondary }}>
+                    {liveData?.non_striker?.name || 'Non-Striker'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                  {liveData?.non_striker?.runs || 0} ({liveData?.non_striker?.balls || 0}b)
                 </Text>
               </View>
-
-              {/* Swap Strike button */}
-              {liveData?.striker && liveData?.non_striker && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  style={[
-                    styles.primaryBtn,
-                    {
-                      backgroundColor: theme.colors.primary,
-                      borderRadius: theme.radius.sm,
-                      height: 44,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginTop: 12,
-                      flexDirection: 'row',
-                      gap: 8,
-                    }
-                  ]}
-                  onPress={handleRotateStrike}
-                  disabled={rotateStrikeMutation.isPending}
-                >
-                  {rotateStrikeMutation.isPending ? (
-                    <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-                  ) : (
-                    <>
-                      <RefreshCw size={16} color={theme.colors.onPrimary} />
-                      <Text style={{ color: theme.colors.onPrimary, fontWeight: '700', fontSize: 14 }}>
-                        Swap Strike (Rotate)
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[
-                styles.drawerCloseBtn,
-                {
-                  borderColor: theme.colors.border,
-                  borderWidth: 1,
-                  marginTop: 20,
-                  width: '100%',
-                  height: 48,
+            {/* Swap Strike */}
+            {liveData?.striker && liveData?.non_striker && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.primaryBtn, {
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: theme.radius.sm,
+                  height: 42,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  borderRadius: theme.radius.sm,
-                },
-              ]}
+                  marginTop: 16,
+                  flexDirection: 'row',
+                  gap: 8,
+                }]}
+                onPress={handleRotateStrike}
+                disabled={rotateStrikeMutation.isPending}
+              >
+                {rotateStrikeMutation.isPending ? (
+                  <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                ) : (
+                  <>
+                    <RefreshCw size={15} color={theme.colors.onPrimary} />
+                    <Text style={{ color: theme.colors.onPrimary, fontWeight: '700', fontSize: 13 }}>Swap Strike</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Close */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={{
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+                marginTop: 8,
+                height: 42,
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: theme.radius.sm,
+              }}
               onPress={() => setPartnershipModalVisible(false)}
             >
-              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
+              <Text style={{ color: theme.colors.textSecondary, fontWeight: '600', fontSize: 14 }}>Close</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1322,13 +1291,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
-  scrollContent: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: 40,
+  contentArea: {
+    flex: 1,
+    padding: 12,
+    gap: 10,
   },
   scoreCard: {
-    padding: 20,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
@@ -1359,11 +1328,11 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     color: '#FFF',
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: '800',
   },
   oversText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
     color: '#CCC',
   },
@@ -1386,10 +1355,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   playerTile: {
-    padding: 14,
+    padding: 10,
     borderWidth: 1,
     borderRadius: 10,
-    gap: 10,
+    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1409,35 +1378,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   trackerSection: {
-    gap: 8,
+    gap: 6,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
   },
+  trackerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overCountText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   ballsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
     paddingVertical: 4,
   },
   ballBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   ballText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '800',
   },
   scoringPanel: {
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderRadius: 8,
-    gap: 16,
+    gap: 6,
   },
   panelHeader: {
     fontSize: 12,
@@ -1450,8 +1429,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   extraBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderWidth: 1,
     borderRadius: 4,
   },
@@ -1461,12 +1440,12 @@ const styles = StyleSheet.create({
   runsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   runCard: {
     flex: 1,
     minWidth: '28%',
-    height: 48,
+    height: 40,
     borderWidth: 1,
     borderRadius: 6,
     justifyContent: 'center',
@@ -1478,12 +1457,12 @@ const styles = StyleSheet.create({
   },
   mainActionsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 0,
   },
   actionBtn: {
     flex: 1,
-    height: 48,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1496,17 +1475,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#D32F2F',
   },
-  undoBtn: {
+  otherBtn: {
     borderColor: '#666666',
     borderWidth: 1,
   },
-  undoBtnText: {
+  otherBtnText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#666666',
   },
   confirmBtn: {
-    flex: 1.5,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
