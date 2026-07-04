@@ -174,7 +174,7 @@ export default function NotificationsScreen() {
   const groupedSections = groupNotifications();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       {/* Header Bar */}
       <View
         style={[
@@ -204,13 +204,16 @@ export default function NotificationsScreen() {
 
       {/* Main List content */}
       {isGuest ? (
-        <LoginRequiredGate fullscreen={true} />
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <LoginRequiredGate fullscreen={true} />
+        </View>
       ) : isLoading ? (
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : (
         <SectionList
+          style={{ backgroundColor: theme.colors.background }}
           sections={groupedSections}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (

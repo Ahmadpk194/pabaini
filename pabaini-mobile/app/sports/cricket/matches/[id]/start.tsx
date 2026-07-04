@@ -128,8 +128,8 @@ export default function StartMatchScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
@@ -138,7 +138,7 @@ export default function StartMatchScreen() {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -147,7 +147,7 @@ export default function StartMatchScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Initialize Match</Text>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
@@ -156,8 +156,8 @@ export default function StartMatchScreen() {
 
   if (!match || !lineups) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <Text style={{ color: theme.colors.textSecondary }}>Failed to load match or lineups details.</Text>
         </View>
       </SafeAreaView>
@@ -504,7 +504,7 @@ export default function StartMatchScreen() {
   // The bottom edge is padded dynamically using insets.bottom inside ScrollView
   // and the absolute footer component below.
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -516,7 +516,7 @@ export default function StartMatchScreen() {
 
       {/* Main scrollable body extending beneath the bottom absolute footer container */}
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: insets.bottom > 0 ? 100 + insets.bottom : 100 }

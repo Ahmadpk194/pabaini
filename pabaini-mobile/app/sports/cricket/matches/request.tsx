@@ -254,7 +254,7 @@ export default function MatchRequestScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoiding}
@@ -271,14 +271,14 @@ export default function MatchRequestScreen() {
         </View>
 
         {isGuest ? (
-          <View style={styles.centerContainer}>
+          <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
             <LoginRequiredGate fullscreen={false} />
           </View>
         ) : (
           <>
             {/* Scroll Content */}
         <ScrollView
-          style={styles.body}
+          style={[styles.body, { backgroundColor: theme.colors.background }]}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -532,7 +532,7 @@ export default function MatchRequestScreen() {
           onRequestClose={() => setOpponentModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <SafeAreaView style={[styles.modalContentFullscreen, { backgroundColor: theme.colors.background }]}>
+            <SafeAreaView style={[styles.modalContentFullscreen, { backgroundColor: theme.colors.surface }]}>
               {/* Header inside Modal */}
               <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <TouchableOpacity style={styles.backButton} onPress={() => setOpponentModalVisible(false)}>
@@ -558,15 +558,16 @@ export default function MatchRequestScreen() {
 
               {/* Teams List */}
               {isLoadingAllTeams ? (
-                <View style={styles.centerContainer}>
+                <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
                   <ActivityIndicator size="large" color={theme.colors.primary} />
                 </View>
               ) : opponentFiltered.length === 0 ? (
-                <View style={styles.centerContainer}>
+                <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
                   <Text style={{ color: theme.colors.textSecondary }}>No active teams found</Text>
                 </View>
               ) : (
                 <FlatList
+                  style={{ backgroundColor: theme.colors.background }}
                   data={opponentFiltered}
                   keyExtractor={(item) => item.id.toString()}
                   contentContainerStyle={{ padding: 16 }}

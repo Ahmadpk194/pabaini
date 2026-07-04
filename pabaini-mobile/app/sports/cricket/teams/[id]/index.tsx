@@ -300,7 +300,7 @@ export default function TeamProfileScreen() {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -309,7 +309,9 @@ export default function TeamProfileScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Team Profile</Text>
           <View style={{ width: 36 }} />
         </View>
-        <LoginRequiredGate title="Team Profile" description="Please log in to view team profiles and player rosters." fullscreen={false} />
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <LoginRequiredGate title="Team Profile" description="Please log in to view team profiles and player rosters." fullscreen={false} />
+        </View>
       </SafeAreaView>
     );
   }

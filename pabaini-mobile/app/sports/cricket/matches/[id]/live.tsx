@@ -32,8 +32,8 @@ export default function LiveViewerScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
@@ -42,8 +42,8 @@ export default function LiveViewerScreen() {
 
   if (!match || !liveData) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <Text style={{ color: theme.colors.textSecondary }}>Failed to load live match data.</Text>
           <TouchableOpacity
             style={[styles.retryBtn, { backgroundColor: theme.colors.primary, marginTop: 12 }]}

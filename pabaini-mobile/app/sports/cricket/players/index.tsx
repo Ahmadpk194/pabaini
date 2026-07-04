@@ -110,7 +110,7 @@ export default function DiscoverPlayersScreen() {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -119,7 +119,9 @@ export default function DiscoverPlayersScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Discover Players</Text>
           <View style={{ width: 44 }} />
         </View>
-        <LoginRequiredGate title="Discover Players" description="Please log in to browse cricket players and view their profiles." fullscreen={false} />
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <LoginRequiredGate title="Discover Players" description="Please log in to browse cricket players and view their profiles." fullscreen={false} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -148,7 +150,7 @@ export default function DiscoverPlayersScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -176,13 +178,14 @@ export default function DiscoverPlayersScreen() {
 
       {/* Players list */}
       {loading && players.length === 0 ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
           <PlayerCardSkeleton />
           <PlayerCardSkeleton />
           <PlayerCardSkeleton />
         </View>
       ) : (
         <FlatList
+          style={{ backgroundColor: theme.colors.background }}
           data={players}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (

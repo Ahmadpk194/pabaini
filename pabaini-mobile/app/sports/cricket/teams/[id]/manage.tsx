@@ -302,8 +302,8 @@ export default function CaptainManageScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
@@ -312,7 +312,7 @@ export default function CaptainManageScreen() {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -323,7 +323,7 @@ export default function CaptainManageScreen() {
           </View>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
@@ -335,7 +335,7 @@ export default function CaptainManageScreen() {
   const activeSquad = team.members.filter((m) => m.status === 'active');
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -351,7 +351,7 @@ export default function CaptainManageScreen() {
       </View>
 
       {/* Tab Selectors */}
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { backgroundColor: theme.colors.background }]}>
         {/* Requests Tab */}
         <TouchableOpacity
           style={[
@@ -408,7 +408,7 @@ export default function CaptainManageScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollBody} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollBody, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* REQUESTS LIST */}
         {activeTab === 'requests' && (
           <View>
@@ -549,7 +549,7 @@ export default function CaptainManageScreen() {
 
       {/* Inline Settings Modal */}
       <Modal visible={editModalVisible} animationType="slide" transparent={false}>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardAvoiding}
@@ -568,7 +568,7 @@ export default function CaptainManageScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.body} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <ScrollView style={[styles.body, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
               <TeamFormFields
                 values={editFormValues}
                 onChange={(field, val) => setEditFormValues((prev) => ({ ...prev, [field]: val }))}

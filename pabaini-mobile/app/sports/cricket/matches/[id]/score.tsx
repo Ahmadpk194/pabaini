@@ -172,8 +172,8 @@ export default function ScorerScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
@@ -182,7 +182,7 @@ export default function ScorerScreen() {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
         {/* Header Bar */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -191,7 +191,7 @@ export default function ScorerScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scorer Console</Text>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <LoginRequiredGate fullscreen={false} />
         </View>
       </SafeAreaView>
@@ -200,8 +200,8 @@ export default function ScorerScreen() {
 
   if (!match || !lineups || !liveData) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <Text style={{ color: theme.colors.textSecondary }}>Failed to load match scoring data.</Text>
         </View>
       </SafeAreaView>
@@ -211,8 +211,8 @@ export default function ScorerScreen() {
   // Handle completed matches
   if (match.status === 'completed') {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.completedContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.completedContainer, { backgroundColor: theme.colors.background }]}>
           <Award size={64} color="#D4A700" />
           <Text style={[styles.completedTitle, { color: theme.colors.textPrimary }]}>Match Completed!</Text>
           <Text style={[styles.completedSub, { color: theme.colors.textSecondary }]}>

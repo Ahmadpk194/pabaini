@@ -115,7 +115,7 @@ export default function CreateTeamScreen() {
   const isNameEmpty = !formValues.name || !formValues.name.trim();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoiding}
@@ -130,14 +130,14 @@ export default function CreateTeamScreen() {
         </View>
 
         {isGuest ? (
-          <View style={styles.gateWrapper}>
+          <View style={[styles.gateWrapper, { backgroundColor: theme.colors.background }]}>
             <LoginRequiredGate fullscreen={false} />
           </View>
         ) : (
           <>
             {/* Form Body */}
             <ScrollView
-              style={styles.body}
+              style={[styles.body, { backgroundColor: theme.colors.background }]}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"

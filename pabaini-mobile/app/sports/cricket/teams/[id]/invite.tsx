@@ -181,7 +181,7 @@ export default function InvitePlayerScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -192,7 +192,7 @@ export default function InvitePlayerScreen() {
       </View>
 
       {isGuest ? (
-        <View style={styles.loaderContainer}>
+        <View style={[styles.loaderContainer, { backgroundColor: theme.colors.background }]}>
           <LoginRequiredGate fullscreen={false} />
         </View>
       ) : (
@@ -214,11 +214,12 @@ export default function InvitePlayerScreen() {
 
           {/* Players list */}
           {loading ? (
-            <View style={styles.loaderContainer}>
+            <View style={[styles.loaderContainer, { backgroundColor: theme.colors.background }]}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
           ) : (
             <FlatList
+              style={{ backgroundColor: theme.colors.background }}
               data={filteredPlayers}
               keyExtractor={(item) => item.id.toString()}
               renderItem={renderPlayerRow}

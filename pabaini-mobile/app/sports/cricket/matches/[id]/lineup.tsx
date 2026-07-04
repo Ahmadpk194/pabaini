@@ -208,8 +208,8 @@ export default function DeclarePlayingXIScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
@@ -217,7 +217,7 @@ export default function DeclarePlayingXIScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -234,13 +234,13 @@ export default function DeclarePlayingXIScreen() {
         </View>
 
         {isGuest ? (
-          <View style={styles.centerContainer}>
+          <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
             <LoginRequiredGate fullscreen={false} />
           </View>
         ) : (
           <>
             <ScrollView
-              style={{ flex: 1 }}
+              style={{ flex: 1, backgroundColor: theme.colors.background }}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
