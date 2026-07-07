@@ -1620,7 +1620,10 @@ interface MyTeamResponse {  // returned by GET /my
       <div class="feature-card">
         <h3><span class="fc-icon">📅</span> Matches Tab &amp; List (<code>sports.tsx</code> / <code>request.tsx</code>)</h3>
         <ul>
-          <li><strong>Match Feed Lists:</strong> Groups matches into Live Matches (pulses red with live scorecard updates), Upcoming Matches (details venue, time, and roster lineup checklist), and Completed Matches (displays the winner, trophy icon, and final summaries). Renders via <code>MatchCard.tsx</code>.</li>
+          <li><strong>Match Feed Lists:</strong> Groups matches into Live Matches, Upcoming Matches, and Completed Matches. Renders via <code>MatchCard.tsx</code>.</li>
+          <li><strong>Refined Premium Card UI:</strong> Compacts overall padding to 12dp, reduces logo avatar sizes to 36dp with fallback initial fonts, and establishes a clean flat Linear style (zero elevation and 0.01 shadow opacity).</li>
+          <li><strong>Indicator Status Badges:</strong> Labels status dynamically with prominent modern indicator emojis (<code>🔴 LIVE</code>, <code>🟢 COMPLETED</code>, <code>🟡 UPCOMING</code>, <code>🟡 PENDING</code>, <code>⚪ CANCELLED</code>, <code>⚪ NO RESULT</code>).</li>
+          <li><strong>Outcome &amp; Footer Actions:</strong> Displays the calculated winning margin outcome (e.g. <code>Badshah XI won by 18 runs</code>) and aligns schedule/venue details alongside a subtle next-action link (e.g. <code>Watch Live →</code>).</li>
           <li><strong>Initiate Challenge:</strong> Captains of active teams can challenge opponents via <code>request.tsx</code>. Fields include team/opponent dropdowns, overs (1-100), optional venue, scheduled date/time helpers, and scoring mode selector (Live vs. Simple).</li>
           <li><strong>Accept/Decline:</strong> Challenged captains view pending match requests on their Match Detail page to Accept or Decline.</li>
         </ul>

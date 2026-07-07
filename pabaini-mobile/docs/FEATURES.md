@@ -225,10 +225,12 @@ graph TD
 
 ### 🌟 Phases 3 & 4: Cricket Matches, Lineups & Scoring (Implemented)
 
-*   **Matches Tab & List ([sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx))**: Lists challenges in three groups:
-    *   *Live Matches*: Pulses red and displays real-time score summaries.
-    *   *Upcoming Matches*: Displays date, venue, and a lineup declaration counter.
-    *   *Completed Matches*: Displays the winning team, trophy icon, final scores, and a styled dynamic victory badge displaying the winning margin (e.g., "Team A won by 15 runs", "Team B won by 4 wickets", or "Match Tied" / "Match Drawn"). These cards are rendered by [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
+*   **Matches Tab & List ([sports.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/(tabs)/sports.tsx))**: Lists challenges in three groups (Live, Upcoming, and Completed) using a highly refined, premium card UI layout ([MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx)) featuring:
+    *   *Match Status*: Prominent status labels prefixed with modern indicator emojis (`🔴 LIVE`, `🟢 COMPLETED`, `🟡 UPCOMING`, `🟡 PENDING`, `⚪ CANCELLED`, `⚪ NO RESULT`).
+    *   *Team Presentation*: Compact team rows with scaled logo fallback avatars (`36dp` size), tighter margins, and italicized VS separators.
+    *   *Winner Outcome*: Renders the exact winning margin (e.g. `Badshah XI won by 18 runs` or `Badshah XI won by 2 wickets`) calculated dynamically off innings score details.
+    *   *Action-Oriented Card Footer*: Distributes compact schedule date and venue metadata on the left with a subtle next-action link (`Watch Live →`, `View Scorecard →`, or `View Details →`) on the right.
+    *   *Flat UI shadows*: Consistent zero elevation and minimal `0.01` shadow opacity to establish a clean, Linear layout style.
 *   **Send Match Request ([request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx))**: Form for captains to challenge opponent teams. Fields: team dropdown, opponent dropdown, overs (1-100), optional venue, optional schedule (with helpers), and scoring mode (Live/Simple).
 *   **Match Detail ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx))**: Detailed page rendering teams, scheduled time, venue, lineups declaration status badges, and dynamic action buttons:
     *   **Layout Compaction**: Refined spacing, card paddings (`8dp`), layout gaps (`8dp`), and team avatar sizes (`44dp` with `marginBottom: 4`) to fit critical match details cleanly onto a single screen.

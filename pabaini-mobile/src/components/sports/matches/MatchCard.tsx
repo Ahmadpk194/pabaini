@@ -6,6 +6,19 @@ import { MapPin, Calendar } from 'lucide-react-native';
 import { getTeamColor } from '../teams/TeamCard';
 import { formatMatchDate } from '../../../utils/format';
 
+const parseScore = (scoreStr: string | null) => {
+  if (!scoreStr) return { runs: 0, wickets: 0, overs: 0 };
+  const match = scoreStr.match(/^(\d+)[-/](\d+)(?:\s*\((\d+(?:\.\d+)?)\))?/);
+  if (match) {
+    return {
+      runs: parseInt(match[1], 10) || 0,
+      wickets: parseInt(match[2], 10) || 0,
+      overs: parseFloat(match[3]) || 0,
+    };
+  }
+  return { runs: 0, wickets: 0, overs: 0 };
+};
+
 interface MatchCardProps {
   match: CricketMatch;
   onPress: () => void;
@@ -26,43 +39,43 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
         return {
           bg: '#FFEBEB',
           text: '#D32F2F',
-          label: 'LIVE',
+          label: '🔴 LIVE',
         };
       case 'pending_request':
         return {
           bg: '#FFF8DC',
           text: '#A07800',
-          label: 'Challenge Pending',
+          label: '🟡 PENDING',
         };
       case 'scheduled':
         return {
           bg: '#EBF3FE',
           text: '#1976D2',
-          label: 'Scheduled',
+          label: '🟡 UPCOMING',
         };
       case 'completed':
         return {
           bg: '#EBFBEF',
           text: '#2E7D32',
-          label: 'Completed',
+          label: '🟢 COMPLETED',
         };
       case 'cancelled':
         return {
           bg: '#FCEBEB',
           text: '#791F1F',
-          label: 'Cancelled',
+          label: '⚪ CANCELLED',
         };
       case 'no_result':
         return {
           bg: '#F5F5F5',
           text: '#616161',
-          label: 'No Result',
+          label: '⚪ NO RESULT',
         };
       default:
         return {
           bg: '#F5F5F5',
           text: '#616161',
-          label: (match.status as string).toUpperCase(),
+          label: `⚪ ${String(match.status).toUpperCase()}`,
         };
     }
   };
@@ -75,6 +88,59 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
   const winnerName = match.winner_team?.name || 
     (match.winner_team_id === match.team_a_id ? match.team_a.name : 
      match.winner_team_id === match.team_b_id ? match.team_b.name : null);
+
+  const getWinnerMessage = () => {
+    if (match.is_tie || (!match.winner_team_id && match.status === 'completed')) {
+      return 'Match Tied';
+    }
+    const winner = winnerName;
+    if (!winner) return 'Completed';
+
+    const scoreA = parseScore(match.team_a_score);
+    const scoreB = parseScore(match.team_b_score);
+
+    if (match.batting_first_team_id) {
+      const firstBattingId = match.batting_first_team_id;
+      const secondBattingId = firstBattingId === match.team_a_id ? match.team_b_id : match.team_a_id;
+      
+      const scoreFirst = firstBattingId === match.team_a_id ? scoreA : scoreB;
+      const scoreSecond = firstBattingId === match.team_a_id ? scoreB : scoreA;
+      
+      if (match.winner_team_id === firstBattingId) {
+        const runsDiff = scoreFirst.runs - scoreSecond.runs;
+        if (runsDiff > 0) {
+          return `${winner} won by ${runsDiff} run${runsDiff > 1 ? 's' : ''}`;
+        }
+      } else if (match.winner_team_id === secondBattingId) {
+        const storedMaxWickets = match.winner_team_id === match.team_a_id
+          ? match.team_a_max_wickets
+          : match.team_b_max_wickets;
+        const maxWickets = storedMaxWickets ?? 10;
+        const wicketsDiff = maxWickets - scoreSecond.wickets;
+        if (wicketsDiff > 0) {
+          return `${winner} won by ${wicketsDiff} wicket${wicketsDiff > 1 ? 's' : ''}`;
+        }
+      }
+    } else {
+      const runsDiff = Math.abs(scoreA.runs - scoreB.runs);
+      if (runsDiff > 0) {
+        return `${winner} won by ${runsDiff} run${runsDiff > 1 ? 's' : ''}`;
+      }
+    }
+
+    return `${winner} won`;
+  };
+
+  const getPrimaryActionLabel = () => {
+    switch (match.status) {
+      case 'live':
+        return 'Watch Live →';
+      case 'completed':
+        return 'View Scorecard →';
+      default:
+        return 'View Details →';
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -92,7 +158,6 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
     >
       <View style={styles.topRow}>
         <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-          {isLive && <View style={styles.liveDot} />}
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {statusStyle.label}
           </Text>
@@ -170,7 +235,7 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
             ]}
             numberOfLines={1}
           >
-            🏆 {winnerName ? `${winnerName} won` : match.is_tie ? 'Match Tied' : 'Completed'}
+            🏆 {getWinnerMessage()}
           </Text>
         </View>
       )}
@@ -178,21 +243,25 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
       <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
       <View style={styles.bottomRow}>
-        <View style={styles.metaItem}>
-          <Calendar size={13} color={theme.colors.textSecondary} />
-          <Text style={[styles.metaText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-            {formatMatchDate(match.scheduled_at)}
-          </Text>
-        </View>
-        
-        {match.venue ? (
-          <View style={[styles.metaItem, { marginLeft: 12, flex: 1 }]}>
-            <MapPin size={13} color={theme.colors.textSecondary} />
+        <View style={styles.metaGroup}>
+          <View style={styles.metaItem}>
             <Text style={[styles.metaText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-              {match.venue}
+              🕒 {formatMatchDate(match.scheduled_at)}
             </Text>
           </View>
-        ) : null}
+          
+          {match.venue ? (
+            <View style={styles.metaItem}>
+              <Text style={[styles.metaText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                📍 {match.venue}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <Text style={[styles.actionLink, { color: theme.colors.primary }]}>
+          {getPrimaryActionLabel()}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -200,48 +269,41 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.01,
+    shadowRadius: 1,
+    elevation: 0,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D32F2F',
-    marginRight: 6,
-  },
   oversText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   teamsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   teamColumn: {
     flex: 1,
@@ -253,16 +315,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   vsText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '700',
     fontStyle: 'italic',
   },
   logoContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     overflow: 'hidden',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   logoImage: {
     width: '100%',
@@ -277,48 +339,59 @@ const styles = StyleSheet.create({
   },
   logoFallbackText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
   },
   teamName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
     width: '90%',
   },
   teamScore: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
   },
   divider: {
     height: 1,
-    marginVertical: 12,
+    marginVertical: 8,
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metaGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 11,
+  },
+  actionLink: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   winnerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
     borderWidth: 0.5,
-    marginTop: 8,
+    marginTop: 6,
     alignSelf: 'flex-start',
   },
   winnerText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
 });
