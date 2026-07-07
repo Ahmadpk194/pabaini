@@ -87,7 +87,7 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
 
       {/* Card Header: Avatar & Info */}
       <View style={styles.header}>
-        <Avatar uri={user.avatar_url} size={70} name={user.name} />
+        <Avatar uri={user.avatar_url} size={54} name={user.name} />
 
         <View style={styles.headerTextContainer}>
           <Text style={styles.name} numberOfLines={1}>
@@ -141,24 +141,24 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    padding: 20,
+    padding: 16,
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
     position: 'relative',
     overflow: 'hidden',
-    marginVertical: 10,
+    marginVertical: 6,
   },
   radialGlow: {
     position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    top: -40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   header: {
@@ -167,43 +167,43 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   headerTextContainer: {
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   name: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 6,
-    letterSpacing: 0.5,
+    marginBottom: 5,
+    letterSpacing: 0.2,
   },
   roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
     alignSelf: 'flex-start',
   },
   roleText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   watermarkIcon: {
-    fontSize: 50,
-    opacity: 0.12,
+    fontSize: 38,
+    opacity: 0.1,
     position: 'absolute',
     right: 0,
-    top: -10,
+    top: -8,
   },
   divider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: 18,
+    marginVertical: 12,
   },
   stylesContainer: {
     flexDirection: 'row',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   styleColumn: {
     flex: 1,
@@ -211,26 +211,26 @@ const styles = StyleSheet.create({
   borderLeft: {
     borderLeftWidth: 1,
     borderLeftColor: 'rgba(255, 255, 255, 0.1)',
-    paddingLeft: 20,
+    paddingLeft: 16,
   },
   styleLabel: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 1,
-    marginBottom: 4,
+    letterSpacing: 0.8,
+    marginBottom: 3,
   },
   styleValue: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
   statsContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderRadius: 7,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
   },
   statBox: {
     flex: 1,
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    letterSpacing: 0.4,
+    marginBottom: 3,
   },
   statValue: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

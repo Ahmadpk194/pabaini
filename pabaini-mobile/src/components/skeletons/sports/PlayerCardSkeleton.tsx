@@ -5,11 +5,11 @@ import { useTheme } from '../../../context/ThemeContext';
 import SkeletonBox from '../SkeletonBox';
 import SkeletonCircle from '../SkeletonCircle';
 
+const overlayStyle: ViewStyle = { backgroundColor: 'rgba(255, 255, 255, 0.15)' };
+
+/** Skeleton matching the compact CricketPlayerCard layout */
 export default function PlayerCardSkeleton() {
   const { theme } = useTheme();
-  
-  // Custom transparent-white style for skeletons overlaying the dark green card background
-  const skeletonOverlayStyle: ViewStyle = { backgroundColor: 'rgba(255, 255, 255, 0.15)' };
 
   return (
     <LinearGradient
@@ -18,48 +18,36 @@ export default function PlayerCardSkeleton() {
       end={{ x: 1, y: 1 }}
       style={[styles.card, { borderRadius: theme.radius.lg }]}
     >
-      {/* Decorative Glow */}
-      <View style={styles.radialGlow} />
-
-      {/* Card Header: Avatar & Info Skeletons */}
+      {/* Header */}
       <View style={styles.header}>
-        <SkeletonCircle size={70} style={skeletonOverlayStyle} />
-        
+        <SkeletonCircle size={54} style={overlayStyle} />
         <View style={styles.headerTextContainer}>
-          {/* Player Name Skeleton */}
-          <SkeletonBox width={160} height={20} borderRadius={4} style={{ ...skeletonOverlayStyle, marginBottom: 8 }} />
-          {/* Role Badge Skeleton */}
-          <SkeletonBox width={90} height={18} borderRadius={4} style={skeletonOverlayStyle} />
+          <SkeletonBox width={140} height={17} borderRadius={4} style={{ ...overlayStyle, marginBottom: 7 }} />
+          <SkeletonBox width={80} height={16} borderRadius={4} style={overlayStyle} />
         </View>
       </View>
 
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Styles details (Batting / Bowling details) Skeletons */}
+      {/* Batting / Bowling */}
       <View style={styles.stylesContainer}>
         <View style={styles.styleColumn}>
-          {/* Batting Title */}
-          <SkeletonBox width={50} height={11} borderRadius={2} style={{ ...skeletonOverlayStyle, marginBottom: 6 }} />
-          {/* Batting Value */}
-          <SkeletonBox width={90} height={14} borderRadius={3} style={skeletonOverlayStyle} />
+          <SkeletonBox width={44} height={10} borderRadius={2} style={{ ...overlayStyle, marginBottom: 5 }} />
+          <SkeletonBox width={90} height={13} borderRadius={3} style={overlayStyle} />
         </View>
         <View style={[styles.styleColumn, styles.borderLeft]}>
-          {/* Bowling Title */}
-          <SkeletonBox width={50} height={11} borderRadius={2} style={{ ...skeletonOverlayStyle, marginBottom: 6 }} />
-          {/* Bowling Value */}
-          <SkeletonBox width={120} height={14} borderRadius={3} style={skeletonOverlayStyle} />
+          <SkeletonBox width={44} height={10} borderRadius={2} style={{ ...overlayStyle, marginBottom: 5 }} />
+          <SkeletonBox width={110} height={13} borderRadius={3} style={overlayStyle} />
         </View>
       </View>
 
-      {/* Stats Table Skeletons */}
+      {/* Stats row */}
       <View style={styles.statsContainer}>
-        {[1, 2, 3, 4].map((index) => (
-          <View key={index} style={styles.statBox}>
-            {/* Stat Label */}
-            <SkeletonBox width={45} height={9} borderRadius={2} style={{ ...skeletonOverlayStyle, marginBottom: 4 }} />
-            {/* Stat Value */}
-            <SkeletonBox width={25} height={14} borderRadius={3} style={skeletonOverlayStyle} />
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={styles.statBox}>
+            <SkeletonBox width={28} height={14} borderRadius={3} style={{ ...overlayStyle, marginBottom: 3 }} />
+            <SkeletonBox width={38} height={8} borderRadius={2} style={overlayStyle} />
           </View>
         ))}
       </View>
@@ -69,25 +57,16 @@ export default function PlayerCardSkeleton() {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 20,
+    padding: 14,
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
     position: 'relative',
     overflow: 'hidden',
-    marginVertical: 10,
-  },
-  radialGlow: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginVertical: 6,
   },
   header: {
     flexDirection: 'row',
@@ -95,17 +74,17 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   headerTextContainer: {
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   divider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: 18,
+    marginVertical: 12,
   },
   stylesContainer: {
     flexDirection: 'row',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   styleColumn: {
     flex: 1,
@@ -113,14 +92,14 @@ const styles = StyleSheet.create({
   borderLeft: {
     borderLeftWidth: 1,
     borderLeftColor: 'rgba(255, 255, 255, 0.1)',
-    paddingLeft: 20,
+    paddingLeft: 16,
   },
   statsContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderRadius: 7,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
   },
   statBox: {
     flex: 1,

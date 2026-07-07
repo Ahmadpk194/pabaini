@@ -277,8 +277,8 @@ export default function SportsScreen() {
       return null;
     }
 
-    const battingText = `${item.batting_hand === 'right' ? 'Right' : 'Left'}-hand bat`;
-    let bowlingText = 'No Bowling';
+    const battingText = `${item.batting_hand === 'right' ? 'Right' : 'Left'}-hand`;
+    let bowlingText = 'No bowling';
     if (item.bowling_arm && item.bowling_arm !== 'none' && item.bowling_type && item.bowling_type !== 'none') {
       const arm = item.bowling_arm === 'right' ? 'Right-arm' : 'Left-arm';
       const type = item.bowling_type.charAt(0).toUpperCase() + item.bowling_type.slice(1);
@@ -287,22 +287,24 @@ export default function SportsScreen() {
 
     return (
       <TouchableOpacity
-        activeOpacity={0.7}
+        activeOpacity={0.75}
         onPress={() => safeRouterPush(router, `/profile/${item.user.id}`)}
         style={[styles.playerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
       >
-        <Avatar uri={item.user.avatar_url} size={48} name={item.user.name} />
+        <Avatar uri={item.user.avatar_url} size={44} name={item.user.name} />
         <View style={styles.playerInfo}>
           <View style={styles.playerMetaHeader}>
-            <Text style={[styles.playerName, { color: theme.colors.textPrimary }]}>{item.user.name}</Text>
-            <View style={[styles.playerRoleBadge, { backgroundColor: `${theme.colors.primary}12` }]}>
+            <Text style={[styles.playerName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+              {item.user.name}
+            </Text>
+            <View style={[styles.playerRoleBadge, { backgroundColor: `${theme.colors.primary}15`, borderColor: `${theme.colors.primary}30`, borderWidth: 1 }]}>
               <Text style={[styles.playerRoleText, { color: theme.colors.primary }]}>
                 {ROLE_LABELS[item.role]}
               </Text>
             </View>
           </View>
-          <Text style={[styles.playerStyles, { color: theme.colors.textSecondary }]}>
-            {battingText} • {bowlingText}
+          <Text style={[styles.playerStyles, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+            🏏 {battingText} · ⚾ {bowlingText}
           </Text>
         </View>
       </TouchableOpacity>
@@ -1040,23 +1042,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 40,
   },
   feedHeader: {
-    paddingTop: 8,
+    paddingTop: 6,
   },
   myProfileSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   myTeamsSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 12,
+    marginTop: 14,
+    marginBottom: 10,
     gap: 8,
   },
   sectionTitle: {
@@ -1066,20 +1068,21 @@ const styles = StyleSheet.create({
   },
   playerCard: {
     flexDirection: 'row',
-    padding: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 6,
     alignItems: 'center',
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.01,
+    shadowRadius: 2,
+    elevation: 0,
   },
   playerInfo: {
     flex: 1,
-    marginLeft: 14,
   },
   playerMetaHeader: {
     flexDirection: 'row',
@@ -1088,8 +1091,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   playerName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    flexShrink: 1,
   },
   playerRoleBadge: {
     paddingHorizontal: 8,
