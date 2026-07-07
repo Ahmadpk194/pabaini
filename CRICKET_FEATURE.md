@@ -1032,6 +1032,10 @@ This checklist provides a step-by-step walkthrough to manually test the Cricket 
 - [ ] **Verify spectator polling**: On the non-participant Account C, open the Live Viewer screen for the match. Verify that the scoreboard, batsman run tallies, bowler figures, and over timeline update automatically without manual refresh inside the 5-second polling interval.
 - [ ] **Verify Required Run Rate (Innings 2)**: During Innings 2, verify that the required run rate (RRR) is visible on Account C's screen.
 - [ ] **Verify Auto-Redirect on Completion**: Keep the Live Viewer open on Account C's device as the scorer enters the final winning run. Verify that Account C's screen automatically transitions to show the finished scorecard/summary page without navigating away.
+- [ ] **Verify offline/stale banner**: Temporarily disable network connection on Account C's device. Verify that a light-red warning banner appears: *"Connection lost. Showing cached data"* with a clickable retry button. Re-enable network, tap "Retry", and verify that the warning dismisses and data refreshes.
+- [ ] **Verify notification follow toggle**: Tap the bell icon in the header. Verify that it toggles between outline and filled states, displaying a green float toast notification overlay confirm message: *"🔔 You are now following this match!"* or *"🔕 Stopped following match."*.
+- [ ] **Verify visual polish and skeleton screens**: Trigger a slow reload. Verify that pulsing layout skeletons matching the headers, cards, and list rows render initially instead of a generic loading spinner. Ensure all cards share a consistent 12dp border radius and flat elevation shadow, with screen borders spaced at a tight 12dp.
+- [ ] **Verify extras details**: Tap the live score card to reveal the Match Summary Details Sheet. Verify that the extras row dynamically displays the count (e.g. `12 (w 5, nb 2, b 1, lb 4)`) calculated dynamically from ball event logs.
 
 ---
 

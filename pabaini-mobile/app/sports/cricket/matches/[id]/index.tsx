@@ -38,6 +38,7 @@ export default function MatchDetailScreen() {
 
   // Share states
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
+  const [lineupsModalVisible, setLineupsModalVisible] = useState(false);
   // Loading overlay shown immediately after option selection while sheet dismisses
   const [isSharePreparing, setIsSharePreparing] = useState(false);
   // Holds pending navigation target so we can navigate after sheet is dismissed
@@ -611,31 +612,44 @@ export default function MatchDetailScreen() {
 
         {/* Lineups Status Card (only show if scheduled or live) */}
         {(match.status === 'scheduled' || match.status === 'live') && (
-          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.md }]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Playing XI Lineups</Text>
-            
-            <View style={styles.lineupStatusRow}>
-              <View style={styles.lineupStatusItem}>
-                <Text style={[styles.lineupTeamName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                  {match.team_a.name}
-                </Text>
-                <View style={[styles.statusBadge, { backgroundColor: match.team_a_lineup_set ? '#EBFBEF' : '#FFF8DC', marginTop: 6, alignSelf: 'center' }]}>
-                  <Text style={[styles.statusText, { color: match.team_a_lineup_set ? '#2E7D32' : '#A07800' }]}>
-                    {match.team_a_lineup_set ? 'Declared' : 'Not Declared'}
-                  </Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.md }]}
+            onPress={() => setLineupsModalVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.textPrimary }}>Playing XI Lineups</Text>
+              <Text style={{ fontSize: 10, color: theme.colors.textSecondary, fontWeight: '600' }}>Tap to view</Text>
+            </View>
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary }}>{match.team_a.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {match.team_a_lineup_set && lineups?.team_a?.players && (
+                    <Text style={{ fontSize: 10, color: theme.colors.textSecondary }}>
+                      ({lineups?.team_a?.players?.length ?? 0} Selected)
+                    </Text>
+                  )}
+                  <View style={{ backgroundColor: match.team_a_lineup_set ? '#EBFBEF' : '#FFF8DC', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: match.team_a_lineup_set ? '#2E7D32' : '#A07800' }}>
+                      {match.team_a_lineup_set ? '✓ Declared' : '✗ Pending'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-
-              <View style={[styles.verticalDivider, { backgroundColor: theme.colors.border }]} />
-
-              <View style={styles.lineupStatusItem}>
-                <Text style={[styles.lineupTeamName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                  {match.team_b.name}
-                </Text>
-                <View style={[styles.statusBadge, { backgroundColor: match.team_b_lineup_set ? '#EBFBEF' : '#FFF8DC', marginTop: 6, alignSelf: 'center' }]}>
-                  <Text style={[styles.statusText, { color: match.team_b_lineup_set ? '#2E7D32' : '#A07800' }]}>
-                    {match.team_b_lineup_set ? 'Declared' : 'Not Declared'}
-                  </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary }}>{match.team_b.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {match.team_b_lineup_set && lineups?.team_b?.players && (
+                    <Text style={{ fontSize: 10, color: theme.colors.textSecondary }}>
+                      ({lineups?.team_b?.players?.length ?? 0} Selected)
+                    </Text>
+                  )}
+                  <View style={{ backgroundColor: match.team_b_lineup_set ? '#EBFBEF' : '#FFF8DC', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: match.team_b_lineup_set ? '#2E7D32' : '#A07800' }}>
+                      {match.team_b_lineup_set ? '✓ Declared' : '✗ Pending'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -643,18 +657,25 @@ export default function MatchDetailScreen() {
             {/* Lineup Buttons for Captains */}
             {match.status === 'scheduled' && isEitherCaptain && (
               <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.lineupActionBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm, marginTop: 16 }]}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: theme.radius.sm,
+                  paddingVertical: 6,
+                  alignItems: 'center',
+                  marginTop: 8,
+                  width: '100%',
+                }}
                 onPress={() => router.push(`/sports/cricket/matches/${match.id}/lineup`)}
               >
-                <Text style={{ color: theme.colors.onPrimary, fontWeight: '700', fontSize: 14 }}>
+                <Text style={{ color: theme.colors.onPrimary, fontWeight: '700', fontSize: 12 }}>
                   {isTeamACaptain
-                    ? match.team_a_lineup_set ? 'Edit Playing XI' : 'Declare Playing XI'
-                    : match.team_b_lineup_set ? 'Edit Playing XI' : 'Declare Playing XI'}
+                    ? match.team_a_lineup_set ? 'Edit My Playing XI' : 'Declare My Playing XI'
+                    : match.team_b_lineup_set ? 'Edit My Playing XI' : 'Declare My Playing XI'}
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
+          </TouchableOpacity>
         )}
 
         {match.status === 'completed' && (
@@ -751,6 +772,101 @@ export default function MatchDetailScreen() {
         {renderActionArea()}
       </ScrollView>
 
+      {/* MODAL: Read-only Lineups Viewer (Bottom Sheet style) */}
+      <Modal
+        visible={lineupsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setLineupsModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.drawerBackdrop}
+          activeOpacity={1}
+          onPress={() => setLineupsModalVisible(false)}
+        >
+          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+            <View style={styles.drawerDragHandle} />
+            <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
+              Declared Playing XI Lineups
+            </Text>
+
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {/* Team A Lineup */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
+                  {match.team_a.name}
+                </Text>
+                {(match.team_a_lineup_set && (lineups?.team_a?.players?.length ?? 0) > 0) ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {lineups?.team_a?.players?.map((player: any, idx: number) => (
+                      <View
+                        key={idx}
+                        style={{
+                          backgroundColor: theme.colors.background,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          borderRadius: 16,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
+                          {player.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
+                    No lineup declared yet.
+                  </Text>
+                )}
+              </View>
+
+              {/* Team B Lineup */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
+                  {match.team_b.name}
+                </Text>
+                {(match.team_b_lineup_set && (lineups?.team_b?.players?.length ?? 0) > 0) ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {lineups?.team_b?.players?.map((player: any, idx: number) => (
+                      <View
+                        key={idx}
+                        style={{
+                          backgroundColor: theme.colors.background,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          borderRadius: 16,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
+                          {player.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
+                    No lineup declared yet.
+                  </Text>
+                )}
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.drawerCloseBtn, { borderColor: theme.colors.border }]}
+              onPress={() => setLineupsModalVisible(false)}
+            >
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <ShareBottomSheet
         isOpen={isShareSheetOpen}
         onClose={() => setIsShareSheetOpen(false)}
@@ -807,25 +923,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   scrollContent: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 8,
+    paddingBottom: 20,
   },
   statusCard: {
-    padding: 16,
+    padding: 8,
     alignItems: 'center',
     borderWidth: 1,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   liveDot: {
@@ -836,11 +953,11 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusSub: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   card: {
-    padding: 16,
+    padding: 8,
     borderWidth: 1,
   },
   vsContainer: {
@@ -853,11 +970,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   teamLogo: {
     width: '100%',
@@ -872,59 +989,59 @@ const styles = StyleSheet.create({
   },
   logoFallbackText: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
   },
   teamName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   captainLabel: {
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
   },
   teamScore: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginTop: 8,
+    marginTop: 4,
   },
   vsMiddle: {
-    flex: 0.6,
+    flex: 0.4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   vsText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '800',
     fontStyle: 'italic',
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
+    gap: 10,
+    paddingVertical: 3,
   },
   infoTextContainer: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
-    marginBottom: 2,
+    fontSize: 11,
+    marginBottom: 1,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   divider: {
     height: 1,
-    marginVertical: 12,
+    marginVertical: 6,
   },
   actionContainer: {
     marginTop: 8,
@@ -964,23 +1081,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   lineupStatusItem: {
     flex: 1,
     alignItems: 'center',
   },
   lineupTeamName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
   },
   verticalDivider: {
     width: 1,
-    height: 40,
+    height: 28,
   },
   lineupActionBtn: {
-    height: 40,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
@@ -1016,5 +1133,71 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: -6,
+  },
+  lineupCard: {
+    padding: 10,
+    borderWidth: 1,
+  },
+  sectionTitleCompact: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  lineupStatusCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  lineupStatusCompactCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  lineupTeamNameCompact: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  verticalDividerCompact: {
+    width: 1,
+    height: 32,
+  },
+  lineupActionBtnCompact: {
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  drawerContentContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  drawerDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CCCCCC',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  drawerTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  drawerCloseBtn: {
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
   },
 });

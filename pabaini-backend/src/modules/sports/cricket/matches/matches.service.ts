@@ -1836,6 +1836,10 @@ export class MatchesService {
 
     const allEvents = await this.ballEventRepo.find({
       where: { match_id: matchId },
+      relations: {
+        batsman: { user: true },
+        bowler: { user: true },
+      },
     });
 
     const getBatsmanStats = (id?: number, guestName?: string) => {
@@ -1844,7 +1848,9 @@ export class MatchesService {
       );
       const runs = playerEvents.reduce((sum, e) => sum + e.runs, 0);
       const balls = playerEvents.filter(e => e.extra_type !== BallExtraType.WIDE).length;
-      return { runs, balls };
+      const fours = playerEvents.filter(e => e.runs === 4).length;
+      const sixes = playerEvents.filter(e => e.runs === 6).length;
+      return { runs, balls, fours, sixes };
     };
 
     const getBowlerStats = (id?: number, guestName?: string) => {
@@ -1938,6 +1944,147 @@ export class MatchesService {
       .filter(e => e.innings === currentInnings && e.is_wicket)
       .map(e => e.batsman_id ? `p-${e.batsman_id}` : `g-${e.batsman_guest_name}`);
 
+    // 1. Calculate Extras for current innings
+    const currentInningsEvents = allEvents.filter(e => e.innings === currentInnings);
+    let cWides = 0, cNoBalls = 0, cByes = 0, cLegByes = 0;
+    for (const e of currentInningsEvents) {
+      if (e.extra_type === BallExtraType.WIDE) cWides += e.extra_runs || 0;
+      else if (e.extra_type === BallExtraType.NO_BALL) cNoBalls += e.extra_runs || 0;
+      else if (e.extra_type === BallExtraType.BYE) cByes += e.extra_runs || 0;
+      else if (e.extra_type === BallExtraType.LEG_BYE) cLegByes += e.extra_runs || 0;
+    }
+    const cTotal = cWides + cNoBalls + cByes + cLegByes;
+    const extrasString = `${cTotal} (w ${cWides}, nb ${cNoBalls}, b ${cByes}, lb ${cLegByes})`;
+
+    // 2. Calculate Fall of Wickets
+    let innings1Score = 0;
+    let innings2Score = 0;
+    const fall_of_wickets: any[] = [];
+    const sortedEvents = [...allEvents].sort((a, b) => a.innings - b.innings || a.over_number - b.over_number || a.ball_number - b.ball_number);
+    for (const event of sortedEvents) {
+      const runsConceded = (event.runs || 0) + (event.extra_runs || 0);
+      if (event.innings === 1) {
+        innings1Score += runsConceded;
+      } else if (event.innings === 2) {
+        innings2Score += runsConceded;
+      }
+
+      if (event.is_wicket) {
+        const playerName = event.batsman_guest_name || event.batsman?.user?.name || 'Guest';
+        const wicketType = event.wicket_type || 'out';
+        const overStr = `${event.over_number}.${event.ball_number}`;
+        const scoreAtWicket = event.innings === 1 ? innings1Score : innings2Score;
+
+        fall_of_wickets.push({
+          player_name: playerName,
+          wicket_type: wicketType,
+          over: overStr,
+          score_at_wicket: scoreAtWicket,
+          innings: event.innings,
+        });
+      }
+    }
+
+    // 3. Calculate Live Player Stats
+    const live_player_stats: any[] = [];
+    const lineups = await this.getLineups(matchId);
+    const allLineupPlayers = [
+      ...lineups.team_a.players.map(p => ({ ...p, team_id: match.team_a_id })),
+      ...lineups.team_b.players.map(p => ({ ...p, team_id: match.team_b_id })),
+    ];
+
+    for (const player of allLineupPlayers) {
+      const isStriker = strikerObj && (player.player_id ? strikerObj.id === player.player_id : strikerObj.name === player.guest_name);
+      const isNonStriker = nonStrikerObj && (player.player_id ? nonStrikerObj.id === player.player_id : nonStrikerObj.name === player.guest_name);
+
+      const batsmanEvents = allEvents.filter(e =>
+        player.player_id ? e.batsman_id === player.player_id : e.batsman_guest_name === player.guest_name
+      );
+
+      const runs = batsmanEvents.reduce((sum, e) => sum + (e.runs || 0), 0);
+      const balls_faced = batsmanEvents.filter(e => e.extra_type !== BallExtraType.WIDE).length;
+      const fours = batsmanEvents.filter(e => e.runs === 4).length;
+      const sixes = batsmanEvents.filter(e => e.runs === 6).length;
+
+      const dismissalEvent = allEvents.find(e =>
+        e.is_wicket && (player.player_id ? e.batsman_id === player.player_id : e.batsman_guest_name === player.guest_name)
+      );
+
+      let how_out: string | null = null;
+      let is_not_out = false;
+
+      if (dismissalEvent) {
+        how_out = dismissalEvent.wicket_type || 'out';
+        is_not_out = false;
+      } else if (isStriker || isNonStriker || balls_faced > 0) {
+        is_not_out = true;
+      }
+
+      // Bowler stats
+      const bowlerEvents = allEvents.filter(e =>
+        player.player_id ? e.bowler_id === player.player_id : e.bowler_guest_name === player.guest_name
+      );
+
+      const legalBowls = bowlerEvents.filter(e =>
+        e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL
+      ).length;
+      const overs_bowled = parseFloat(`${Math.floor(legalBowls / 6)}.${legalBowls % 6}`) || 0;
+
+      const runs_given = bowlerEvents.reduce((sum, e) => {
+        if (e.extra_type === BallExtraType.BYE || e.extra_type === BallExtraType.LEG_BYE) {
+          return sum;
+        }
+        return sum + (e.runs || 0) + (e.extra_runs || 0);
+      }, 0);
+
+      const wickets = bowlerEvents.filter(e =>
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+      ).length;
+
+      const wides = bowlerEvents.filter(e => e.extra_type === BallExtraType.WIDE).length;
+      const no_balls = bowlerEvents.filter(e => e.extra_type === BallExtraType.NO_BALL).length;
+
+      // Calculate maidens
+      let maidens = 0;
+      const bowlerOversGrouped: Record<number, CricketBallEvent[]> = {};
+      for (const e of bowlerEvents) {
+        if (!bowlerOversGrouped[e.over_number]) {
+          bowlerOversGrouped[e.over_number] = [];
+        }
+        bowlerOversGrouped[e.over_number].push(e);
+      }
+
+      for (const [overNum, events] of Object.entries(bowlerOversGrouped)) {
+        const legalEvents = events.filter(e => e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL);
+        if (legalEvents.length >= 6) {
+          const overRuns = legalEvents.reduce((sum, e) => sum + (e.runs || 0) + (e.extra_runs || 0), 0);
+          if (overRuns === 0) {
+            maidens++;
+          }
+        }
+      }
+
+      live_player_stats.push({
+        team_id: player.team_id,
+        player_id: player.player_id,
+        guest_name: player.guest_name,
+        name: player.name,
+        avatar_url: player.avatar_url,
+        runs,
+        balls_faced,
+        fours,
+        sixes,
+        how_out,
+        is_not_out,
+        overs_bowled,
+        runs_given,
+        wickets,
+        wides,
+        no_balls,
+        maidens,
+      });
+    }
+
     return {
       status: match.status,
       current_innings: currentInnings,
@@ -1957,6 +2104,9 @@ export class MatchesService {
       })),
       balls_remaining_in_over: 6 - match.current_ball,
       dismissed_players: dismissedPlayers,
+      extras: extrasString,
+      fall_of_wickets,
+      live_player_stats,
     };
   }
 }

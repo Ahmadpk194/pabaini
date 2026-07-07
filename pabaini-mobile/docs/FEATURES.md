@@ -231,6 +231,8 @@ graph TD
     *   *Completed Matches*: Displays the winning team, trophy icon, final scores, and a styled dynamic victory badge displaying the winning margin (e.g., "Team A won by 15 runs", "Team B won by 4 wickets", or "Match Tied" / "Match Drawn"). These cards are rendered by [MatchCard.tsx](file:///c:/dev/pabaini/pabaini-mobile/src/components/sports/matches/MatchCard.tsx).
 *   **Send Match Request ([request.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/request.tsx))**: Form for captains to challenge opponent teams. Fields: team dropdown, opponent dropdown, overs (1-100), optional venue, optional schedule (with helpers), and scoring mode (Live/Simple).
 *   **Match Detail ([index.tsx](file:///c:/dev/pabaini/pabaini-mobile/app/sports/cricket/matches/[id]/index.tsx))**: Detailed page rendering teams, scheduled time, venue, lineups declaration status badges, and dynamic action buttons:
+    *   **Layout Compaction**: Refined spacing, card paddings (`8dp`), layout gaps (`8dp`), and team avatar sizes (`44dp` with `marginBottom: 4`) to fit critical match details cleanly onto a single screen.
+    *   **Playing XI Status Card**: Sleek horizontal row listing displaying team status badges and player counts (e.g. `11 Selected`) in a space-saving flat list format.
     *   *Challenge Pending*: Opponent captain can accept or decline.
     *   *Scheduled*: Captains can declare lineups or cancel the match.
     *   *Lineups Ready*: Shows "Start Match" (live mode) or "Submit Result" (simple mode) buttons.
@@ -431,7 +433,7 @@ flowchart TD
     *   This instantly boosts visibility and resolves readability issues for all skeleton layouts (Players, Matches, Teams, Comments, and Search loaders) on bright light screens.
 *   **Match Details Loading Skeleton (`src/components/skeletons/sports/MatchDetailSkeleton.tsx`)**:
     *   Designed a theme-aware shimmering layout using `SkeletonBox` and `SkeletonCircle` elements.
-    *   Replicates the exact structure of the cricket Match Details screen: a top status card banner, the team versus block (with circle placeholders for logo images, team titles, and captains), the Playing XI lineups block, and three rows of match information (Date, Venue, and Scoring Mode).
+    *   Replicates the exact compacted structure of the cricket Match Details screen: a top status card banner, the team versus block (with circle placeholders for logo images scaled to `44dp`, team titles, and captains), the redesigned compact list-row Playing XI lineups block, and three rows of match information (Date, Venue, and Scoring Mode).
     *   Wired into `app/sports/cricket/matches/[id]/index.tsx`. The screen header bar (with back navigation button and Title) remains visible and interactive immediately while details are loading.
 *   **Team Profile Loading Skeleton (`src/components/skeletons/sports/TeamProfileSkeleton.tsx`)**:
     *   Replicates the Team Profile screen: a glowing linear gradient hero header, circular logo wrapper, team name slot, badges (founded year, home ground), about section, full-width action button placeholder, segmented controls bar, and 3 list rows representing members in the squad.
@@ -593,6 +595,28 @@ sequenceDiagram
 1.  **Off-Screen Snapshotting**: Rendering captured containers visible but stashed off-screen (`position: 'absolute', left: -9999`) prevents snapshot clipping, layout scaling skewing, and empty black output screens on older Android systems.
 2.  **Instant Visual Feedback Overlay**: To hide slow navigation transits while bottom sheets retract, option selection immediately renders a fullscreen `Modal` overlay ("Preparing scorecard... / Creating your shareable image") containing an `ActivityIndicator` in `theme.colors.primary`. Once navigation is finished, the overlay is dismissed.
 3.  **Dedicated Share Service (`shareService.ts`)**: Encapsulates capture, permission check, gallery saving, and share sheet logic into pure reusable utility methods.
+
+---
+
+## 📺 18. Sports — Live Spectator Match Viewer (`app/sports/cricket/matches/[id]/live.tsx`)
+**Objective**: Provide spectators and diaspora members with a highly responsive, real-time updated, and polished interface to view match progress, dynamic scoreboard metrics, overs, live partnership stats, ball-by-ball commentary, and head-to-head metrics.
+
+*   **Real-Time Polling & Progressive Disclosure**:
+    *   Fires background queries to poll the live view API every 5 seconds, updating scores, bowlers, and batsman runs reactively.
+    *   Displays immediate score context (score, overs, CRR, RRR, extras) with expandable bottom drawer details ( साझेदारी partnership runs, partnership boundaries, batsman runs splits, dot ball percentages).
+*   **Match Lifecycle States**:
+    *   Checks match status dynamically: if `scheduled` or `pending_request`, hides active play statistics and displays a calendar-based start-time card.
+    *   If innings complete, displays a dedicated Innings Break banner noting the target score for the chase.
+    *   Blocks scorer controls upon match completion.
+*   **Offline/Stale Data Banner**:
+    *   Detects API request failures and displays a red warning banner: *"Connection lost. Showing cached data"* with a manual retry control button to fetch fresh profiles.
+*   **Follow Match Notification Alert**:
+    *   Features a bell toggle button in the header that updates user preferences and fires a green floating toast confirmation alert: *"🔔 You are now following this match!"*.
+*   **Visual Polish & Compact Fit**:
+    *   Applies unified card styles (rounded corners `10dp`, thin borders, elevation shadows) matching Linear/GitHub design language.
+    *   Reduces padding bounds to `8dp` (and gaps to `8dp`) to make details sit tighter next to mobile screen edges and fit screens without scrolling.
+    *   Renders a compact, clean versus header in the app's primary green brand color with white/gray text and no team avatars to maximize space.
+    *   Draws layout skeletons (placeholders mimicking header, versus bars, tabs, and content rows) while data is loading.
 
 ---
 

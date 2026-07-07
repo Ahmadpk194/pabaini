@@ -555,7 +555,16 @@ export default function ScorerScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
       <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.replace(`/sports/cricket/matches/${matchId}`)}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(`/sports/cricket/matches/${matchId}`);
+            }
+          }}
+        >
           <ArrowLeft color={theme.colors.textPrimary} size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scoring Console</Text>
@@ -1303,10 +1312,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.01,
+    shadowRadius: 1,
+    elevation: 0,
   },
   scoreHeader: {
     flexDirection: 'row',
@@ -1361,9 +1370,9 @@ const styles = StyleSheet.create({
     gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.01,
+    shadowRadius: 1,
+    elevation: 0,
   },
   batsmanRow: {
     flexDirection: 'row',

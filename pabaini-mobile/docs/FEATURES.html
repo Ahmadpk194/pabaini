@@ -1632,6 +1632,8 @@ interface MyTeamResponse {  // returned by GET /my
         <ul>
           <li><strong>Dynamic Scorer Actions:</strong> Renders context-specific button overlays depending on match state (Accept/Decline for challenges, Lineup Declaration, Start Match / Submit Result, Scorer Console, Watch Live, or Completed Scorecard).</li>
           <li><strong>Collapsible Scorecards:</strong> For completed matches, displays full read-only scorecard summaries and individual player stats grouped into clean, collapsible sections for each team's batting and bowling performance cards, reducing UI clutter.</li>
+          <li><strong>Layout Compaction:</strong> Refined spacings, card paddings, layout gaps, and team avatar sizes (from 60dp to 44dp) to fit all match information cleanly on a single screen.</li>
+          <li><strong>Playing XI status:</strong> Redesigned card layout using clean horizontal rows displaying team badges and declared player counts.</li>
         </ul>
       </div>
 
@@ -2016,7 +2018,7 @@ interface MyTeamResponse {  // returned by GET /my
       <div class="feature-card">
         <h3><span class="fc-icon">🏏</span> Match Details Skeleton (<code>MatchDetailSkeleton.tsx</code>)</h3>
         <ul>
-          <li>Shimmering layout mimicking the Match Details screen layout: a status banner card, the team versus container, Playing XI lineups block, and three rows of match information (Date/Time, Venue, Scoring Mode).</li>
+          <li>Shimmering layout mimicking the compacted Match Details screen layout: a status banner card, the team versus container (with logo placeholder circles scaled to 44dp), the redesigned compact Playing XI lineups rows, and three rows of match information (Date/Time, Venue, Scoring Mode).</li>
           <li>Wired inside <code>app/sports/cricket/matches/[id]/index.tsx</code>. The navigation header bar remains interactive during loading so the back action is immediately available.</li>
         </ul>
       </div>
@@ -2281,6 +2283,56 @@ interface MyTeamResponse {  // returned by GET /my
         </ul>
       </div>
     </section>
+
+    <!-- ─── Live Spectator Match Viewer ────────────────────────────────────── -->
+    <section class="section" id="cricket-live-viewer">
+      <div class="section-header">
+        <div class="section-number">18</div>
+        <h2>Sports — Live Spectator Match Viewer</h2>
+        <span class="badge badge-success">Live</span>
+      </div>
+
+      <div class="summary-box">
+        <p><strong>Objective</strong>: Provide spectators and diaspora members with a highly responsive, real-time updated, and polished interface to view match progress, dynamic scoreboard metrics, overs, live partnership stats, ball-by-ball commentary, and head-to-head metrics.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📺</span> Real-Time Polling &amp; Progressive Disclosure</h3>
+        <ul>
+          <li><strong>Auto-polling</strong>: Background queries poll the live view API every 5 seconds, updating scores, bowlers, and batsman runs reactively.</li>
+          <li><strong>Collapsed Hero State</strong>: Displays immediate score context (score, overs, CRR, RRR, extras) with expandable bottom drawer details.</li>
+          <li><strong>Detailed Drawers</strong>: Clicking stats segments reveals bottom sheet overlays for partnership averages, striker splits, dot ball percentages, and over timelines.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🔄</span> Match Lifecycle States</h3>
+        <ul>
+          <li><strong>Pre-Match state</strong>: Gated check that hides live scoring counters when status is <code>scheduled</code>, replacing them with a structured calendar dashboard highlighting start times.</li>
+          <li><strong>Innings Break state</strong>: Detects transition splits to render orange break flags indicating the target runs needed for the chase.</li>
+          <li><strong>Completed state</strong>: Displays victory markers and locks scorer panels from retroactive mutations.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">🛜</span> Connection Fault Banner &amp; Follow Match</h3>
+        <ul>
+          <li><strong>Offline banner</strong>: Red connection warning banner at the top of the feed (<em>"Connection lost. Showing cached data"</em>) with a retry button to fetch refreshed profiles immediately.</li>
+          <li><strong>Match Notification Follow</strong>: Dynamic bell button in header allowing users to subscribe/unsubscribe, triggering green bottom toast confirmations (<em>"You are now following this match!"</em>).</li>
+          <li><strong>Visual Polish, Compact Fit &amp; Skeletons</strong>: Soft rounded card borders (10dp), compact padding gaps (8dp) to prevent scrolling overflow, a green primary brand header color removing team avatars to maximize space, and pulsing skeleton placeholders.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3><span class="fc-icon">📂</span> Files Created &amp; Modified</h3>
+        <ul>
+          <li><code>app/sports/cricket/matches/[id]/live.tsx</code> — MODIFIED: Tabs layout, skeletons loader, follow bell alerts, network status listeners, lifecycle state components, and visual styles.</li>
+          <li><code>src/modules/sports/cricket/matches/matches.service.ts</code> — MODIFIED: Calculates and returns live partnership, dynamic player scoring aggregates, and innings extras calculations.</li>
+        </ul>
+      </div>
+    </section>
+
+
 
     <!-- ─── Verification ──────────────────────────────────────────────────── -->
     <section class="section" id="verification">

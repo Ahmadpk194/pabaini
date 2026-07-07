@@ -24,40 +24,39 @@ export default function MatchDetailSkeleton() {
         <View style={styles.vsContainer}>
           {/* Team A */}
           <View style={styles.teamBlock}>
-            <SkeletonCircle size={60} style={styles.logoMargin} />
-            <SkeletonBox width={80} height={16} borderRadius={4} style={styles.marginBottom6} />
-            <SkeletonBox width={100} height={12} borderRadius={3} />
+            <SkeletonCircle size={44} style={styles.logoMargin} />
+            <SkeletonBox width={80} height={14} borderRadius={4} style={styles.marginBottom6} />
+            <SkeletonBox width={100} height={10} borderRadius={3} />
           </View>
 
           {/* VS Divider */}
           <View style={styles.vsMiddle}>
-            <SkeletonBox width={30} height={18} borderRadius={4} />
+            <SkeletonBox width={30} height={14} borderRadius={4} />
           </View>
 
           {/* Team B */}
           <View style={styles.teamBlock}>
-            <SkeletonCircle size={60} style={styles.logoMargin} />
-            <SkeletonBox width={80} height={16} borderRadius={4} style={styles.marginBottom6} />
-            <SkeletonBox width={100} height={12} borderRadius={3} />
+            <SkeletonCircle size={44} style={styles.logoMargin} />
+            <SkeletonBox width={80} height={14} borderRadius={4} style={styles.marginBottom6} />
+            <SkeletonBox width={100} height={10} borderRadius={3} />
           </View>
         </View>
       </View>
 
       {/* Lineups Status Card Skeleton */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.md }]}>
-        <SkeletonBox width={140} height={16} borderRadius={4} style={styles.marginBottom16} />
-        
-        <View style={styles.lineupStatusRow}>
-          <View style={styles.lineupStatusItem}>
-            <SkeletonBox width={80} height={14} borderRadius={4} style={styles.centerSelf} />
-            <SkeletonBox width={70} height={20} borderRadius={4} style={styles.centerSelfWithMargin} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <SkeletonBox width={110} height={13} borderRadius={4} />
+          <SkeletonBox width={60} height={10} borderRadius={3} />
+        </View>
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 }}>
+            <SkeletonBox width={90} height={12} borderRadius={4} />
+            <SkeletonBox width={80} height={16} borderRadius={4} />
           </View>
-
-          <View style={[styles.verticalDivider, { backgroundColor: theme.colors.border }]} />
-
-          <View style={styles.lineupStatusItem}>
-            <SkeletonBox width={80} height={14} borderRadius={4} style={styles.centerSelf} />
-            <SkeletonBox width={70} height={20} borderRadius={4} style={styles.centerSelfWithMargin} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 }}>
+            <SkeletonBox width={90} height={12} borderRadius={4} />
+            <SkeletonBox width={80} height={16} borderRadius={4} />
           </View>
         </View>
       </View>
@@ -103,16 +102,17 @@ export default function MatchDetailSkeleton() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 8,
   },
   statusCard: {
-    padding: 16,
+    padding: 8,
     alignItems: 'center',
     borderWidth: 1,
   },
   card: {
-    padding: 16,
+    padding: 8,
     borderWidth: 1,
   },
   vsContainer: {
@@ -125,35 +125,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vsMiddle: {
-    flex: 0.6,
+    flex: 0.4,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  lineupStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  lineupStatusItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  verticalDivider: {
-    width: 1,
-    height: 40,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
+    gap: 10,
+    paddingVertical: 3,
   },
   infoTextContainer: {
     flex: 1,
   },
   divider: {
     height: 1,
-    marginVertical: 12,
+    marginVertical: 6,
   },
   marginBottom6: {
     marginBottom: 6,
@@ -162,22 +149,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   marginBottom16: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   marginBottom4: {
     marginBottom: 4,
   },
-  marginTop6: {
-    marginTop: 6,
-  },
   logoMargin: {
-    marginBottom: 10,
-  },
-  centerSelf: {
-    alignSelf: 'center',
-  },
-  centerSelfWithMargin: {
-    alignSelf: 'center',
-    marginTop: 6,
+    marginBottom: 4,
   },
 });
