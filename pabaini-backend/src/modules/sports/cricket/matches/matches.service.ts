@@ -29,6 +29,7 @@ import { StartMatchDto } from './dto/start-match.dto';
 import { RecordBallDto } from './dto/record-ball.dto';
 import { SelectBowlerDto } from './dto/select-bowler.dto';
 import { StartSecondInningsDto } from './dto/start-second-innings.dto';
+import { RetireBatsmanDto } from './dto/retire-batsman.dto';
 
 
 @Injectable()
@@ -1385,7 +1386,14 @@ export class MatchesService {
       where: { match_id: match.id },
     });
 
+    const existingStats = await entityManager.find(CricketPlayerMatchStats, {
+      where: { match_id: match.id },
+    });
+
     const statsToSave: CricketPlayerMatchStats[] = [];
+
+    const strikerKey = match.striker_id ? `p-${match.striker_id}` : (match.striker_guest_name ? `g-${match.striker_guest_name}` : null);
+    const nonStrikerKey = match.non_striker_id ? `p-${match.non_striker_id}` : (match.non_striker_guest_name ? `g-${match.non_striker_guest_name}` : null);
 
     for (const mp of matchPlayers) {
       const battingEvents = ballEvents.filter(e =>
@@ -1401,9 +1409,13 @@ export class MatchesService {
       const fours = battingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.runs === 4).length;
       const sixes = battingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.runs === 6).length;
 
-      const wicketEvent = battingEvents.find(e => e.is_wicket);
-      const howOut = wicketEvent ? (wicketEvent.wicket_type as HowOut) : undefined;
-      const isNotOut = !wicketEvent;
+      // Sort batting events to get the most recent wicket event
+      const sortedBattingEvents = [...battingEvents].sort((a, b) => a.innings - b.innings || a.over_number - b.over_number || a.ball_number - b.ball_number);
+      const wicketEvents = sortedBattingEvents.filter(e => e.is_wicket);
+      const lastWicketEvent = wicketEvents.length > 0 ? wicketEvents[wicketEvents.length - 1] : undefined;
+
+      const howOut = lastWicketEvent ? (lastWicketEvent.wicket_type as HowOut) : undefined;
+      const isNotOut = !lastWicketEvent || lastWicketEvent.wicket_type === HowOut.RETIRED_HURT;
 
       const legalBowledEvents = bowlingEvents.filter(e => e.extra_type !== BallExtraType.WIDE && e.extra_type !== BallExtraType.NO_BALL);
       const legalBalls = legalBowledEvents.length;
@@ -1417,13 +1429,56 @@ export class MatchesService {
       }, 0);
 
       const wickets = bowlingEvents.filter(e =>
-        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED_HURT && e.wicket_type !== HowOut.RETIRED_OUT
       ).length;
 
       const wides = bowlingEvents.filter(e => e.extra_type === BallExtraType.WIDE).length;
       const noBalls = bowlingEvents.filter(e => e.extra_type === BallExtraType.NO_BALL).length;
 
+      const mpKey = mp.player_id ? `p-${mp.player_id}` : (mp.guest_name ? `g-${mp.guest_name}` : null);
+      const isStriker = mpKey && strikerKey === mpKey;
+      const isNonStriker = mpKey && nonStrikerKey === mpKey;
+
+      const existingStat = existingStats.find(s =>
+        mp.player_id ? s.player_id === mp.player_id : s.guest_name === mp.guest_name
+      );
+
+      let status: 'not_batted' | 'batting' | 'out' | 'retired_hurt' | 'retired_out' = 'not_batted';
+      let finalHowOut = howOut;
+      let finalIsNotOut = isNotOut;
+
+      if (isStriker || isNonStriker) {
+        status = 'batting';
+        finalHowOut = undefined;
+        finalIsNotOut = true;
+      } else if (existingStat && (existingStat.status === 'retired_hurt' || existingStat.status === 'retired_out')) {
+        status = existingStat.status;
+        finalHowOut = existingStat.how_out;
+        finalIsNotOut = existingStat.is_not_out;
+      } else if (battingEvents.length > 0) {
+        if (lastWicketEvent) {
+          if (lastWicketEvent.wicket_type === HowOut.RETIRED_HURT) {
+            status = 'retired_hurt';
+            finalHowOut = HowOut.RETIRED_HURT;
+            finalIsNotOut = true;
+          } else if (lastWicketEvent.wicket_type === HowOut.RETIRED_OUT) {
+            status = 'retired_out';
+            finalHowOut = HowOut.RETIRED_OUT;
+            finalIsNotOut = false;
+          } else {
+            status = 'out';
+            finalHowOut = lastWicketEvent.wicket_type as HowOut;
+            finalIsNotOut = false;
+          }
+        } else {
+          status = 'out';
+          finalHowOut = undefined;
+          finalIsNotOut = false;
+        }
+      }
+
       const statRecord = entityManager.create(CricketPlayerMatchStats, {
+        id: existingStat?.id,
         match_id: match.id,
         team_id: mp.team_id,
         player_id: mp.player_id || undefined,
@@ -1432,13 +1487,14 @@ export class MatchesService {
         balls_faced: ballsFaced,
         fours,
         sixes,
-        how_out: howOut || undefined,
-        is_not_out: isNotOut,
+        how_out: finalHowOut || undefined,
+        is_not_out: finalIsNotOut,
         overs_bowled: oversBowled,
         runs_given: runsGiven,
         wickets,
         wides,
         no_balls: noBalls,
+        status,
       });
 
       statsToSave.push(statRecord);
@@ -1540,10 +1596,16 @@ export class MatchesService {
         throw new BadRequestException('Wicket type is required when is_wicket is true');
       }
 
+      if (dto.wicket_type === HowOut.RETIRED_HURT || dto.wicket_type === HowOut.RETIRED_OUT) {
+        throw new BadRequestException('Batsman retirement must be done via the retire endpoint');
+      }
+
       const maxWickets = match.current_batting_team_id === match.team_a_id
         ? (match.team_a_max_wickets ?? 10)
         : (match.team_b_max_wickets ?? 10);
+      
       const willNeedNextBatsman = currentWickets < (maxWickets - 1);
+
       if (willNeedNextBatsman) {
         if (!dto.next_batsman_id && (!dto.next_batsman_guest_name || !dto.next_batsman_guest_name.trim())) {
           throw new BadRequestException('Next batsman is required for wicket event');
@@ -1668,6 +1730,180 @@ export class MatchesService {
         if (isEndConditions || targetReached) {
           await this.completeMatch(match, manager);
         }
+      }
+    });
+
+    return this.findOneMatch(match.id);
+  }
+
+  async retireBatsman(matchId: number, dto: RetireBatsmanDto, userId: number): Promise<any> {
+    const playerProfile = await this.getCurrentPlayerProfile(userId);
+
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations: {
+        team_a: { captain: { user: true } },
+        team_b: { captain: { user: true } },
+      },
+    });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    if (match.status !== MatchStatus.LIVE) {
+      throw new BadRequestException('Match is not live');
+    }
+
+    if (match.scorer_id !== playerProfile.id) {
+      throw new ForbiddenException('Only the assigned scorer can retire batsmen');
+    }
+
+    const target = dto.target;
+    const retiredPlayerId = target === 'striker' ? match.striker_id : match.non_striker_id;
+    const retiredGuestName = target === 'striker' ? match.striker_guest_name : match.non_striker_guest_name;
+
+    if (!retiredPlayerId && !retiredGuestName) {
+      throw new BadRequestException(`No batsman found at the ${target} position to retire`);
+    }
+
+    const matchPlayers = await this.matchPlayerRepo.find({
+      where: { match_id: match.id },
+    });
+
+    const battingTeamId = match.current_batting_team_id;
+    const battingLineup = matchPlayers.filter(mp => mp.team_id === battingTeamId);
+
+    const currentWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
+    const isRetiredOut = dto.retirement_type === 'retired_out';
+
+    // Get stats to find available players
+    const stats = await this.statsRepo.find({
+      where: { match_id: match.id, team_id: battingTeamId },
+    });
+
+    const activeStrikerId = match.striker_id;
+    const activeStrikerGuest = match.striker_guest_name;
+    const activeNonStrikerId = match.non_striker_id;
+    const activeNonStrikerGuest = match.non_striker_guest_name;
+
+    const availablePlayers = battingLineup.filter(mp => {
+      // Exclude current striker/non-striker
+      if (mp.player_id && (mp.player_id === activeStrikerId || mp.player_id === activeNonStrikerId)) return false;
+      if (mp.guest_name && (mp.guest_name === activeStrikerGuest || mp.guest_name === activeNonStrikerGuest)) return false;
+
+      const pStat = stats.find(s => mp.player_id ? s.player_id === mp.player_id : s.guest_name === mp.guest_name);
+      if (!pStat) return true;
+      return pStat.status === 'not_batted' || pStat.status === 'retired_hurt';
+    });
+
+    const hasAvailableBatsmen = availablePlayers.length > 0;
+    const maxWickets = match.current_batting_team_id === match.team_a_id
+      ? (match.team_a_max_wickets ?? 10)
+      : (match.team_b_max_wickets ?? 10);
+
+    const futureWickets = currentWickets + (isRetiredOut ? 1 : 0);
+
+    let willNeedNextBatsman = false;
+    if (!isRetiredOut) {
+      willNeedNextBatsman = hasAvailableBatsmen;
+    } else {
+      willNeedNextBatsman = futureWickets < maxWickets && hasAvailableBatsmen;
+    }
+
+    if (willNeedNextBatsman) {
+      if (!dto.next_batsman_id && (!dto.next_batsman_guest_name || !dto.next_batsman_guest_name.trim())) {
+        throw new BadRequestException('Next batsman is required');
+      }
+      if (dto.next_batsman_id) {
+        const ok = battingLineup.some(mp => mp.player_id === dto.next_batsman_id);
+        if (!ok) throw new BadRequestException('Next batsman must belong to the batting Playing XI');
+        if (dto.next_batsman_id === (target === 'striker' ? match.non_striker_id : match.striker_id)) {
+          throw new BadRequestException('Next batsman cannot be the other active batsman');
+        }
+      } else if (dto.next_batsman_guest_name) {
+        const ok = battingLineup.some(mp => mp.guest_name === dto.next_batsman_guest_name);
+        if (!ok) throw new BadRequestException('Next batsman guest must belong to the batting Playing XI');
+        if (dto.next_batsman_guest_name === (target === 'striker' ? match.non_striker_guest_name : match.striker_guest_name)) {
+          throw new BadRequestException('Next batsman guest cannot be the other active batsman');
+        }
+      }
+    }
+
+    await this.matchRepo.manager.transaction(async (manager) => {
+      // 1. Update the retired batsman's stats record
+      let pStat = stats.find(s => retiredPlayerId ? s.player_id === retiredPlayerId : s.guest_name === retiredGuestName);
+      if (!pStat) {
+        pStat = manager.create(CricketPlayerMatchStats, {
+          id: undefined,
+          match_id: match.id,
+          team_id: battingTeamId,
+          player_id: retiredPlayerId || undefined,
+          guest_name: retiredGuestName || undefined,
+          runs: 0,
+          balls_faced: 0,
+          fours: 0,
+          sixes: 0,
+        });
+      }
+
+      pStat.status = dto.retirement_type;
+      pStat.how_out = dto.retirement_type as HowOut;
+      pStat.is_not_out = dto.retirement_type === 'retired_hurt';
+      await manager.save(CricketPlayerMatchStats, pStat);
+
+      // 2. If retired out, increment wickets in match
+      if (isRetiredOut) {
+        if (match.current_innings === 1) {
+          match.innings_1_wickets += 1;
+        } else {
+          match.innings_2_wickets += 1;
+        }
+      }
+
+      // 3. Replace the batsman at the target position
+      if (target === 'striker') {
+        if (willNeedNextBatsman) {
+          match.striker_id = dto.next_batsman_id || null as any;
+          match.striker_guest_name = dto.next_batsman_guest_name || null as any;
+        } else {
+          match.striker_id = null as any;
+          match.striker_guest_name = null as any;
+        }
+      } else {
+        if (willNeedNextBatsman) {
+          match.non_striker_id = dto.next_batsman_id || null as any;
+          match.non_striker_guest_name = dto.next_batsman_guest_name || null as any;
+        } else {
+          match.non_striker_id = null as any;
+          match.non_striker_guest_name = null as any;
+        }
+      }
+
+      await manager.save(CricketMatch, match);
+
+      // 4. Check end conditions for second innings / first innings transition
+      const finalWickets = match.current_innings === 1 ? match.innings_1_wickets : match.innings_2_wickets;
+      const isEndConditions = finalWickets >= maxWickets || (dto.retirement_type === 'retired_hurt' && !hasAvailableBatsmen && !match.striker_id && !match.non_striker_id);
+
+      if (match.current_innings === 1 && isEndConditions) {
+        await this.transitionInnings(match, manager);
+      } else if (match.current_innings === 2) {
+        const targetReached = match.target !== null && match.target !== undefined && match.innings_2_score >= match.target;
+        if (isEndConditions || targetReached) {
+          await this.completeMatch(match, manager);
+        }
+      }
+
+      // 5. Aggregate player stats
+      const registeredPlayerIds = Array.from(
+        new Set(
+          matchPlayers
+            .map(mp => mp.player_id)
+            .filter((id): id is number => !!id)
+        )
+      );
+      for (const pId of registeredPlayerIds) {
+        await this.aggregatePlayerStats(pId, manager);
       }
     });
 
@@ -1842,6 +2078,10 @@ export class MatchesService {
       },
     });
 
+    const persistedStats = await this.statsRepo.find({
+      where: { match_id: matchId },
+    });
+
     const getBatsmanStats = (id?: number, guestName?: string) => {
       const playerEvents = allEvents.filter(e =>
         id ? e.batsman_id === id : e.batsman_guest_name === guestName
@@ -1870,7 +2110,7 @@ export class MatchesService {
       }, 0);
 
       const wickets = playerEvents.filter(e =>
-        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED_HURT && e.wicket_type !== HowOut.RETIRED_OUT
       ).length;
 
       return { overs, runs_given, wickets };
@@ -1941,7 +2181,7 @@ export class MatchesService {
     }
 
     const dismissedPlayers = allEvents
-      .filter(e => e.innings === currentInnings && e.is_wicket)
+      .filter(e => e.innings === currentInnings && e.is_wicket && e.wicket_type !== HowOut.RETIRED_HURT)
       .map(e => e.batsman_id ? `p-${e.batsman_id}` : `g-${e.batsman_guest_name}`);
 
     // 1. Calculate Extras for current innings
@@ -1969,7 +2209,7 @@ export class MatchesService {
         innings2Score += runsConceded;
       }
 
-      if (event.is_wicket) {
+      if (event.is_wicket && event.wicket_type !== HowOut.RETIRED_HURT) {
         const playerName = event.batsman_guest_name || event.batsman?.user?.name || 'Guest';
         const wicketType = event.wicket_type || 'out';
         const overStr = `${event.over_number}.${event.ball_number}`;
@@ -2006,17 +2246,39 @@ export class MatchesService {
       const fours = batsmanEvents.filter(e => e.runs === 4).length;
       const sixes = batsmanEvents.filter(e => e.runs === 6).length;
 
-      const dismissalEvent = allEvents.find(e =>
+      const playerWickets = allEvents.filter(e =>
         e.is_wicket && (player.player_id ? e.batsman_id === player.player_id : e.batsman_guest_name === player.guest_name)
+      );
+      const sortedPlayerWickets = [...playerWickets].sort((a, b) => a.innings - b.innings || a.over_number - b.over_number || a.ball_number - b.ball_number);
+      const dismissalEvent = sortedPlayerWickets.length > 0 ? sortedPlayerWickets[sortedPlayerWickets.length - 1] : undefined;
+
+      const existingStat = persistedStats.find(s =>
+        player.player_id ? s.player_id === player.player_id : s.guest_name === player.guest_name
       );
 
       let how_out: string | null = null;
       let is_not_out = false;
+      let status: 'not_batted' | 'batting' | 'out' | 'retired_hurt' | 'retired_out' = 'not_batted';
 
-      if (dismissalEvent) {
+      if (isStriker || isNonStriker) {
+        status = 'batting';
+        is_not_out = true;
+      } else if (existingStat && (existingStat.status === 'retired_hurt' || existingStat.status === 'retired_out')) {
+        status = existingStat.status;
+        how_out = existingStat.how_out || null;
+        is_not_out = existingStat.is_not_out;
+      } else if (dismissalEvent) {
         how_out = dismissalEvent.wicket_type || 'out';
-        is_not_out = false;
-      } else if (isStriker || isNonStriker || balls_faced > 0) {
+        is_not_out = dismissalEvent.wicket_type === HowOut.RETIRED_HURT;
+        if (dismissalEvent.wicket_type === HowOut.RETIRED_HURT) {
+          status = 'retired_hurt';
+        } else if (dismissalEvent.wicket_type === HowOut.RETIRED_OUT) {
+          status = 'retired_out';
+        } else {
+          status = 'out';
+        }
+      } else if (balls_faced > 0) {
+        status = 'out';
         is_not_out = true;
       }
 
@@ -2038,7 +2300,7 @@ export class MatchesService {
       }, 0);
 
       const wickets = bowlerEvents.filter(e =>
-        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED
+        e.is_wicket && e.wicket_type !== HowOut.RUN_OUT && e.wicket_type !== HowOut.RETIRED_HURT && e.wicket_type !== HowOut.RETIRED_OUT
       ).length;
 
       const wides = bowlerEvents.filter(e => e.extra_type === BallExtraType.WIDE).length;
@@ -2082,6 +2344,7 @@ export class MatchesService {
         wides,
         no_balls,
         maidens,
+        status,
       });
     }
 
@@ -2107,6 +2370,19 @@ export class MatchesService {
       extras: extrasString,
       fall_of_wickets,
       live_player_stats,
+      all_deliveries: allEvents.map(e => ({
+        id: e.id,
+        innings: e.innings,
+        over_number: e.over_number,
+        ball_number: e.ball_number,
+        runs: e.runs,
+        extra_runs: e.extra_runs,
+        extra_type: e.extra_type || null,
+        is_wicket: e.is_wicket,
+        wicket_type: e.wicket_type || null,
+        batsman: e.batsman_guest_name || e.batsman?.user?.name || 'Guest',
+        bowler: e.bowler_guest_name || e.bowler?.user?.name || 'Bowler',
+      })),
     };
   }
 }

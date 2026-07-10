@@ -167,29 +167,74 @@ export class TeamsService {
       relations: {
         team: {
           captain: { user: true },
+          members: true,
         },
       },
       order: { joined_at: 'DESC' },
     });
 
-    return memberships.map((m) => ({
-      id: m.team.id,
-      name: m.team.name,
-      logo_url: m.team.logo_url,
-      home_ground: m.team.home_ground,
-      founded_year: m.team.founded_year,
-      captain: {
-        id: m.team.captain.id,
-        user: {
-          id: m.team.captain.user?.id,
-          name: m.team.captain.user?.name,
-          avatar_url: m.team.captain.user?.avatar_url,
+    const results = await Promise.all(
+      memberships.map(async (m) => {
+        const teamId = m.team.id;
+        
+        // Count completed matches where this team was team_a or team_b
+        const matchesCount = await this.teamRepo.manager
+          .createQueryBuilder()
+          .select('m.id')
+          .from('cricket_matches', 'm')
+          .where('m.status = :status AND (m.team_a_id = :teamId OR m.team_b_id = :teamId)', {
+            status: 'completed',
+            teamId,
+          })
+          .getCount();
+
+        // Count completed matches where this team won
+        const winsCount = await this.teamRepo.manager
+          .createQueryBuilder()
+          .select('m.id')
+          .from('cricket_matches', 'm')
+          .where('m.status = :status AND m.winner_team_id = :teamId', {
+            status: 'completed',
+            teamId,
+          })
+          .getCount();
+
+        return {
+          teamId,
+          matchesCount,
+          winsCount,
+        };
+      })
+    );
+
+    const statsMap = new Map(results.map((r) => [r.teamId, r]));
+
+    return memberships.map((m) => {
+      const stats = statsMap.get(m.team.id) || { matchesCount: 0, winsCount: 0 };
+      const activeMembersCount = m.team.members.filter((mb) => mb.status === TeamMemberStatus.ACTIVE).length;
+
+      return {
+        id: m.team.id,
+        name: m.team.name,
+        logo_url: m.team.logo_url,
+        home_ground: m.team.home_ground,
+        founded_year: m.team.founded_year,
+        captain: {
+          id: m.team.captain.id,
+          user: {
+            id: m.team.captain.user?.id,
+            name: m.team.captain.user?.name,
+            avatar_url: m.team.captain.user?.avatar_url,
+          },
         },
-      },
-      role: m.role,
-      status: m.status,
-      joined_at: m.joined_at,
-    }));
+        role: m.role,
+        status: m.status,
+        joined_at: m.joined_at,
+        member_count: activeMembersCount,
+        matches_count: stats.matchesCount,
+        wins_count: stats.winsCount,
+      };
+    });
   }
 
   async findOneTeam(teamId: number): Promise<Team> {

@@ -141,3 +141,50 @@ We use **TanStack Query (`useInfiniteQuery` v5)** to query the backend database 
 | **Performance**: Caches tab results for 30s (`staleTime: 30_000`), reducing redundant network payload roundtrips. | **Concurrent Queries Overhead**: The "All" tab runs 4 queries concurrently, increasing server request volume. |
 | **UX Shimmer Layouts**: Reuses native card skeletons matching card heights instead of standard indicators. | **State Complexity**: Manages two inputs (live `inputValue` and debounced `searchQuery`) to prevent stuttering. |
 | **Extensible Architecture**: Adding tabs requires only a config entry in `SEARCH_CATEGORIES`. | |
+
+---
+
+## 🏏 Batsman Retirement Scoring Flow (Already Implemented)
+
+This section documents the engineering details of the batsman retirement feature in the Live Scorer Console (`score.tsx`).
+
+### Business Rules
+- **`retired_hurt`** — Temporary retirement. Stats (runs, balls, 4s, 6s) are frozen. The player's innings is NOT closed (`is_not_out = true`). Does not count as a team wicket. Excluded from fall-of-wickets. The player can return to bat later in the same innings.
+- **`retired_out`** — Permanent retirement. Counts as a team wicket. Included in fall-of-wickets. Bowler does not get credit for either retirement type.
+
+### UI Entry Point
+The retirement action is intentionally kept **off** the main scoring card to avoid cluttering the console. Instead, it is accessed via the **Partnership Details bottom drawer**, which opens when the scorer taps the batsmen card. A small red "Retire" button appears inline next to each batsman's stat line.
+
+### State Variables Added
+```typescript
+const [retiringBatsmanType, setRetiringBatsmanType] = useState<'striker' | 'non_striker'>('striker');
+const [wicketType, setWicketType] = useState<'bowled' | ... | 'retired_hurt' | 'retired_out'>('bowled');
+```
+
+### Direct Striker / Non-Striker Retirement (Refactored)
+Previously, the backend only supported retiring the current striker, requiring a strike rotation workaround. The scoring flow now calls a dedicated `PATCH /sports/cricket/matches/:id/batsman/retire` endpoint. This allows retiring striker or non-striker directly via the `target` parameter, ensuring that:
+1. **No ball event** is recorded in commentary.
+2. The current over's **ball count does not increment**.
+3. **Bowler stats** (overs, runs) are untouched.
+
+This is executed cleanly in `handleRecordWicket`:
+```typescript
+const payload = {
+  retirement_type: wicketType as 'retired_hurt' | 'retired_out',
+  target: retiringBatsmanType,
+  next_batsman_id,
+  next_batsman_guest_name,
+};
+await retireBatsmanMutation.mutateAsync({ id: matchId, payload });
+```
+
+### Next Batsman Availability Logic
+The `getAvailableNextBatsmen()` helper splits available squad players into two groups:
+- **Returning** — Players whose `live_player_stats[].status === 'retired_hurt'` (can re-enter).
+- **New** — Players whose `status === 'not_batted'` (first time at crease).
+
+The `dismissedKeys` set used to filter out already-out players explicitly **excludes** `retired_hurt` players so they remain available for selection.
+
+### API & Mutation Hooks
+A new dedicated mutation hook `useRetireBatsman()` is used, wrapping `retireBatsman` in `cricketMatchesApi.ts`. The old `recordBall` endpoint continues to handle regular legal balls, runs, extras, and standard dismissals. Wicket circles (`formatOverBallSymbol`) render legacy retirement ball events as `RH` (softer badge) or `RO` instead of `W`.
+

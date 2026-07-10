@@ -63,6 +63,13 @@ export class CricketPlayerMatchStats {
   @Column({ default: false })
   is_not_out!: boolean;
 
+  @Column({
+    type: 'varchar',
+    length: 30,
+    default: 'not_batted',
+  })
+  status!: 'not_batted' | 'batting' | 'out' | 'retired_hurt' | 'retired_out';
+
   @Column({ type: 'decimal', precision: 4, scale: 1, default: 0, transformer: {
     to: (value: number) => value,
     from: (value: string) => parseFloat(value),

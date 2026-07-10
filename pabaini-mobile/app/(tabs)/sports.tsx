@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   ScrollView,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +32,7 @@ import { PlayerCardSkeleton, TeamCardSkeleton, DiscoverTeamCardSkeleton } from '
 import { Avatar } from '../../src/components/ui/Avatar';
 import client from '../../src/api/client';
 import { CricketPlayerProfile, TeamSummary } from '../../src/types/sports.types';
-import { Shield, Trophy, Calendar, Users, Award } from 'lucide-react-native';
+import { Shield, Trophy, Calendar, Users, Award, MapPin } from 'lucide-react-native';
 import { useMatches } from '../../src/hooks/useMatches';
 import { MatchCard } from '../../src/components/sports/matches/MatchCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -51,10 +52,12 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function SportsScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const { user, isGuest } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const teamsScrollViewRef = useRef<ScrollView>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const discoverCardWidth = (screenWidth - 32 - 12) / 2.3;
 
   // Zustand Store
   const seenOptIn = useSportsStore((state) => state.seenOptIn['cricket']);
@@ -603,6 +606,7 @@ export default function SportsScreen() {
 
             {activeTab === 'teams' && (
               <ScrollView
+                ref={teamsScrollViewRef}
                 style={{ flex: 1 }}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
@@ -636,29 +640,57 @@ export default function SportsScreen() {
                         <TeamCardSkeleton />
                       </View>
                     ) : myTeams.length === 0 ? (
-                      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
-                        <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
-                          You haven't joined or created any teams yet.
+                      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 16, alignItems: 'center' }]}>
+                        <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: 14, fontWeight: '500' }]}>
+                          You haven't joined a team yet.
                         </Text>
-                        <TouchableOpacity
-                          disabled={isAtCaptainLimit}
-                          style={{
-                            backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
-                            paddingHorizontal: 16,
-                            paddingVertical: 8,
-                            borderRadius: theme.radius.sm,
-                            marginTop: 12,
-                          }}
-                          onPress={() => router.push('/sports/cricket/teams/create')}
-                        >
-                          <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
-                            Create a Team
-                          </Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, width: '100%', justifyContent: 'center' }}>
+                          <TouchableOpacity
+                            disabled={isAtCaptainLimit}
+                            activeOpacity={0.7}
+                            style={{
+                              flex: 1,
+                              maxWidth: 140,
+                              backgroundColor: isAtCaptainLimit ? theme.colors.border : theme.colors.primary,
+                              paddingVertical: 10,
+                              borderRadius: theme.radius.sm,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onPress={() => safeRouterPush(router, '/sports/cricket/teams/create')}
+                          >
+                            <Text style={{ color: isAtCaptainLimit ? theme.colors.textSecondary : theme.colors.onPrimary, fontSize: 13, fontWeight: '700' }}>
+                              Create Team
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            style={{
+                              flex: 1,
+                              maxWidth: 140,
+                              backgroundColor: 'transparent',
+                              borderColor: theme.colors.border,
+                              borderWidth: 1,
+                              paddingVertical: 10,
+                              borderRadius: theme.radius.sm,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onPress={() => {
+                              // Scroll ScrollView to end where Discover/Explore is
+                              teamsScrollViewRef.current?.scrollToEnd();
+                            }}
+                          >
+                            <Text style={{ color: theme.colors.textPrimary, fontSize: 13, fontWeight: '700' }}>
+                              Explore Teams
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                         {isAtCaptainLimit && (
                           <Text style={{
                             color: theme.colors.textSecondary,
-                            fontSize: 12,
+                            fontSize: 11,
                             marginTop: 8,
                             textAlign: 'center',
                           }}>
@@ -789,9 +821,9 @@ export default function SportsScreen() {
                       <DiscoverTeamCardSkeleton />
                     </ScrollView>
                   ) : allTeams.length === 0 ? (
-                    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 20 }]}>
-                      <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
-                        No teams available at the moment.
+                    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.md, padding: 16 }]}>
+                      <Text style={[styles.emptyText, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: 13.5 }]}>
+                        No teams available right now.
                       </Text>
                     </View>
                   ) : (
@@ -800,54 +832,62 @@ export default function SportsScreen() {
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ gap: 12, paddingBottom: 10 }}
                     >
-                      {allTeams.map((t) => (
-                        <TouchableOpacity
-                          key={t.id}
-                          activeOpacity={0.7}
-                          onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
-                          style={{
-                            width: 220,
-                            backgroundColor: theme.colors.surface,
-                            borderColor: theme.colors.border,
-                            borderWidth: 1,
-                            borderRadius: theme.radius.md,
-                            padding: 14,
-                          }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                            <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden' }}>
-                              {t.logo_url ? (
-                                <Image source={{ uri: t.logo_url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                              ) : (
-                                <View style={{ width: '100%', height: '100%', backgroundColor: getTeamColor(t.name), justifyContent: 'center', alignItems: 'center' }}>
-                                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-                                    {t.name ? t.name.charAt(0).toUpperCase() : '?'}
-                                  </Text>
-                                </View>
-                              )}
+                      {allTeams.map((t) => {
+                        const initials = t.name ? t.name.charAt(0).toUpperCase() : '?';
+                        const fallbackBg = getTeamColor(t.name);
+
+                        return (
+                          <TouchableOpacity
+                            key={t.id}
+                            activeOpacity={0.7}
+                            onPress={() => safeRouterPush(router, `/sports/cricket/teams/${t.id}`)}
+                            style={{
+                              width: discoverCardWidth,
+                              backgroundColor: theme.colors.surface,
+                              borderColor: theme.colors.border,
+                              borderWidth: 1,
+                              borderRadius: theme.radius.md,
+                              padding: 10,
+                            }}
+                          >
+                            {/* Horizontal Header Flow */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ width: 32, height: 32, borderRadius: 16, overflow: 'hidden', backgroundColor: fallbackBg }}>
+                                {t.logo_url ? (
+                                  <Image source={{ uri: t.logo_url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                                ) : (
+                                  <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                                      {initials}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ color: theme.colors.textPrimary, fontWeight: '700', fontSize: 12.5 }} numberOfLines={1}>
+                                  {t.name}
+                                </Text>
+                                <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginTop: 1 }} numberOfLines={1}>
+                                  {t.home_ground || 'No Home Ground'}
+                                </Text>
+                              </View>
                             </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
-                                {t.name}
-                              </Text>
-                              <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
-                                {t.home_ground || 'No Home Ground'}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
-                              {t.member_count} members
+
+                            {/* Divider Line */}
+                            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginVertical: 8 }} />
+
+                            {/* Player Count */}
+                            <Text style={{ color: theme.colors.textSecondary, fontSize: 10.5, fontWeight: '600' }}>
+                              👥 {t.member_count} Players
                             </Text>
-                            <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '600' }}>
-                              View Profile
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
+                          </TouchableOpacity>
+                        );
+                      })}
                     </ScrollView>
                   )}
                 </View>
+
+
               </ScrollView>
             )}
 

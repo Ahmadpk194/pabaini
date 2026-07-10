@@ -193,7 +193,7 @@ export async function recordBall(
     extra_type?: 'wide' | 'no_ball' | 'bye' | 'leg_bye';
     extra_runs?: number;
     is_wicket: boolean;
-    wicket_type?: 'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired';
+    wicket_type?: 'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired_hurt' | 'retired_out';
     next_batsman_id?: number;
     next_batsman_guest_name?: string;
   }
@@ -236,6 +236,19 @@ export async function undoLastBall(id: number): Promise<CricketMatch> {
 
 export async function rotateStrike(id: number): Promise<CricketMatch> {
   const response = await client.patch(`/sports/cricket/matches/${id}/strike/rotate`);
+  return response.data.data;
+}
+
+export async function retireBatsman(
+  id: number,
+  payload: {
+    retirement_type: 'retired_hurt' | 'retired_out';
+    target: 'striker' | 'non_striker';
+    next_batsman_id?: number;
+    next_batsman_guest_name?: string;
+  }
+): Promise<CricketMatch> {
+  const response = await client.patch(`/sports/cricket/matches/${id}/batsman/retire`, payload);
   return response.data.data;
 }
 

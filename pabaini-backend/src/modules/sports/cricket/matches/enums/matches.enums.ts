@@ -24,7 +24,8 @@ export enum HowOut {
   LBW = 'lbw',
   STUMPED = 'stumped',
   HIT_WICKET = 'hit_wicket',
-  RETIRED = 'retired',
+  RETIRED_HURT = 'retired_hurt',
+  RETIRED_OUT = 'retired_out',
 }
 
 export enum BallExtraType {

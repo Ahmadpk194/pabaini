@@ -620,6 +620,7 @@ sequenceDiagram
     *   Renders a compact, clean versus header in the app's primary green brand color with white/gray text and no team avatars to maximize space.
     *   Draws layout skeletons (placeholders mimicking header, versus bars, tabs, and content rows) while data is loading.
 
+
 ---
 
 ## 🛠️ Verification & Building
@@ -631,3 +632,50 @@ npx tsc --noEmit
 # In pabaini-backend directory
 npx tsc --noEmit
 ```
+
+---
+
+## 🏏 19. Sports — Batsman Retirement (Retired Hurt / Retired Out) (`app/sports/cricket/matches/[id]/score.tsx`)
+**Objective**: Allow the scorer to retire an active batsman under two cricket-rule-compliant outcomes during live scoring, without disrupting the rest of the innings flow.
+
+*   **Two Distinct Retirement Outcomes**:
+    *   **Retired Hurt** — Batsman temporarily leaves the field due to injury. Their stats (runs, balls, 4s, 6s) are frozen and preserved. The innings record stays open (`is_not_out = true`), meaning they are not counted as a wicket and do not appear in the fall-of-wickets table. A retired-hurt batsman can return to bat later in the same innings when selected as the next incoming batsman.
+    *   **Retired Out** — Batsman permanently leaves. This counts as a full team wicket (increments wickets tally, appears in fall-of-wickets), but the bowler does not receive wicket credit for either type of retirement.
+
+*   **Retirement Action via Partnership Drawer**:
+    *   To keep the main scoring console clean and uncluttered, the retirement action is placed inside the **Partnership Details bottom drawer**, which opens when the scorer taps the active batsmen card.
+    *   Inside the drawer, a small red-tinted **"Retire"** button appears next to each active batsman (striker and non-striker) alongside their current run/ball count.
+    *   Tapping "Retire" dismisses the drawer and immediately presents a native **Alert dialog** asking the scorer to choose between *Retired Hurt* and *Retired Out*.
+
+*   **Dedicated Batsman Retirement Endpoint**:
+    *   Batsman retirement now operates through a dedicated `PATCH /sports/cricket/matches/:id/batsman/retire` endpoint rather than recording a fake ball delivery.
+    *   This ensures that batsman retirement **does not increment** the current over's ball count, trigger over rollovers, or affect the bowler's runs conceded or overs bowled.
+    *   The endpoint accepts a `target` field (`'striker'` or `'non_striker'`), allowing the non-striker to be retired directly without requiring strike rotation.
+
+*   **Wicket Modal Updates**:
+    *   The Wicket modal (used for both normal dismissals and retirements) shows `retired_hurt` and `retired_out` as selectable dismissal types in the type picker.
+    *   The modal title dynamically changes to **"Retire Batsman"** when a retirement type is selected, and shows the name of the player being retired.
+    *   The "Next Batsman" picker section is shown whenever there are available squad players to replace the retiring batsman.
+
+*   **Returning Batsmen in Next-Batsman Picker**:
+    *   The next batsman sub-modal is grouped into two sections:
+        *   **Returning Batsmen (Retired Hurt)** — Players who previously retired hurt and can return. Each entry displays their frozen stat line (*e.g., "Resuming at 14 (9b)"*).
+        *   **New Batsmen (Not Batted)** — Players who have not yet come to bat this innings.
+
+*   **Scorecard & Live Display**:
+    *   In the live spectator view (`live.tsx`), dismissal labels are rendered with spaces (e.g., *"retired hurt"*, *"retired out"*).
+    *   Since retirement is not a ball bowled, it does not write a ball event. For legacy/historical events, `retired_hurt` displays as a soft amber badge with **"RH"** (or **"RO"** for retired out) instead of a red **"W"** badge in over circles, and shows *"Retired Hurt"* in commentary lines instead of *"WICKET!"*.
+
+---
+
+## 🎨 20. Team Card Skeleton Refinement (`src/components/skeletons/sports/TeamCardSkeleton.tsx`)
+**Objective**: Update the loading skeleton for the "Your Teams" section on the Sports tab to accurately mirror the real `TeamCard` layout, eliminating jarring layout shifts between loading and loaded states.
+
+*   **Before**: Generic 3-row skeleton with a 48px circle and two plain text bars — did not resemble the actual card at all.
+*   **After (My Teams skeleton)**:
+    *   **44px circle** placeholder for the team logo.
+    *   **Name + Role Badge row**: A wider name bar plus a shorter pill-shaped bar (matching the coloured Captain/Vice Captain/Player role badge).
+    *   **Ground row**: A tiny square icon stub + a 90px text bar (matching the `📍 home_ground` row).
+    *   **Stats row**: Three stat bars separated by small dot separators, with a faint top border line — matching the *Players • Matches • Wins* row that appears for user-joined teams.
+    *   **Chevron stub** on the right edge.
+*   **Discover Card skeleton** (`DiscoverTeamCardSkeleton`): Tightened to 200px card width (matching real discover cards), with a 36px circle, compact name + member count bars, and a glyph stub on the right.

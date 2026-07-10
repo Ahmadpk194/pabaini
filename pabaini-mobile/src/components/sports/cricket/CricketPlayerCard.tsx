@@ -141,7 +141,7 @@ export function CricketPlayerCard({ profile, onPress }: CricketPlayerCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
+    padding: 18,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },

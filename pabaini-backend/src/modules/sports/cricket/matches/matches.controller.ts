@@ -24,6 +24,8 @@ import { StartMatchDto } from './dto/start-match.dto';
 import { RecordBallDto } from './dto/record-ball.dto';
 import { SelectBowlerDto } from './dto/select-bowler.dto';
 import { StartSecondInningsDto } from './dto/start-second-innings.dto';
+import { RetireBatsmanDto } from './dto/retire-batsman.dto';
+
 
 
 @Controller('matches')
@@ -191,6 +193,17 @@ export class MatchesController {
   ) {
     const match = await this.matchesService.rotateStrike(id, user.id);
     return { data: match, message: 'Strike rotated successfully' };
+  }
+
+  @Patch(':id/batsman/retire')
+  @UseGuards(FirebaseAuthGuard, DbUserGuard)
+  async retireBatsman(
+    @Param('id', ParseIntPipe) id: number,
+    @DbUser() user: User,
+    @Body() dto: RetireBatsmanDto,
+  ) {
+    const match = await this.matchesService.retireBatsman(id, dto, user.id);
+    return { data: match, message: 'Batsman retired successfully' };
   }
 
   @Get(':id/live')

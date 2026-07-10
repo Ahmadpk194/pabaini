@@ -139,7 +139,11 @@ export default function LiveViewerScreen() {
 
   // Format ball symbols
   const formatOverBallSymbol = (ball: any) => {
-    if (ball.is_wicket) return 'W';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return 'RH';
+      if (ball.wicket_type === 'retired_out') return 'RO';
+      return 'W';
+    }
     if (ball.extra_type === 'wide') return `${ball.runs || ''}wd`;
     if (ball.extra_type === 'no_ball') return `${ball.runs || ''}nb`;
     if (ball.extra_type === 'bye') return `${ball.runs || ''}B`;
@@ -149,21 +153,30 @@ export default function LiveViewerScreen() {
   };
 
   const getBallBadgeColor = (ball: any) => {
-    if (ball.is_wicket) return '#FFEBEB';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#FFF9E6';
+      return '#FFEBEB';
+    }
     if (ball.extra_type) return '#FFF8DC';
     if (ball.runs === 4 || ball.runs === 6) return '#EBFBEF';
     return '#F5F5F5';
   };
 
   const getBallTextColor = (ball: any) => {
-    if (ball.is_wicket) return '#D32F2F';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#A07800';
+      return '#D32F2F';
+    }
     if (ball.extra_type) return '#A07800';
     if (ball.runs === 4 || ball.runs === 6) return '#2E7D32';
     return '#616161';
   };
 
   const getBallBorderColor = (ball: any) => {
-    if (ball.is_wicket) return '#FFCDD2';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#FFE082';
+      return '#FFCDD2';
+    }
     if (ball.extra_type) return '#FFE082';
     if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9';
     return '#BDBDBD';
@@ -668,7 +681,7 @@ export default function LiveViewerScreen() {
                       {s.name}
                     </Text>
                     <Text style={[styles.colDismissal, { color: theme.colors.textSecondary, fontSize: 11 }]} numberOfLines={1}>
-                      {s.how_out ? s.how_out : (s.is_not_out ? 'not out' : 'dnb')}
+                      {s.how_out ? s.how_out.replace(/_/g, ' ') : (s.is_not_out ? 'not out' : 'dnb')}
                     </Text>
                     <Text style={[styles.colRuns, styles.statValueBold, { color: theme.colors.textPrimary }]}>
                       {s.runs}
@@ -804,7 +817,7 @@ export default function LiveViewerScreen() {
                     </View>
                     <View style={styles.commentaryContent}>
                       <Text style={[styles.commentaryText, { color: theme.colors.textPrimary, fontWeight: '600' }]}>
-                        {ball.is_wicket ? 'WICKET!' : `${ball.runs} Run(s)`}
+                        {ball.is_wicket && ball.wicket_type !== 'retired_hurt' ? 'WICKET!' : ball.wicket_type === 'retired_hurt' ? 'Retired Hurt' : `${ball.runs} Run(s)`}
                       </Text>
                       <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 }}>
                         Delivery {idx + 1} of current over.
@@ -1399,7 +1412,11 @@ export default function LiveViewerScreen() {
                     </View>
                     <View style={styles.commentaryContent}>
                       <Text style={[styles.commentaryText, { color: theme.colors.textPrimary }]}>
-                        {ball.is_wicket ? `Dismissal: Wicket falls!` : `Delivery: ${ball.runs || 0} run(s) scored.`}
+                        {ball.is_wicket && ball.wicket_type !== 'retired_hurt'
+                          ? `Dismissal: Wicket falls!`
+                          : ball.wicket_type === 'retired_hurt'
+                            ? `Batsman Retired Hurt`
+                            : `Delivery: ${ball.runs || 0} run(s) scored.`}
                       </Text>
                       {ball.extra_type && (
                         <Text style={{ fontSize: 11, color: '#A07800', marginTop: 2 }}>
@@ -1556,18 +1573,18 @@ const styles = StyleSheet.create({
   },
   tabsNavContainer: {
     flexDirection: 'row',
-    height: 44,
+    height: 38,
     paddingHorizontal: 8,
     alignItems: 'center',
   },
   tabButton: {
-    height: 44,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   tabButtonText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
   },

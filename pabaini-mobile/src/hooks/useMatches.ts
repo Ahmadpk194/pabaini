@@ -19,6 +19,7 @@ import {
   undoLastBall,
   getLiveMatchDetails,
   rotateStrike,
+  retireBatsman,
 } from '../services/sports/cricketMatchesApi';
 import {
   RequestMatchPayload,
@@ -267,7 +268,7 @@ export function useRecordBall() {
         extra_type?: 'wide' | 'no_ball' | 'bye' | 'leg_bye';
         extra_runs?: number;
         is_wicket: boolean;
-        wicket_type?: 'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired';
+        wicket_type?: 'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired_hurt' | 'retired_out';
         next_batsman_id?: number;
         next_batsman_guest_name?: string;
       };
@@ -370,7 +371,7 @@ export function useRecordBall() {
           let updatedBowler = old.bowler ? { ...old.bowler } : null;
           if (updatedBowler) {
             if (payload.is_wicket) {
-              const isBowlerWicket = payload.wicket_type !== 'run_out' && payload.wicket_type !== 'retired';
+              const isBowlerWicket = payload.wicket_type !== 'run_out' && payload.wicket_type !== 'retired_hurt' && payload.wicket_type !== 'retired_out';
               if (isBowlerWicket) {
                 updatedBowler.wickets = (updatedBowler.wickets || 0) + 1;
               }
@@ -797,6 +798,31 @@ export function useRotateStrike() {
       const numericId = Number(id);
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(numericId) });
       queryClient.invalidateQueries({ queryKey: ['matches', 'live', numericId] });
+    },
+  });
+}
+
+export function useRetireBatsman() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        retirement_type: 'retired_hurt' | 'retired_out';
+        target: 'striker' | 'non_striker';
+        next_batsman_id?: number;
+        next_batsman_guest_name?: string;
+      };
+    }) => retireBatsman(id, payload),
+    onSettled: (data, error, variables) => {
+      const numericId = Number(variables.id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches.detail(numericId) });
+      queryClient.invalidateQueries({ queryKey: ['matches', 'live', numericId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches.all });
     },
   });
 }

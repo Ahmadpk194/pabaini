@@ -30,16 +30,45 @@ export function getTeamColor(name: string): string {
 }
 
 export function TeamCard({ team, showCaptainBadge = false, onPress }: TeamCardProps) {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   
   const initials = team.name ? team.name.charAt(0).toUpperCase() : '?';
   const fallbackBgColor = getTeamColor(team.name);
 
   // Check if member_count exists, otherwise check if role exists (which indicates joined status)
   const isMyTeam = 'role' in team;
-  const subtitleText = isMyTeam 
-    ? `${team.role.charAt(0).toUpperCase() + team.role.slice(1).replace('_', ' ')}`
-    : `${(team as TeamSummary).member_count || 0} members`;
+  const myTeam = team as MyTeamResponse;
+
+  const playersCount = team.member_count ?? 0;
+  const matchesCount = isMyTeam ? (myTeam.matches_count ?? 0) : 0;
+  const winsCount = isMyTeam ? (myTeam.wins_count ?? 0) : 0;
+
+  // Premium, subtle role badge styles
+  const getRoleBadgeStyle = (role: string) => {
+    const isDark = mode === 'dark';
+    switch (role.toLowerCase()) {
+      case 'captain':
+        return {
+          text: 'Captain',
+          color: isDark ? '#81C784' : '#1B4332',
+          bg: isDark ? 'rgba(129, 199, 132, 0.15)' : 'rgba(27, 67, 50, 0.08)',
+        };
+      case 'vice_captain':
+        return {
+          text: 'Vice Captain',
+          color: isDark ? '#64B5F6' : '#184E77',
+          bg: isDark ? 'rgba(100, 181, 246, 0.15)' : 'rgba(24, 78, 119, 0.08)',
+        };
+      default:
+        return {
+          text: 'Player',
+          color: theme.colors.textSecondary,
+          bg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+        };
+    }
+  };
+
+  const roleStyle = isMyTeam ? getRoleBadgeStyle(team.role) : null;
 
   return (
     <TouchableOpacity
@@ -50,17 +79,19 @@ export function TeamCard({ team, showCaptainBadge = false, onPress }: TeamCardPr
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
           borderRadius: theme.radius.md,
+          paddingVertical: isMyTeam ? 12 : 10,
+          paddingHorizontal: 12,
         },
       ]}
       onPress={onPress}
     >
       {/* Left: Logo */}
-      <View style={styles.logoContainer}>
+      <View style={[styles.logoContainer, { width: isMyTeam ? 44 : 40, height: isMyTeam ? 44 : 40, borderRadius: isMyTeam ? 22 : 20 }]}>
         {team.logo_url ? (
           <Image source={{ uri: team.logo_url }} style={styles.logoImage} />
         ) : (
           <View style={[styles.logoFallback, { backgroundColor: fallbackBgColor }]}>
-            <Text style={styles.logoFallbackText}>{initials}</Text>
+            <Text style={[styles.logoFallbackText, { fontSize: isMyTeam ? 18 : 16 }]}>{initials}</Text>
           </View>
         )}
       </View>
@@ -68,31 +99,49 @@ export function TeamCard({ team, showCaptainBadge = false, onPress }: TeamCardPr
       {/* Center: Info */}
       <View style={styles.infoContainer}>
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: theme.colors.textPrimary, fontSize: isMyTeam ? 15 : 14 }]} numberOfLines={1}>
             {team.name}
           </Text>
-          {showCaptainBadge && (
-            <Star size={16} color="#EAA81A" fill="#EAA81A" style={styles.captainStar} />
+          {roleStyle && (
+            <View style={[styles.roleBadge, { backgroundColor: roleStyle.bg }]}>
+              <Text style={[styles.roleBadgeText, { color: roleStyle.color }]}>{roleStyle.text}</Text>
+            </View>
           )}
         </View>
 
         {team.home_ground && (
           <View style={styles.groundRow}>
-            <MapPin size={12} color={theme.colors.textSecondary} />
+            <MapPin size={11} color={theme.colors.textSecondary} />
             <Text style={[styles.groundText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
               {team.home_ground}
             </Text>
           </View>
         )}
 
-        <Text style={[styles.membersText, { color: theme.colors.textSecondary }]}>
-          {subtitleText}
-        </Text>
+        {isMyTeam ? (
+          <View style={[styles.statsRow, { borderTopColor: theme.colors.border }]}>
+            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+              👥 {playersCount} Players
+            </Text>
+            <Text style={[styles.statDivider, { color: theme.colors.border }]}>•</Text>
+            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+              🏏 {matchesCount} Matches
+            </Text>
+            <Text style={[styles.statDivider, { color: theme.colors.border }]}>•</Text>
+            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+              🏆 {winsCount} Wins
+            </Text>
+          </View>
+        ) : (
+          <Text style={[styles.membersText, { color: theme.colors.textSecondary }]}>
+            👥 {playersCount} Players
+          </Text>
+        )}
       </View>
 
       {/* Right: Chevron */}
       <View style={styles.chevronContainer}>
-        <ChevronRight size={20} color={theme.colors.border} />
+        <ChevronRight size={18} color={theme.colors.textSecondary} />
       </View>
     </TouchableOpacity>
   );
@@ -101,15 +150,12 @@ export function TeamCard({ team, showCaptainBadge = false, onPress }: TeamCardPr
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     marginBottom: 10,
     alignItems: 'center',
   },
   logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     overflow: 'hidden',
   },
   logoImage: {
@@ -125,7 +171,6 @@ const styles = StyleSheet.create({
   },
   logoFallbackText: {
     color: '#FFFFFF',
-    fontSize: 20,
     fontWeight: '700',
   },
   infoContainer: {
@@ -135,30 +180,54 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 2,
   },
   name: {
-    fontSize: 16,
     fontWeight: '700',
-    maxWidth: '90%',
+    maxWidth: '70%',
   },
-  captainStar: {
-    marginLeft: 6,
+  roleBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  roleBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   groundRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   groundText: {
-    fontSize: 13,
+    fontSize: 12,
   },
   membersText: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    borderTopWidth: 0.5,
+    paddingTop: 6,
+    flexWrap: 'wrap',
+  },
+  statText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  statDivider: {
+    marginHorizontal: 6,
+    fontSize: 10,
   },
   chevronContainer: {
-    marginLeft: 8,
+    marginLeft: 6,
   },
 });

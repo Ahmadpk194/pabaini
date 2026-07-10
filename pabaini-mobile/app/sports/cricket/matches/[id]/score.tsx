@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RotateCcw, ShieldAlert, Award, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, RotateCcw, ShieldAlert, Award, RefreshCw, Info, MoreVertical } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
@@ -25,9 +25,11 @@ import {
   useStartSecondInnings,
   useUndoLastBall,
   useRotateStrike,
+  useRetireBatsman,
 } from '../../../../../src/hooks/useMatches';
 import { useAuth } from '../../../../../src/hooks/useAuth';
 import { LoginRequiredGate } from '../../../../../src/components/ui/LoginRequiredGate';
+import { ScorerConsoleSkeleton } from '../../../../../src/components/skeletons';
 
 interface LineupPlayer {
   id: number;
@@ -37,7 +39,7 @@ interface LineupPlayer {
 }
 
 export default function ScorerScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
@@ -57,6 +59,7 @@ export default function ScorerScreen() {
   const startSecondInningsMutation = useStartSecondInnings();
   const undoLastBallMutation = useUndoLastBall();
   const rotateStrikeMutation = useRotateStrike();
+  const retireBatsmanMutation = useRetireBatsman();
 
   // Local state for recording a ball
   const [selectedRuns, setSelectedRuns] = useState<number>(0);
@@ -64,7 +67,8 @@ export default function ScorerScreen() {
 
   // Wicket flow modal states
   const [wicketModalVisible, setWicketModalVisible] = useState(false);
-  const [wicketType, setWicketType] = useState<'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired'>('bowled');
+  const [wicketType, setWicketType] = useState<'bowled' | 'caught' | 'run_out' | 'lbw' | 'stumped' | 'hit_wicket' | 'retired_hurt' | 'retired_out'>('bowled');
+  const [retiringBatsmanType, setRetiringBatsmanType] = useState<'striker' | 'non_striker'>('striker');
   const [nextBatsmanKey, setNextBatsmanKey] = useState<string | null>(null);
   const [batsmanPickerVisible, setBatsmanPickerVisible] = useState(false);
 
@@ -84,6 +88,30 @@ export default function ScorerScreen() {
   // Other runs selection modal
   const [otherRunsModalVisible, setOtherRunsModalVisible] = useState(false);
   const [partnershipModalVisible, setPartnershipModalVisible] = useState(false);
+  const [thisOverModalVisible, setThisOverModalVisible] = useState(false);
+  const [extrasModalVisible, setExtrasModalVisible] = useState(false);
+  const [expandedOvers, setExpandedOvers] = useState<Record<number, boolean>>({});
+
+  // Helper to parse liveData.extras string
+  const parseExtras = (extrasStr: string | null | undefined) => {
+    if (!extrasStr) return { total: 0, wides: 0, noBalls: 0, byes: 0, legByes: 0 };
+    const totalMatch = extrasStr.match(/^(\d+)/);
+    const total = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+    
+    const wMatch = extrasStr.match(/w\s+(\d+)/);
+    const wides = wMatch ? parseInt(wMatch[1], 10) : 0;
+    
+    const nbMatch = extrasStr.match(/nb\s+(\d+)/);
+    const noBalls = nbMatch ? parseInt(nbMatch[1], 10) : 0;
+    
+    const bMatch = extrasStr.match(/b\s+(\d+)/);
+    const byes = bMatch ? parseInt(bMatch[1], 10) : 0;
+    
+    const lbMatch = extrasStr.match(/lb\s+(\d+)/);
+    const legByes = lbMatch ? parseInt(lbMatch[1], 10) : 0;
+    
+    return { total, wides, noBalls, byes, legByes };
+  };
 
   // Scorer Auth Check & Redirect
   useEffect(() => {
@@ -172,10 +200,16 @@ export default function ScorerScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]}>
-        <View style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
+        {/* Header Bar */}
+        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft color={theme.colors.textPrimary} size={24} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scoring Console</Text>
+          <View style={{ width: 36 }} />
         </View>
+        <ScorerConsoleSkeleton />
       </SafeAreaView>
     );
   }
@@ -268,7 +302,7 @@ export default function ScorerScreen() {
   const dismissedKeys = new Set([
     ...(liveData.dismissed_players || []),
     ...(match.player_stats || [])
-      .filter((s) => s.team_id === battingTeamId && s.how_out && s.how_out !== 'not_out')
+      .filter((s) => s.team_id === battingTeamId && s.how_out && s.how_out !== 'not_out' && s.how_out !== 'retired_hurt')
       .map((s) => s.player_id ? `p-${s.player_id}` : `g-${s.guest_name}`)
   ]);
 
@@ -285,6 +319,37 @@ export default function ScorerScreen() {
     }
     return !dismissedKeys.has(key);
   });
+
+  const getAvailableNextBatsmen = () => {
+    const squad = battingPlayers;
+
+    const returning = squad.filter(p => {
+      // Exclude currently active striker and non-striker
+      if (liveData?.striker && (p.player_id ? liveData.striker.id === p.player_id : liveData.striker.name === p.guest_name)) return false;
+      if (liveData?.non_striker && (p.player_id ? liveData.non_striker.id === p.player_id : liveData.non_striker.name === p.guest_name)) return false;
+
+      const stat = liveData?.live_player_stats?.find((s: any) =>
+        p.player_id ? s.player_id === p.player_id : s.guest_name === p.guest_name
+      );
+      return stat && stat.status === 'retired_hurt';
+    });
+
+    const newBatsmenList = squad.filter(p => {
+      // Exclude currently active striker and non-striker
+      if (liveData?.striker && (p.player_id ? liveData.striker.id === p.player_id : liveData.striker.name === p.guest_name)) return false;
+      if (liveData?.non_striker && (p.player_id ? liveData.non_striker.id === p.player_id : liveData.non_striker.name === p.guest_name)) return false;
+
+      const stat = liveData?.live_player_stats?.find((s: any) =>
+        p.player_id ? s.player_id === p.player_id : s.guest_name === p.guest_name
+      );
+      return !stat || stat.status === 'not_batted';
+    });
+
+    return { returning, newBatsmen: newBatsmenList };
+  };
+
+  const { returning: returningBatsmen, newBatsmen } = getAvailableNextBatsmen();
+  const hasAvailableRemainingBatsmen = returningBatsmen.length > 0 || newBatsmen.length > 0;
 
   // Bowler change submission
   const handleSelectBowler = async (player: LineupPlayer, bypassCheck = false) => {
@@ -367,10 +432,44 @@ export default function ScorerScreen() {
     }
   };
 
+  // Retire Batsman Click Handler
+  const handleRetireBatsmanClick = (type: 'striker' | 'non_striker') => {
+    const batsman = type === 'striker' ? liveData?.striker : liveData?.non_striker;
+    if (!batsman) return;
+
+    Alert.alert(
+      'Retire Batsman',
+      `Choose retirement outcome for ${batsman.name}:`,
+      [
+        {
+          text: 'Retired Hurt',
+          onPress: () => {
+            setRetiringBatsmanType(type);
+            setWicketType('retired_hurt');
+            setWicketModalVisible(true);
+          },
+        },
+        {
+          text: 'Retired Out',
+          onPress: () => {
+            setRetiringBatsmanType(type);
+            setWicketType('retired_out');
+            setWicketModalVisible(true);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   // Wicket Recording Submission
   const handleRecordWicket = async () => {
-    if (!nextBatsmanKey && remainingBatsmen.length > 0 && wicketType !== 'retired') {
-      Alert.alert('Next Batsman Required', 'Please select the next batsman from the remaining squad roster.');
+    if (!nextBatsmanKey && hasAvailableRemainingBatsmen) {
+      Alert.alert('Next Batsman Required', 'Please select the next batsman.');
       return;
     }
 
@@ -379,7 +478,7 @@ export default function ScorerScreen() {
     let next_batsman_guest_name: string | undefined;
 
     if (nextBatsmanKey) {
-      const nextPlayer = remainingBatsmen.find((p) => getPlayerKey(p) === nextBatsmanKey);
+      const nextPlayer = battingPlayers.find((p) => getPlayerKey(p) === nextBatsmanKey);
       if (nextPlayer) {
         if (nextPlayer.player_id) {
           next_batsman_id = nextPlayer.player_id;
@@ -387,6 +486,32 @@ export default function ScorerScreen() {
           next_batsman_guest_name = nextPlayer.guest_name || undefined;
         }
       }
+    }
+
+    const isRetirement = wicketType === 'retired_hurt' || wicketType === 'retired_out';
+
+    if (isRetirement) {
+      const payload = {
+        retirement_type: wicketType as 'retired_hurt' | 'retired_out',
+        target: retiringBatsmanType,
+        next_batsman_id,
+        next_batsman_guest_name,
+      };
+
+      const prevWicketType = wicketType;
+      const prevNextBatsmanKey = nextBatsmanKey;
+      setWicketModalVisible(false);
+      setNextBatsmanKey(null);
+
+      try {
+        await retireBatsmanMutation.mutateAsync({ id: matchId, payload });
+      } catch (err: any) {
+        setWicketModalVisible(true);
+        setWicketType(prevWicketType);
+        setNextBatsmanKey(prevNextBatsmanKey);
+        Alert.alert('Retirement Error', err.response?.data?.message || err.message);
+      }
+      return;
     }
 
     const payload = {
@@ -404,6 +529,10 @@ export default function ScorerScreen() {
     setNextBatsmanKey(null);
 
     try {
+      if (retiringBatsmanType === 'non_striker') {
+        // Swap strike first
+        await rotateStrikeMutation.mutateAsync(matchId);
+      }
       await recordBallMutation.mutateAsync({ id: matchId, payload });
     } catch (err: any) {
       // Revert modal state on API failure
@@ -481,7 +610,11 @@ export default function ScorerScreen() {
 
   // Formatting this over symbols
   const formatOverBallSymbol = (ball: any) => {
-    if (ball.is_wicket) return 'W';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return 'RH';
+      if (ball.wicket_type === 'retired_out') return 'RO';
+      return 'W';
+    }
     if (ball.extra_type === 'wide') return `${ball.runs || ''}wd`;
     if (ball.extra_type === 'no_ball') return `${ball.runs || ''}nb`;
     if (ball.extra_type === 'bye') return `${ball.runs || ''}B`;
@@ -491,21 +624,30 @@ export default function ScorerScreen() {
   };
 
   const getBallBadgeColor = (ball: any) => {
-    if (ball.is_wicket) return '#FFEBEB'; // Wicket red bg
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#FFF9E6'; // amber bg for retired hurt
+      return '#FFEBEB'; // Wicket red bg
+    }
     if (ball.extra_type) return '#FFF9E6'; // Extra light amber bg
     if (ball.runs === 4 || ball.runs === 6) return '#EBFBEF'; // Boundary green bg
     return theme.colors.surface; // Normal ball uses theme surface
   };
 
   const getBallTextColor = (ball: any) => {
-    if (ball.is_wicket) return '#D32F2F';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#B78103';
+      return '#D32F2F';
+    }
     if (ball.extra_type) return '#B78103';
     if (ball.runs === 4 || ball.runs === 6) return '#1B5E20';
     return theme.colors.textPrimary; // Normal text color
   };
 
   const getBallBorderColor = (ball: any) => {
-    if (ball.is_wicket) return '#FFCDD2';
+    if (ball.is_wicket) {
+      if (ball.wicket_type === 'retired_hurt') return '#FFE082';
+      return '#FFCDD2';
+    }
     if (ball.extra_type) return '#FFE082';
     if (ball.runs === 4 || ball.runs === 6) return '#C8E6C9';
     return theme.colors.border;
@@ -551,6 +693,60 @@ export default function ScorerScreen() {
     ? match?.team_a?.name
     : match?.team_b?.name;
 
+  // Chase progress calculations
+  const getChaseProgress = () => {
+    if (!liveData?.target) return null;
+    let currentRuns = 0;
+    let wickets = 0;
+    if (liveData.score && typeof liveData.score === 'string') {
+      const parts = liveData.score.split('/');
+      currentRuns = parseInt(parts[0], 10) || 0;
+      wickets = parseInt(parts[1], 10) || 0;
+    }
+    const runsNeeded = Math.max(0, liveData.target - currentRuns);
+    
+    let oversBowled = 0;
+    if (typeof liveData.overs === 'number') {
+      oversBowled = liveData.overs;
+    } else if (typeof liveData.overs === 'string') {
+      oversBowled = parseFloat(liveData.overs) || 0;
+    }
+    
+    const completedOvers = Math.floor(oversBowled);
+    const ballsInOver = Math.round((oversBowled - completedOvers) * 10);
+    const totalBallsBowled = (completedOvers * 6) + ballsInOver;
+    const totalMatchBalls = (match.overs || 20) * 6;
+    const ballsRemaining = Math.max(0, totalMatchBalls - totalBallsBowled);
+
+    return {
+      runsNeeded,
+      ballsRemaining,
+      wicketsRemaining: 10 - wickets,
+      target: liveData.target,
+    };
+  };
+
+  const getMatchSituationMessage = () => {
+    const chase = getChaseProgress();
+    if (chase) {
+      if (chase.runsNeeded === 0) {
+        return 'Scores level!';
+      }
+      return `Need ${chase.runsNeeded} runs from ${chase.ballsRemaining} balls`;
+    }
+
+    if (liveData.current_innings === 1) {
+      return `1st Innings in progress`;
+    }
+
+    return `${battingTeamName || 'Batting team'} leads`;
+  };
+
+  const calculateSR = (runs: number, balls: number) => {
+    if (balls === 0) return '0.00';
+    return ((runs / balls) * 100).toFixed(2);
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
       {/* Header Bar */}
@@ -568,13 +764,7 @@ export default function ScorerScreen() {
           <ArrowLeft color={theme.colors.textPrimary} size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Scoring Console</Text>
-        <TouchableOpacity
-          style={[styles.backButton, isUndoDisabled && { opacity: 0.4 }]}
-          onPress={handleUndo}
-          disabled={isUndoDisabled}
-        >
-          <RotateCcw color={isUndoDisabled ? '#999999' : theme.colors.primary} size={20} />
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
       <View style={[styles.contentArea, { backgroundColor: theme.colors.background }]}>
@@ -608,49 +798,154 @@ export default function ScorerScreen() {
           </View>
         </LinearGradient>
 
-        {/* Batsmen & Bowler Cards */}
+        {/* Match Situation Card */}
+        <View style={[styles.situationCard, { backgroundColor: '#F0F9EB', borderColor: '#E1F3D8' }]}>
+          <Text style={[styles.situationText, { color: '#67C23A' }]}>
+            📢 {getMatchSituationMessage()}
+          </Text>
+        </View>
+
+        {/* Refined Batters & Bowler Table Section */}
         <View style={styles.rosterSection}>
+          {/* Batters Card - On Top, tapping opens modal */}
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.playerTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            style={[styles.rosterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
             onPress={() => setPartnershipModalVisible(true)}
           >
-            <View style={styles.batsmanRow}>
-              <Text style={[styles.playerLabel, { color: theme.colors.textPrimary, fontWeight: '700' }]}>
-                🏏 {liveData.striker?.name || 'No Striker'} *
-              </Text>
-              <Text style={[styles.playerStatText, { color: theme.colors.textSecondary }]}>
-                {liveData.striker?.runs || 0} ({liveData.striker?.balls || 0}b)
-              </Text>
+            <View style={[styles.battersGridHeader, { borderBottomColor: theme.colors.border, marginTop: 2, alignItems: 'center' }]}>
+              <View style={styles.colName}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary }]}>Batter</Text>
+              </View>
+              <View style={styles.colRuns}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>R(B)</Text>
+              </View>
+              <View style={styles.colBoundaries}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>4s / 6s</Text>
+              </View>
+              <View style={styles.colSr}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>SR</Text>
+              </View>
             </View>
-            <View style={styles.batsmanRow}>
-              <Text style={[styles.playerLabel, { color: theme.colors.textSecondary }]}>
-                {liveData.non_striker?.name || 'No Non-Striker'}
-              </Text>
-              <Text style={[styles.playerStatText, { color: theme.colors.textSecondary }]}>
-                {liveData.non_striker?.runs || 0} ({liveData.non_striker?.balls || 0}b)
-              </Text>
+
+            {/* Striker */}
+            <View style={styles.batterGridRow}>
+              <View style={styles.colName}>
+                <Text style={[styles.batterNameActive, styles.gridRowText, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                  🏏 {liveData.striker?.name || 'No Striker'} *
+                </Text>
+              </View>
+              <View style={styles.colRuns}>
+                <Text style={[styles.statValueBold, styles.gridRowText, { color: theme.colors.textPrimary, textAlign: 'right' }]}>
+                  {liveData.striker?.runs || 0}({liveData.striker?.balls || 0})
+                </Text>
+              </View>
+              <View style={styles.colBoundaries}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary, textAlign: 'right' }]}>
+                  {liveData.striker?.fours || 0} / {liveData.striker?.sixes || 0}
+                </Text>
+              </View>
+              <View style={styles.colSr}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary, textAlign: 'right' }]}>
+                  {calculateSR(liveData.striker?.runs || 0, liveData.striker?.balls || 0)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Non-Striker */}
+            <View style={styles.batterGridRow}>
+              <View style={styles.colName}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                  {liveData.non_striker?.name || 'No Non-Striker'}
+                </Text>
+              </View>
+              <View style={styles.colRuns}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textPrimary, textAlign: 'right' }]}>
+                  {liveData.non_striker?.runs || 0}({liveData.non_striker?.balls || 0})
+                </Text>
+              </View>
+              <View style={styles.colBoundaries}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary, textAlign: 'right' }]}>
+                  {liveData.non_striker?.fours || 0} / {liveData.non_striker?.sixes || 0}
+                </Text>
+              </View>
+              <View style={styles.colSr}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary, textAlign: 'right' }]}>
+                  {calculateSR(liveData.non_striker?.runs || 0, liveData.non_striker?.balls || 0)}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
 
+          {/* Bowler Card - Below Batters, tapping opens bowler modal, no title/header */}
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.playerTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+            style={[styles.rosterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
             onPress={() => setBowlerModalVisible(true)}
           >
-            <Text style={[styles.playerLabel, { color: theme.colors.textPrimary }]}>
-              🔴 Bowler: <Text style={{ fontWeight: '700' }}>{liveData.bowler?.name || 'Select Bowler'}</Text>
-            </Text>
-            <Text style={[styles.playerStatText, { color: theme.colors.textSecondary }]}>
-              {liveData.bowler?.wickets || 0} - {liveData.bowler?.runs_given || 0} ({liveData.bowler?.overs || '0'} ov)
-            </Text>
+            <View style={[styles.bowlerGridHeader, { borderBottomColor: theme.colors.border, marginTop: 2, alignItems: 'center' }]}>
+              <View style={styles.colName}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary }]}>Bowler</Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>O</Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>R</Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>W</Text>
+              </View>
+              <View style={styles.colEcon}>
+                <Text style={[styles.gridColLabel, { color: theme.colors.textSecondary, textAlign: 'right' }]}>Econ</Text>
+              </View>
+            </View>
+
+            <View style={styles.bowlerGridRow}>
+              <View style={styles.colName}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+                  🔴 {liveData.bowler?.name || 'Select Bowler'}
+                </Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textPrimary, textAlign: 'right' }]}>
+                  {liveData.bowler?.overs || '0.0'}
+                </Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textPrimary, textAlign: 'right' }]}>
+                  {liveData.bowler?.runs_given || 0}
+                </Text>
+              </View>
+              <View style={styles.colStat}>
+                <Text style={[styles.statValueBold, styles.gridRowText, { color: theme.colors.primary, textAlign: 'right' }]}>
+                  {liveData.bowler?.wickets || 0}
+                </Text>
+              </View>
+              <View style={styles.colEcon}>
+                <Text style={[styles.gridRowText, { color: theme.colors.textSecondary, textAlign: 'right' }]}>
+                  {(() => {
+                    const overs = parseFloat(liveData.bowler?.overs || '0');
+                    if (overs === 0) return '0.00';
+                    return (liveData.bowler?.runs_given / overs).toFixed(2);
+                  })()}
+                </Text>
+              </View>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* This Over Tracker */}
-        <View style={styles.trackerSection}>
+        {/* Refined Over Tracker Card */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.rosterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+          onPress={() => setThisOverModalVisible(true)}
+        >
           <View style={styles.trackerTitleRow}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>This Over</Text>
+              <Text style={{ fontSize: 11, color: theme.colors.primary, fontWeight: '700' }}>· View Details</Text>
+            </View>
             <Text style={[styles.overCountText, { color: theme.colors.textSecondary }]}>{legalBallsThisOver}/6</Text>
           </View>
           <View style={styles.ballsRow}>
@@ -666,17 +961,16 @@ export default function ScorerScreen() {
                 </View>
               ))
             ) : (
-              <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', fontSize: 13, paddingVertical: 4 }}>
                 Starting new over...
               </Text>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
 
-        {/* Scoring Action Buttons */}
-        <View style={[styles.scoringPanel, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flex: 1 }]}>
-
-          {/* Extras Toggle Selection */}
+        {/* Scoring Console Panel Card */}
+        <View style={[styles.scoringPanel, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          {/* Extras selector row - ABOVE runs buttons grid, styled as small border chips */}
           <View style={styles.extraSelectorRow}>
             {(['none', 'wide', 'no_ball', 'bye', 'leg_bye'] as const).map((ext) => (
               <TouchableOpacity
@@ -700,13 +994,13 @@ export default function ScorerScreen() {
                     },
                   ]}
                 >
-                  {ext === 'none' ? 'Normal' : ext.replace('_', ' ')}
+                  {ext === 'none' ? 'Normal' : ext.replace('_', ' ').toUpperCase()}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Quick Runs Rows - 6 uniform buttons: 0 1 2 3 4 6 */}
+          {/* Quick Runs Grid (0, 1, 2, 3, 4, 6) + Other Button */}
           <View style={styles.runsGrid}>
             {[0, 1, 2, 3, 4, 6].map((run) => (
               <TouchableOpacity
@@ -715,7 +1009,7 @@ export default function ScorerScreen() {
                 style={[
                   styles.runCard,
                   {
-                    backgroundColor: selectedRuns === run ? theme.colors.primary : theme.colors.surface,
+                    backgroundColor: selectedRuns === run ? theme.colors.primary : theme.colors.elevated,
                     borderColor: selectedRuns === run ? theme.colors.primary : theme.colors.border,
                   },
                 ]}
@@ -733,43 +1027,306 @@ export default function ScorerScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
-
-          <View style={styles.mainActionsRow}>
-            {/* Other Runs Button */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[styles.actionBtn, styles.otherBtn, { borderRadius: theme.radius.sm }]}
+              style={[
+                styles.runCard,
+                {
+                  backgroundColor: theme.colors.elevated,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               onPress={() => setOtherRunsModalVisible(true)}
             >
-              <Text style={styles.otherBtnText}>Other</Text>
+              <Text style={[styles.runCardText, { fontSize: 13, color: theme.colors.textSecondary }]}>Other</Text>
             </TouchableOpacity>
 
-            {/* Record Wicket Button */}
+            {/* Wicket Button in Runs Grid */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[styles.actionBtn, styles.wicketBtn, { borderRadius: theme.radius.sm }]}
-              onPress={() => setWicketModalVisible(true)}
+              style={[
+                styles.runCard,
+                {
+                  backgroundColor: theme.colors.elevated,
+                  borderColor: '#D32F2F',
+                },
+              ]}
+              onPress={() => {
+                setRetiringBatsmanType('striker');
+                setWicketType('bowled');
+                setWicketModalVisible(true);
+              }}
             >
-              <Text style={styles.actionBtnText}>Wicket</Text>
+              <Text style={[styles.runCardText, { fontSize: 13, color: '#D32F2F', fontWeight: '700' }]}>Wicket</Text>
             </TouchableOpacity>
+          </View>
 
-            {/* Confirm Ball Button */}
+          {/* Action Row: Undo, Extras, Record Ball */}
+          <View style={styles.mainActionsRow}>
+            {/* Undo Button */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[styles.actionBtn, styles.confirmBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm }]}
+              style={[
+                styles.actionBtn,
+                styles.undoBtn,
+                isUndoDisabled && { opacity: 0.4 },
+                { borderColor: theme.colors.border, borderRadius: theme.radius.sm, flex: 1 },
+              ]}
+              onPress={handleUndo}
+              disabled={isUndoDisabled}
+            >
+              <RotateCcw size={15} color={isUndoDisabled ? theme.colors.textSecondary : theme.colors.textPrimary} style={{ marginRight: 4 }} />
+              <Text style={[styles.undoBtnText, { color: isUndoDisabled ? theme.colors.textSecondary : theme.colors.textPrimary }]} numberOfLines={1}>Undo</Text>
+            </TouchableOpacity>
+
+            {/* Extras Stats Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.actionBtn,
+                {
+                  borderColor: theme.colors.border,
+                  borderWidth: 1,
+                  borderRadius: theme.radius.sm,
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+              onPress={() => setExtrasModalVisible(true)}
+            >
+              <Info size={15} color={theme.colors.textPrimary} style={{ marginRight: 4 }} />
+              <Text style={[styles.undoBtnText, { color: theme.colors.textPrimary }]} numberOfLines={1}>Extras</Text>
+            </TouchableOpacity>
+
+            {/* Confirm Ball Button - Rest of the space */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.actionBtn, styles.confirmBtn, { backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm, flex: 1.8 }]}
               onPress={handleRecordBall}
               disabled={recordBallMutation.isPending}
             >
               {recordBallMutation.isPending ? (
                 <ActivityIndicator size="small" color={theme.colors.onPrimary} />
               ) : (
-                <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]}>Record Ball</Text>
+                <Text style={[styles.actionBtnText, { color: theme.colors.onPrimary }]} numberOfLines={1}>Record Ball</Text>
               )}
             </TouchableOpacity>
           </View>
         </View>
       </View>
+
+
+      {/* MODAL: This Over Details (Bottom Sheet Style) */}
+      <Modal
+        visible={thisOverModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setThisOverModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.drawerBackdrop}
+          activeOpacity={1}
+          onPress={() => setThisOverModalVisible(false)}
+        >
+          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+            <View style={styles.drawerDragHandle} />
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Info color={theme.colors.primary} size={22} />
+              <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary, marginBottom: 0 }]}>This Over Summary</Text>
+            </View>
+
+            <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 14, paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
+              {/* CURRENT OVER DETAILS */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.primary, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                  Current Over ({legalBallsThisOver}/6 balls)
+                </Text>
+                {liveData.this_over && liveData.this_over.length > 0 ? (
+                  <View style={{ gap: 8 }}>
+                    {liveData.this_over.map((ball: any, idx: number) => (
+                      <View key={idx} style={[styles.modalItem, { borderBottomColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 8 }]}>
+                        <View
+                          style={[
+                            styles.ballBadge,
+                            {
+                              backgroundColor: getBallBadgeColor(ball),
+                              borderColor: getBallBorderColor(ball),
+                              width: 28,
+                              height: 28,
+                              borderRadius: 14,
+                              borderWidth: 1.5,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            },
+                          ]}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: getBallTextColor(ball) }}>
+                            {formatOverBallSymbol(ball)}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12.5, color: theme.colors.textPrimary, fontWeight: '500' }}>
+                            Ball {idx + 1}: {ball.is_wicket ? `Dismissal: Wicket falls!` : `${ball.runs || 0} run(s) off bat`}
+                          </Text>
+                          {ball.extra_type && (
+                            <Text style={{ fontSize: 11, color: '#A07800', fontWeight: '600', marginTop: 1 }}>
+                              Extra: {ball.extra_type.toUpperCase()} ({ball.extra_runs || 0} runs)
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ fontStyle: 'italic', color: theme.colors.textSecondary, fontSize: 13 }}>
+                    No deliveries recorded in this over yet.
+                  </Text>
+                )}
+              </View>
+
+              {/* PREVIOUS OVERS DETAILS */}
+              {(() => {
+                const currentInningsEvents = (liveData.all_deliveries || []).filter((e: any) => e.innings === liveData.current_innings);
+                const currentOverNumber = liveData.overs ? Math.floor(parseFloat(liveData.overs)) : 0;
+                const previousDeliveries = currentInningsEvents.filter((e: any) => e.over_number < currentOverNumber);
+
+                if (previousDeliveries.length === 0) return null;
+
+                const groupedOvers: Record<number, any[]> = {};
+                for (const e of previousDeliveries) {
+                  if (!groupedOvers[e.over_number]) {
+                    groupedOvers[e.over_number] = [];
+                  }
+                  groupedOvers[e.over_number].push(e);
+                }
+
+                const overNumbers = Object.keys(groupedOvers).map(Number).sort((a, b) => b - a);
+
+                return (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.textSecondary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
+                      Previous Overs History
+                    </Text>
+                    <View style={{ gap: 10 }}>
+                      {overNumbers.map((overNo) => {
+                        const balls = groupedOvers[overNo];
+                        const runs = balls.reduce((sum, b) => sum + (b.runs || 0) + (b.extra_runs || 0), 0);
+                        const wickets = balls.filter(b => b.is_wicket).length;
+                        const bowler = balls[0]?.bowler || 'Bowler';
+                        const isExpanded = !!expandedOvers[overNo];
+
+                        return (
+                          <View
+                            key={overNo}
+                            style={{
+                              borderColor: theme.colors.border,
+                              borderWidth: 1,
+                              borderRadius: theme.radius.sm,
+                              backgroundColor: theme.colors.surface,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {/* Header Clickable */}
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              onPress={() => setExpandedOvers(prev => ({ ...prev, [overNo]: !prev[overNo] }))}
+                              style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingHorizontal: 12,
+                                paddingVertical: 10,
+                                backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)',
+                              }}
+                            >
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.textPrimary }}>
+                                  Over {overNo} · by {bowler}
+                                </Text>
+                                <Text style={{ fontSize: 11.5, color: theme.colors.textSecondary, marginTop: 2 }}>
+                                  {runs} runs · {wickets} {wickets === 1 ? 'wicket' : 'wickets'}
+                                </Text>
+                              </View>
+                              <Text style={{ color: theme.colors.primary, fontSize: 11.5, fontWeight: '600' }}>
+                                {isExpanded ? 'Hide' : 'Details'}
+                              </Text>
+                            </TouchableOpacity>
+
+                            {/* Horizontal row of ball badges inside card */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingBottom: 10, paddingTop: 4 }}>
+                              {balls.map((ball, idx) => (
+                                <View
+                                  key={idx}
+                                  style={[
+                                    styles.ballBadge,
+                                    {
+                                      backgroundColor: getBallBadgeColor(ball),
+                                      borderColor: getBallBorderColor(ball),
+                                      width: 22,
+                                      height: 22,
+                                      borderRadius: 11,
+                                      borderWidth: 1,
+                                      justifyContent: 'center',
+                                      alignItems: 'center',
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ fontSize: 8.5, fontWeight: '800', color: getBallTextColor(ball) }}>
+                                    {formatOverBallSymbol(ball)}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+
+                            {/* Expanded Details list */}
+                            {isExpanded && (
+                              <View style={{ paddingHorizontal: 12, paddingBottom: 10, borderTopWidth: 0.5, borderTopColor: theme.colors.border, gap: 6, paddingTop: 8 }}>
+                                {balls.map((ball, idx) => (
+                                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text style={{ fontSize: 11, color: theme.colors.textSecondary, fontWeight: '600', width: 45 }}>
+                                      Ball {ball.ball_number}:
+                                    </Text>
+                                    <Text style={{ fontSize: 11.5, color: theme.colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                                      {ball.is_wicket ? `Dismissal (${ball.wicket_type || 'out'})` : `${ball.runs || 0} run(s) off ${ball.batsman}`}
+                                      {ball.extra_type ? ` · ${ball.extra_type.toUpperCase()} (+${ball.extra_runs || 0})` : ''}
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })()}
+            </ScrollView>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.primaryBtn, {
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+                backgroundColor: 'transparent',
+                borderRadius: theme.radius.sm,
+                marginTop: 16,
+                paddingVertical: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }]}
+              onPress={() => setThisOverModalVisible(false)}
+            >
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '700' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
 
       {/* MODAL: Bowler Selector */}
       <Modal visible={bowlerModalVisible} transparent={true} animationType="fade">
@@ -857,7 +1414,12 @@ export default function ScorerScreen() {
       <Modal visible={wicketModalVisible} transparent={true} animationType="fade" onRequestClose={() => setWicketModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Record Wicket</Text>
+            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>
+              {wicketType === 'retired_hurt' || wicketType === 'retired_out' ? 'Retire Batsman' : 'Record Wicket'}
+            </Text>
+            <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginBottom: 12 }}>
+              Player: <Text style={{ fontWeight: '700', color: theme.colors.textPrimary }}>{retiringBatsmanType === 'striker' ? (liveData.striker?.name || 'Striker') : (liveData.non_striker?.name || 'Non-Striker')}</Text>
+            </Text>
 
             {/* Wicket Type Selection */}
             <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginBottom: 8 }]}>How Out *</Text>
@@ -869,7 +1431,8 @@ export default function ScorerScreen() {
                 'lbw',
                 'stumped',
                 'hit_wicket',
-                'retired',
+                'retired_hurt',
+                'retired_out',
               ] as const).map((type) => (
                 <TouchableOpacity
                   key={type}
@@ -891,7 +1454,7 @@ export default function ScorerScreen() {
             </ScrollView>
 
             {/* Next Batsman Selector */}
-            {wicketType !== 'retired' && (
+            {hasAvailableRemainingBatsmen && (
               <>
                 <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16, marginBottom: 8 }]}>
                   Next Batsman *
@@ -903,7 +1466,7 @@ export default function ScorerScreen() {
                 >
                   <Text style={[styles.pickerButtonText, { color: nextBatsmanKey ? theme.colors.textPrimary : theme.colors.textSecondary }]}>
                     {nextBatsmanKey
-                      ? remainingBatsmen.find((p) => getPlayerKey(p) === nextBatsmanKey)?.name || 'Select player'
+                      ? battingPlayers.find((p) => getPlayerKey(p) === nextBatsmanKey)?.name || 'Select player'
                       : 'Select batsman'}
                   </Text>
                 </TouchableOpacity>
@@ -941,21 +1504,69 @@ export default function ScorerScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, maxHeight: '60%' }]}>
             <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Choose Next Batsman</Text>
-            <FlatList
-              data={remainingBatsmen}
-              keyExtractor={(item) => getPlayerKey(item)}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
-                  onPress={() => {
-                    setNextBatsmanKey(getPlayerKey(item));
-                    setBatsmanPickerVisible(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>{item.name}</Text>
-                </TouchableOpacity>
+            
+            <ScrollView style={{ width: '100%', marginVertical: 12 }} showsVerticalScrollIndicator={false}>
+              {/* Returning Batsmen Group */}
+              {returningBatsmen.length > 0 && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.primary, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.colors.primary + '10', borderRadius: 4, overflow: 'hidden' }}>
+                    Returning Batsmen (Retired Hurt)
+                  </Text>
+                  {returningBatsmen.map((item) => {
+                    const stat = liveData.live_player_stats?.find((s: any) =>
+                      item.player_id ? s.player_id === item.player_id : s.guest_name === item.guest_name
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={getPlayerKey(item)}
+                        style={[styles.modalItem, { borderBottomColor: theme.colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                        onPress={() => {
+                          setNextBatsmanKey(getPlayerKey(item));
+                          setBatsmanPickerVisible(false);
+                        }}
+                      >
+                        <Text style={[styles.modalItemText, { color: theme.colors.textPrimary, fontWeight: '600' }]}>
+                          {item.name}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                          Resuming at {stat?.runs || 0} ({stat?.balls_faced || 0}b)
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               )}
-            />
+
+              {/* New Batsmen Group */}
+              {newBatsmen.length > 0 && (
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.textSecondary, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.colors.border + '30', borderRadius: 4, overflow: 'hidden' }}>
+                    New Batsmen (Not Batted)
+                  </Text>
+                  {newBatsmen.map((item) => (
+                    <TouchableOpacity
+                      key={getPlayerKey(item)}
+                      style={[styles.modalItem, { borderBottomColor: theme.colors.border }]}
+                      onPress={() => {
+                        setNextBatsmanKey(getPlayerKey(item));
+                        setBatsmanPickerVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.modalItemText, { color: theme.colors.textPrimary }]}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {returningBatsmen.length === 0 && newBatsmen.length === 0 && (
+                <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, marginVertical: 24 }}>
+                  No available batsmen left.
+                </Text>
+              )}
+            </ScrollView>
+
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.modalCloseBtn, { borderColor: theme.colors.border, borderWidth: 1 }]}
@@ -1205,9 +1816,22 @@ export default function ScorerScreen() {
                     {liveData?.striker?.name || 'Striker'} *
                   </Text>
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary }}>
-                  {liveData?.striker?.runs || 0} ({liveData?.striker?.balls || 0}b)
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary }}>
+                    {liveData?.striker?.runs || 0} ({liveData?.striker?.balls || 0}b)
+                  </Text>
+                  {!!liveData?.striker && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPartnershipModalVisible(false);
+                        handleRetireBatsmanClick('striker');
+                      }}
+                      style={{ paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme.colors.elevated, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.border }}
+                    >
+                      <Text style={{ fontSize: 11, color: '#D32F2F', fontWeight: '600' }}>Retire</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
 
               {/* Non-striker */}
@@ -1218,9 +1842,22 @@ export default function ScorerScreen() {
                     {liveData?.non_striker?.name || 'Non-Striker'}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-                  {liveData?.non_striker?.runs || 0} ({liveData?.non_striker?.balls || 0}b)
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                    {liveData?.non_striker?.runs || 0} ({liveData?.non_striker?.balls || 0}b)
+                  </Text>
+                  {!!liveData?.non_striker && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPartnershipModalVisible(false);
+                        handleRetireBatsmanClick('non_striker');
+                      }}
+                      style={{ paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme.colors.elevated, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.border }}
+                    >
+                      <Text style={{ fontSize: 11, color: '#D32F2F', fontWeight: '600' }}>Retire</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -1271,6 +1908,95 @@ export default function ScorerScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* MODAL: Extras Breakdown Details (Bottom Sheet Style) */}
+      <Modal
+        visible={extrasModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setExtrasModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.drawerBackdrop}
+          activeOpacity={1}
+          onPress={() => setExtrasModalVisible(false)}
+        >
+          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+            <View style={styles.drawerDragHandle} />
+
+            {/* Title & Total Extras */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <View>
+                <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>Extras Summary</Text>
+                <Text style={{ fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 }}>
+                  {liveData?.current_innings === 1 ? '1st Innings' : '2nd Innings'}
+                </Text>
+              </View>
+              {(() => {
+                const ext = parseExtras(liveData?.extras);
+                return (
+                  <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.primary }}>
+                    {ext.total} Runs
+                  </Text>
+                );
+              })()}
+            </View>
+
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginBottom: 16 }} />
+
+            {/* Extras Breakdown Grid/List */}
+            {(() => {
+              const ext = parseExtras(liveData?.extras);
+              
+              const statsRow = (label: string, value: number, abbrev: string) => (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.primary }} />
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textPrimary }}>{label}</Text>
+                    <Text style={{ fontSize: 11, color: theme.colors.textSecondary, textTransform: 'uppercase' }}>({abbrev})</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.textPrimary }}>
+                    {value} {value === 1 ? 'run' : 'runs'}
+                  </Text>
+                </View>
+              );
+
+              return (
+                <View style={{ gap: 4, marginBottom: 16 }}>
+                  {statsRow('Wides', ext.wides, 'wd')}
+                  <View style={{ height: 0.5, backgroundColor: theme.colors.border, opacity: 0.5 }} />
+                  {statsRow('No Balls', ext.noBalls, 'nb')}
+                  <View style={{ height: 0.5, backgroundColor: theme.colors.border, opacity: 0.5 }} />
+                  {statsRow('Byes', ext.byes, 'b')}
+                  <View style={{ height: 0.5, backgroundColor: theme.colors.border, opacity: 0.5 }} />
+                  {statsRow('Leg Byes', ext.legByes, 'lb')}
+                </View>
+              );
+            })()}
+
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginBottom: 12 }} />
+
+            {/* Close Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={{
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+                marginTop: 8,
+                height: 42,
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: theme.radius.sm,
+              }}
+              onPress={() => setExtrasModalVisible(false)}
+            >
+              <Text style={{ color: theme.colors.textSecondary, fontWeight: '600', fontSize: 14 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1302,11 +2028,15 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     flex: 1,
-    padding: 12,
-    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  gridRowText: {
+    fontSize: 13,
   },
   scoreCard: {
-    padding: 14,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
@@ -1321,7 +2051,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   inningsLabel: {
     color: '#81C784',
@@ -1337,18 +2067,18 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     color: '#FFF',
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '800',
   },
   oversText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: '#CCC',
   },
   runRateRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 10,
+    marginTop: 6,
   },
   rrBadge: {
     paddingHorizontal: 10,
@@ -1361,30 +2091,109 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   rosterSection: {
-    gap: 10,
+    gap: 6,
   },
-  playerTile: {
+  rosterCard: {
     padding: 10,
     borderWidth: 1,
     borderRadius: 10,
-    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.01,
     shadowRadius: 1,
     elevation: 0,
   },
-  batsmanRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  playerLabel: {
+  cardTitle: {
     fontSize: 14,
+    fontWeight: '800',
   },
-  playerStatText: {
-    fontSize: 13,
+  inlineSwapBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 77, 38, 0.05)',
+  },
+  swapBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  interactiveText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  battersGridHeader: {
+    flexDirection: 'row',
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    marginBottom: 6,
+  },
+  bowlerGridHeader: {
+    flexDirection: 'row',
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    marginBottom: 6,
+  },
+  gridColLabel: {
+    fontSize: 11,
     fontWeight: '600',
+  },
+  colName: {
+    flex: 2.2,
+  },
+  colRuns: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  colBoundaries: {
+    flex: 1.5,
+    textAlign: 'right',
+  },
+  colSr: {
+    flex: 1.2,
+    textAlign: 'right',
+  },
+  colStat: {
+    flex: 0.8,
+    textAlign: 'right',
+  },
+  colEcon: {
+    flex: 1.2,
+    textAlign: 'right',
+  },
+  batterGridRow: {
+    flexDirection: 'row',
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  batterNameActive: {
+    fontWeight: '700',
+  },
+  statValueBold: {
+    fontWeight: '700',
+  },
+  bowlerGridRow: {
+    flexDirection: 'row',
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  situationCard: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 2,
+  },
+  situationText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   trackerSection: {
     gap: 6,
@@ -1397,6 +2206,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 4,
   },
   overCountText: {
     fontSize: 13,
@@ -1407,25 +2217,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   ballBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   ballText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   scoringPanel: {
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
-    borderRadius: 8,
-    gap: 6,
+    borderRadius: 10,
+    gap: 8,
   },
   panelHeader: {
     fontSize: 12,
@@ -1438,49 +2248,56 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   extraBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     borderWidth: 1,
     borderRadius: 4,
   },
   extraBtnText: {
-    fontSize: 11,
+    fontSize: 10,
   },
   runsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   runCard: {
-    flex: 1,
-    minWidth: '28%',
-    height: 40,
+    width: '23%',
+    height: 34,
     borderWidth: 1,
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   runCardText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   mainActionsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 0,
+    marginTop: 2,
   },
   actionBtn: {
     flex: 1,
-    height: 40,
+    height: 34,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+  },
+  undoBtn: {
+    borderColor: '#CCCCCC',
+  },
+  undoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   wicketBtn: {
     borderColor: '#D32F2F',
-    borderWidth: 1,
   },
-  actionBtnText: {
-    fontSize: 14,
+  wicketBtnText: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#D32F2F',
   },
@@ -1494,7 +2311,11 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   confirmBtn: {
-    flex: 1,
+    borderWidth: 0,
+  },
+  actionBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,

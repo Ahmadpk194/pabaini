@@ -12,5 +12,6 @@ export { default as DonorListSkeleton } from './donors/DonorListSkeleton';
 export { default as Shimmer } from './Shimmer';
 export { default as SkeletonBox } from './SkeletonBox';
 export { default as SkeletonCircle } from './SkeletonCircle';
+export { default as ScorerConsoleSkeleton } from './sports/ScorerConsoleSkeleton';
 
 

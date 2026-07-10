@@ -103,6 +103,9 @@ export interface MyTeamResponse {
   role: TeamMemberRole;
   status: TeamMemberStatus;
   joined_at: string;
+  member_count?: number;
+  matches_count?: number;
+  wins_count?: number;
 }
 
 export type MatchStatus = 'pending_request' | 'scheduled' | 'live' | 'completed' | 'cancelled' | 'no_result';

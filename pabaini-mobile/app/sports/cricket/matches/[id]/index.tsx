@@ -923,13 +923,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   scrollContent: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
     paddingBottom: 20,
   },
   statusCard: {
-    padding: 8,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
   },
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   card: {
-    padding: 8,
+    padding: 12,
     borderWidth: 1,
   },
   vsContainer: {

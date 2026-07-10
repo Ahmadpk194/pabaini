@@ -124,6 +124,7 @@ interface ApiResponse<T> {
 - [#55 — PATCH `/sports/cricket/matches/:id/innings/start`](#55-patch-sportscricketmatchesidinningsstart) — Start second innings
 - [#56 — PATCH `/sports/cricket/matches/:id/balls/undo`](#56-patch-sportscricketmatchesidballsundo) — Undo last ball
 - [#56b — PATCH `/sports/cricket/matches/:id/strike/rotate`](#56b-patch-sportscricketmatchesidstrikerotate) — Rotate strike manually
+- [#56c — PATCH `/sports/cricket/matches/:id/batsman/retire`](#56c-patch-sportscricketmatchesidbatsmanretire) — Retire batsman (retired hurt/out)
 - [#57 — GET `/sports/cricket/matches/:id/live`](#57-get-sportscricketmatchesidlive) — Public live scoring view
 
 ### 10. Sports Module — Phase 3 (Leaderboard & Standings) 🗓 Roadmap
@@ -2465,6 +2466,7 @@ curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1
         "sixes": 2,
         "how_out": "caught",
         "is_not_out": false,
+        "status": "out",
         "overs_bowled": "4.0",
         "runs_given": 24,
         "wickets": 3,
@@ -2939,7 +2941,7 @@ curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/start \
 
 ### #53 · POST `/sports/cricket/matches/:id/balls`
 
-Records a single delivery event. Modifies scores, wickets, overs, legal balls, strike rotations, and handles wickets.
+Records a single delivery event. Modifies scores, wickets, overs, legal balls, strike rotations, and handles wickets. Supports batsman retirement via two distinct outcome types.
 
 | | |
 |---|---|
@@ -2963,9 +2965,13 @@ Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
 | `extra_type` | `string` | No | Extra delivery type: `wide` · `no_ball` · `bye` · `leg_bye` · `penalty` |
 | `extra_runs` | `number` | No | Extra runs conceded (default 0) |
 | `is_wicket` | `boolean` | ✅ Yes | Set to `true` if a wicket fell |
-| `wicket_type` | `string` | No | Dismissal type: `bowled` · `caught` · `caught_behind` · `run_out` · `lbw` · `stumped` · `retired` · `hit_wicket` · `handled_ball` · `double_hit` · `obstructing_field` · `timed_out` |
-| `next_batsman_id` | `number` | No | ID of the incoming batsman (required if wicket falls and wickets < 10) |
-| `next_batsman_guest_name` | `string` | No | Guest name of the incoming batsman (required if wicket falls and wickets < 10) |
+| `wicket_type` | `string` | No | Dismissal type: `bowled` · `caught` · `caught_behind` · `run_out` · `lbw` · `stumped` · `hit_wicket` · **`retired_hurt`** · **`retired_out`** · `handled_ball` · `double_hit` · `obstructing_field` · `timed_out` |
+| `next_batsman_id` | `number` | No | ID of the incoming batsman. For `retired_hurt`: ID of the returning or new batsman. For `retired_out`: ID of the new batsman only. |
+| `next_batsman_guest_name` | `string` | No | Guest name of the incoming batsman (alternative to `next_batsman_id` for guest players) |
+
+> **Retirement behaviour:**
+> - `retired_hurt` — Batsman's stats are frozen and preserved. The innings record remains **open** (`is_not_out = true`). This does **not** increment the team's wickets tally and does **not** appear in the fall-of-wickets table. A `retired_hurt` batsman can return to bat later in the same innings by being selected as the `next_batsman_id` when another wicket falls.
+> - `retired_out` — Batsman's innings is permanently closed. Counts as a team wicket, appears in fall-of-wickets, and the batsman cannot return. Bowler does **not** receive wicket credit for either retirement type.
 
 **cURL Example**
 
@@ -3116,6 +3122,53 @@ curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/strike/rotat
 
 ---
 
+### #56c · PATCH `/sports/cricket/matches/:id/batsman/retire`
+
+Retires a batsman currently at the crease (either striker or non-striker) as `retired_hurt` or `retired_out`.
+This endpoint does not write a ball event, increment the over's ball count, or affect bowler stats.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/v1/sports/cricket/matches/:id/batsman/retire` |
+| **Access** | 🔴 Protected *(Assigned Scorer only)* |
+| **Status** | ✅ Live |
+
+**Headers**
+
+```
+Authorization: Bearer <YOUR_FIREBASE_ID_TOKEN>
+Content-Type: application/json
+```
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `retirement_type` | `string` | Yes | Outcome type: `'retired_hurt'` or `'retired_out'` |
+| `target` | `string` | Yes | Which batsman position to retire: `'striker'` or `'non_striker'` |
+| `next_batsman_id` | `number` | No | ID of the replacing batsman from Playing XI (if available) |
+| `next_batsman_guest_name` | `string` | No | Guest name of the replacing batsman (if unregistered) |
+
+```json
+{
+  "retirement_type": "retired_hurt",
+  "target": "striker",
+  "next_batsman_id": 5
+}
+```
+
+**cURL Example**
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/sports/cricket/matches/1/batsman/retire \
+  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"retirement_type": "retired_hurt", "target": "striker", "next_batsman_id": 5}'
+```
+
+---
+
 ### #57 · GET `/sports/cricket/matches/:id/live`
 
 Retrieves a near real-time live view of the match scoring, batsman statistics, bowler statistics, and events in the current over.
@@ -3201,6 +3254,7 @@ curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/live
         "sixes": 0,
         "how_out": "bowled",
         "is_not_out": false,
+        "status": "out",
         "overs_bowled": 0,
         "runs_given": 0,
         "wickets": 0,
@@ -3210,6 +3264,15 @@ curl -X GET http://localhost:3000/api/v1/sports/cricket/matches/1/live
   }
 }
 ```
+
+> **`live_player_stats[].status` values:**
+> - `not_batted` — Player has not yet come to bat this innings.
+> - `batting` — Player is currently at the crease (striker or non-striker).
+> - `out` — Player is fully dismissed.
+> - `retired_hurt` — Player retired temporarily (can return to bat). Stats are frozen. Bowler does not get wicket credit. Not included in team wickets tally or fall-of-wickets.
+> - `retired_out` — Player retired permanently (counts as a team wicket, appears in fall-of-wickets). Bowler does not get wicket credit.
+>
+> **`fall_of_wickets`** only includes actual dismissals and `retired_out` events. `retired_hurt` events are **excluded** to preserve not-out status.
 
 ---
 
