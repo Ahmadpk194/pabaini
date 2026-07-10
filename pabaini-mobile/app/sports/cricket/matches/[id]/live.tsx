@@ -34,6 +34,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useMatchDetail, useLiveMatch, useLineup } from '../../../../../src/hooks/useMatches';
+import { SkeletonBox, SkeletonCircle } from '../../../../../src/components/skeletons';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -78,9 +79,9 @@ export default function LiveViewerScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.surface }]} edges={['top', 'left', 'right']}>
         {/* Skeleton Sticky Header */}
         <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBEBEB' }} />
-          <View style={{ width: 100, height: 18, borderRadius: 4, backgroundColor: '#EBEBEB' }} />
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBEBEB' }} />
+          <SkeletonCircle size={36} />
+          <SkeletonBox width={100} height={18} borderRadius={4} />
+          <SkeletonCircle size={36} />
         </View>
 
         {/* Skeleton Match Versus Card */}
@@ -95,22 +96,31 @@ export default function LiveViewerScreen() {
 
         {/* Skeleton Tab Nav */}
         <View style={{ height: 44, borderBottomWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, flexDirection: 'row', paddingHorizontal: 16, alignItems: 'center', gap: 16 }}>
-          <View style={{ width: 60, height: 16, borderRadius: 4, backgroundColor: '#EBEBEB' }} />
-          <View style={{ width: 65, height: 16, borderRadius: 4, backgroundColor: '#EBEBEB' }} />
-          <View style={{ width: 80, height: 16, borderRadius: 4, backgroundColor: '#EBEBEB' }} />
-          <View style={{ width: 50, height: 16, borderRadius: 4, backgroundColor: '#EBEBEB' }} />
+          <SkeletonBox width={60} height={16} borderRadius={4} />
+          <SkeletonBox width={65} height={16} borderRadius={4} />
+          <SkeletonBox width={80} height={16} borderRadius={4} />
+          <SkeletonBox width={50} height={16} borderRadius={4} />
         </View>
 
         {/* Skeleton Body Scroll */}
         <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={{ height: 120, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0', padding: 16, gap: 12 }}>
-            <View style={{ width: 80, height: 12, backgroundColor: '#EBEBEB', borderRadius: 4 }} />
-            <View style={{ width: 140, height: 32, backgroundColor: '#EBEBEB', borderRadius: 4 }} />
-            <View style={{ width: 110, height: 12, backgroundColor: '#EBEBEB', borderRadius: 4 }} />
+          <View style={{ height: 120, borderRadius: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, padding: 16, gap: 12 }}>
+            <SkeletonBox width={80} height={12} borderRadius={4} />
+            <SkeletonBox width={140} height={32} borderRadius={4} />
+            <SkeletonBox width={110} height={12} borderRadius={4} />
           </View>
-          <View style={{ height: 40, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0' }} />
-          <View style={{ height: 110, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0' }} />
-          <View style={{ height: 90, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0' }} />
+          <View style={{ height: 40, borderRadius: 8, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, justifyContent: 'center' }}>
+            <SkeletonBox width={150} height={14} borderRadius={4} />
+          </View>
+          <View style={{ height: 110, borderRadius: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, padding: 16, gap: 10 }}>
+            <SkeletonBox width={100} height={14} borderRadius={4} />
+            <SkeletonBox width="90%" height={12} borderRadius={4} />
+            <SkeletonBox width="70%" height={12} borderRadius={4} />
+          </View>
+          <View style={{ height: 90, borderRadius: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, padding: 16, gap: 10 }}>
+            <SkeletonBox width={80} height={14} borderRadius={4} />
+            <SkeletonBox width="60%" height={12} borderRadius={4} />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
