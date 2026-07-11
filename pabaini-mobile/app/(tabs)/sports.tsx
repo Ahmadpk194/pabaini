@@ -28,7 +28,13 @@ import { SportsOptIn } from '../../src/components/sports/common/SportsOptIn';
 import { SetupBanner } from '../../src/components/sports/common/SetupBanner';
 import { ComingSoonState } from '../../src/components/sports/common/ComingSoonState';
 import { CricketPlayerCard } from '../../src/components/sports/cricket/CricketPlayerCard';
-import { PlayerCardSkeleton, TeamCardSkeleton, DiscoverTeamCardSkeleton } from '../../src/components/skeletons';
+import {
+  PlayerCardSkeleton,
+  TeamCardSkeleton,
+  DiscoverTeamCardSkeleton,
+  SkeletonCircle,
+  SkeletonBox,
+} from '../../src/components/skeletons';
 import { Avatar } from '../../src/components/ui/Avatar';
 import client from '../../src/api/client';
 import { CricketPlayerProfile, TeamSummary } from '../../src/types/sports.types';
@@ -36,6 +42,33 @@ import { Shield, Trophy, Calendar, Users, Award, MapPin } from 'lucide-react-nat
 import { useMatches } from '../../src/hooks/useMatches';
 import { MatchCard } from '../../src/components/sports/matches/MatchCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
+
+function RegularPlayerSkeleton() {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        padding: 12,
+        marginBottom: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+    >
+      <SkeletonCircle size={44} />
+      <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <SkeletonBox width={100} height={14} borderRadius={4} />
+          <SkeletonBox width={60} height={16} borderRadius={4} />
+        </View>
+        <SkeletonBox width={150} height={12} borderRadius={3} />
+      </View>
+    </View>
+  );
+}
 
 const TABS = [
   { id: 'players', name: 'Players', icon: Users },
@@ -364,15 +397,33 @@ export default function SportsScreen() {
   };
 
   // Empty state when no players are registered
+  // Empty state when no players are registered
   const renderListEmpty = () => {
     if (loading || loadingProfile) {
+      const showProfileSkeleton = loadingProfile || !isRegistered;
       return (
         <View style={{ gap: 10, marginTop: 10 }}>
-          <PlayerCardSkeleton />
-          <PlayerCardSkeleton />
-          <PlayerCardSkeleton />
-          <PlayerCardSkeleton />
-          <PlayerCardSkeleton />
+          {/* Your Profile Skeleton */}
+          {showProfileSkeleton && (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Award color={theme.colors.primary} size={20} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Your Player Profile</Text>
+              </View>
+              <PlayerCardSkeleton />
+            </View>
+          )}
+
+          {/* Other Registered Players Skeleton */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: showProfileSkeleton ? 18 : 8, marginBottom: 12 }}>
+            <Users color={theme.colors.primary} size={20} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+              {isRegistered ? 'Other Registered Players' : 'Registered Players'}
+            </Text>
+          </View>
+
+          <RegularPlayerSkeleton />
+          <RegularPlayerSkeleton />
         </View>
       );
     }

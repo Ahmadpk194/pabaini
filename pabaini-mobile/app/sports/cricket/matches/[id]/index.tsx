@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -784,86 +785,88 @@ export default function MatchDetailScreen() {
           activeOpacity={1}
           onPress={() => setLineupsModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
-            <View style={styles.drawerDragHandle} />
-            <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
-              Declared Playing XI Lineups
-            </Text>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+              <View style={styles.drawerDragHandle} />
+              <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
+                Declared Playing XI Lineups
+              </Text>
 
-            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-              {/* Team A Lineup */}
-              <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
-                  {match.team_a.name}
-                </Text>
-                {(match.team_a_lineup_set && (lineups?.team_a?.players?.length ?? 0) > 0) ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {lineups?.team_a?.players?.map((player: any, idx: number) => (
-                      <View
-                        key={idx}
-                        style={{
-                          backgroundColor: theme.colors.background,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          borderRadius: 16,
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
-                          {player.name}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
-                    No lineup declared yet.
+              <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                {/* Team A Lineup */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
+                    {match.team_a.name}
                   </Text>
-                )}
-              </View>
+                  {(match.team_a_lineup_set && (lineups?.team_a?.players?.length ?? 0) > 0) ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {lineups?.team_a?.players?.map((player: any, idx: number) => (
+                        <View
+                          key={idx}
+                          style={{
+                            backgroundColor: theme.colors.background,
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                            borderRadius: 16,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
+                            {player.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
+                      No lineup declared yet.
+                    </Text>
+                  )}
+                </View>
 
-              {/* Team B Lineup */}
-              <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
-                  {match.team_b.name}
-                </Text>
-                {(match.team_b_lineup_set && (lineups?.team_b?.players?.length ?? 0) > 0) ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {lineups?.team_b?.players?.map((player: any, idx: number) => (
-                      <View
-                        key={idx}
-                        style={{
-                          backgroundColor: theme.colors.background,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          borderRadius: 16,
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
-                          {player.name}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
-                    No lineup declared yet.
+                {/* Team B Lineup */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginBottom: 8 }}>
+                    {match.team_b.name}
                   </Text>
-                )}
-              </View>
-            </ScrollView>
+                  {(match.team_b_lineup_set && (lineups?.team_b?.players?.length ?? 0) > 0) ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {lineups?.team_b?.players?.map((player: any, idx: number) => (
+                        <View
+                          key={idx}
+                          style={{
+                            backgroundColor: theme.colors.background,
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                            borderRadius: 16,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, color: theme.colors.textPrimary, fontWeight: '500' }}>
+                            {player.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ fontStyle: 'italic', fontSize: 13, color: theme.colors.textSecondary }}>
+                      No lineup declared yet.
+                    </Text>
+                  )}
+                </View>
+              </ScrollView>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.drawerCloseBtn, { borderColor: theme.colors.border }]}
-              onPress={() => setLineupsModalVisible(false)}
-            >
-              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.drawerCloseBtn, { borderColor: theme.colors.border }]}
+                onPress={() => setLineupsModalVisible(false)}
+              >
+                <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 

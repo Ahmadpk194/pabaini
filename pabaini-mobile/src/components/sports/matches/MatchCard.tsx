@@ -25,7 +25,7 @@ interface MatchCardProps {
 }
 
 export function MatchCard({ match, onPress }: MatchCardProps) {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
 
   const teamAInitials = match.team_a.name ? match.team_a.name.charAt(0).toUpperCase() : '?';
   const teamBInitials = match.team_b.name ? match.team_b.name.charAt(0).toUpperCase() : '?';
@@ -34,47 +34,48 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
   const teamBBgColor = getTeamColor(match.team_b.name);
 
   const getStatusStyles = () => {
+    const isDark = mode === 'dark';
     switch (match.status) {
       case 'live':
         return {
-          bg: '#FFEBEB',
-          text: '#D32F2F',
+          bg: isDark ? 'rgba(211, 47, 47, 0.18)' : '#FFEBEB',
+          text: isDark ? '#FF8A80' : '#D32F2F',
           label: '🔴 LIVE',
         };
       case 'pending_request':
         return {
-          bg: '#FFF8DC',
-          text: '#A07800',
+          bg: isDark ? 'rgba(255, 179, 0, 0.18)' : '#FFF8DC',
+          text: isDark ? '#FFCA28' : '#A07800',
           label: '🟡 PENDING',
         };
       case 'scheduled':
         return {
-          bg: '#EBF3FE',
-          text: '#1976D2',
+          bg: isDark ? 'rgba(25, 118, 210, 0.18)' : '#EBF3FE',
+          text: isDark ? '#64B5F6' : '#1976D2',
           label: '🟡 UPCOMING',
         };
       case 'completed':
         return {
-          bg: '#EBFBEF',
-          text: '#2E7D32',
+          bg: isDark ? 'rgba(46, 125, 50, 0.18)' : '#EBFBEF',
+          text: isDark ? '#81C784' : '#2E7D32',
           label: '🟢 COMPLETED',
         };
       case 'cancelled':
         return {
-          bg: '#FCEBEB',
-          text: '#791F1F',
+          bg: isDark ? 'rgba(121, 31, 31, 0.18)' : '#FCEBEB',
+          text: isDark ? '#E57373' : '#791F1F',
           label: '⚪ CANCELLED',
         };
       case 'no_result':
         return {
-          bg: '#F5F5F5',
-          text: '#616161',
+          bg: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F5F5F5',
+          text: isDark ? '#B0BEC5' : '#616161',
           label: '⚪ NO RESULT',
         };
       default:
         return {
-          bg: '#F5F5F5',
-          text: '#616161',
+          bg: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F5F5F5',
+          text: isDark ? '#B0BEC5' : '#616161',
           label: `⚪ ${String(match.status).toUpperCase()}`,
         };
     }
@@ -157,19 +158,21 @@ export function MatchCard({ match, onPress }: MatchCardProps) {
       onPress={onPress}
     >
       <View style={styles.topRow}>
-        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-          <Text style={[styles.statusText, { color: statusStyle.text }]}>
+        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg, flexShrink: 0 }]}>
+          <Text style={[styles.statusText, { color: statusStyle.text }]} numberOfLines={1}>
             {statusStyle.label}
           </Text>
         </View>
-        {match.status === 'scheduled' ? (
-          <Text style={{ fontSize: 11, fontWeight: '600', color: theme.colors.textSecondary }}>
-            Lineups: {(match.team_a_lineup_set ? 1 : 0) + (match.team_b_lineup_set ? 1 : 0)}/2
+        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginLeft: 12 }}>
+          {match.status === 'scheduled' ? (
+            <Text style={{ fontSize: 11, fontWeight: '600', color: theme.colors.textSecondary, marginRight: 8 }} numberOfLines={1}>
+              Lineups: {(match.team_a_lineup_set ? 1 : 0) + (match.team_b_lineup_set ? 1 : 0)}/2
+            </Text>
+          ) : null}
+          <Text style={[styles.oversText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+            {match.overs} Overs • {match.scoring_mode === 'live' ? 'Live Scoring' : 'Simple Entry'}
           </Text>
-        ) : null}
-        <Text style={[styles.oversText, { color: theme.colors.textSecondary }]}>
-          {match.overs} Overs • {match.scoring_mode === 'live' ? 'Live Scoring' : 'Simple Entry'}
-        </Text>
+        </View>
       </View>
 
       <View style={styles.teamsContainer}>
@@ -298,6 +301,7 @@ const styles = StyleSheet.create({
   oversText: {
     fontSize: 11,
     fontWeight: '600',
+    flexShrink: 1,
   },
   teamsContainer: {
     flexDirection: 'row',

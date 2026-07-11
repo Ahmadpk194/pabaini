@@ -1946,11 +1946,11 @@ export class MatchesService {
     await this.matchRepo.manager.transaction(async (manager) => {
       const totalRunsThisBall = ballEvent.runs + ballEvent.extra_runs;
       if (match.current_innings === 1) {
-        match.innings_1_score -= totalRunsThisBall;
-        if (ballEvent.is_wicket) match.innings_1_wickets -= 1;
+        match.innings_1_score = Math.max(0, match.innings_1_score - totalRunsThisBall);
+        if (ballEvent.is_wicket) match.innings_1_wickets = Math.max(0, match.innings_1_wickets - 1);
       } else {
-        match.innings_2_score -= totalRunsThisBall;
-        if (ballEvent.is_wicket) match.innings_2_wickets -= 1;
+        match.innings_2_score = Math.max(0, match.innings_2_score - totalRunsThisBall);
+        if (ballEvent.is_wicket) match.innings_2_wickets = Math.max(0, match.innings_2_wickets - 1);
       }
 
       if (ballEvent.runs % 2 !== 0) {

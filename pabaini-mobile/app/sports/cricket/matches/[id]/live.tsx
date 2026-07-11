@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,7 +40,7 @@ import { SkeletonBox, SkeletonCircle } from '../../../../../src/components/skele
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function LiveViewerScreen() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const matchId = Number(id);
@@ -56,6 +57,7 @@ export default function LiveViewerScreen() {
   const [battersModalVisible, setBattersModalVisible] = useState(false);
   const [bowlerModalVisible, setBowlerModalVisible] = useState(false);
   const [overModalVisible, setOverModalVisible] = useState(false);
+  const [battersListExpanded, setBattersListExpanded] = useState(false);
 
   // UX Interaction States
   const [isFollowing, setIsFollowing] = useState(false);
@@ -237,6 +239,19 @@ export default function LiveViewerScreen() {
 
   // Innings 1 vs 2 status tracking
   const firstInningsScore = liveData.current_innings === 2 ? liveData.innings_1_score : null;
+
+  // Active batsman keys
+  const strikerKey = liveData?.striker ? (liveData.striker.id ? `p-${liveData.striker.id}` : null) : null;
+  const nonStrikerKey = liveData?.non_striker ? (liveData.non_striker.id ? `p-${liveData.non_striker.id}` : null) : null;
+
+  // Helper to extract player key
+  const getPlayerKey = (player: any) => {
+    return player.player_id ? `p-${player.player_id}` : `g-${player.guest_name}`;
+  };
+
+  const battingPlayers = lineup
+    ? (currentBattingTeamId === match?.team_a_id ? lineup.team_a.players : lineup.team_b.players)
+    : [];
 
   // Calculate dynamic stats for chase scenario
   const getChaseProgress = () => {
@@ -426,8 +441,16 @@ export default function LiveViewerScreen() {
             </TouchableOpacity>
 
             {/* MATCH SITUATION CARD */}
-            <View style={[styles.situationCard, { backgroundColor: '#F0F9EB', borderColor: '#E1F3D8' }]}>
-              <Text style={[styles.situationText, { color: '#67C23A' }]}>
+            <View
+              style={[
+                styles.situationCard,
+                {
+                  backgroundColor: mode === 'dark' ? 'rgba(76, 175, 80, 0.12)' : '#F0F9EB',
+                  borderColor: mode === 'dark' ? 'rgba(76, 175, 80, 0.25)' : '#E1F3D8',
+                },
+              ]}
+            >
+              <Text style={[styles.situationText, { color: mode === 'dark' ? '#81C784' : '#67C23A' }]}>
                 📢 {getMatchSituationMessage()}
               </Text>
             </View>
@@ -438,7 +461,10 @@ export default function LiveViewerScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   style={[styles.rosterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                  onPress={() => setBattersModalVisible(true)}
+                  onPress={() => {
+                    setBattersListExpanded(false);
+                    setBattersModalVisible(true);
+                  }}
                 >
                   <View style={styles.cardHeaderRow}>
                     <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>Batting</Text>
@@ -1137,7 +1163,8 @@ export default function LiveViewerScreen() {
           activeOpacity={1}
           onPress={() => setScoreModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
             <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
               Match Summary Details
@@ -1222,6 +1249,7 @@ export default function LiveViewerScreen() {
               <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1237,84 +1265,188 @@ export default function LiveViewerScreen() {
           activeOpacity={1}
           onPress={() => setBattersModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
-            <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
-              Batting Partnership Details
-            </Text>
 
-            <View style={{ alignItems: 'center', marginVertical: 12 }}>
-              <Text style={{ fontSize: 36, fontWeight: '800', color: theme.colors.primary }}>
-                {getPartnershipRuns()} Runs
-              </Text>
-              <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 4 }}>
-                Active Partnership Runs
+            {/* Title + partnership runs */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary, marginBottom: 0 }]}>Partnership</Text>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.primary }}>
+                {getPartnershipRuns()} runs
               </Text>
             </View>
 
-            {/* Innings Contribution comparison bar */}
+            {/* Slim contribution bar */}
             {(() => {
-              const strikerRuns = liveData?.striker?.runs || 0;
-              const nonStrikerRuns = liveData?.non_striker?.runs || 0;
-              const totalRuns = strikerRuns + nonStrikerRuns;
-              
-              const strikerPercent = totalRuns > 0 ? (strikerRuns / totalRuns) * 100 : 50;
-              const nonStrikerPercent = totalRuns > 0 ? (nonStrikerRuns / totalRuns) * 100 : 50;
-              
+              const sR = liveData?.striker?.runs || 0;
+              const nsR = liveData?.non_striker?.runs || 0;
+              const total = sR + nsR;
+              const sPct = total > 0 ? (sR / total) * 100 : 50;
+              const nsPct = 100 - sPct;
               return (
-                <View style={{ marginVertical: 12, width: '100%' }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary, marginBottom: 8, textAlign: 'center' }}>
-                    Innings Contribution Comparison
-                  </Text>
-                  
-                  <View style={{ height: 10, width: '100%', flexDirection: 'row', borderRadius: 5, overflow: 'hidden', backgroundColor: theme.colors.border }}>
-                    <View style={{ width: `${strikerPercent}%`, backgroundColor: theme.colors.primary }} />
-                    <View style={{ width: `${nonStrikerPercent}%`, backgroundColor: '#81C784' }} />
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ height: 6, flexDirection: 'row', borderRadius: 3, overflow: 'hidden', backgroundColor: theme.colors.border }}>
+                    <View style={{ width: `${sPct}%`, backgroundColor: theme.colors.primary }} />
+                    <View style={{ width: `${nsPct}%`, backgroundColor: '#81C784' }} />
                   </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                    <View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.textPrimary }}>
-                        {liveData?.striker?.name || 'Striker'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
-                        {strikerRuns} runs ({strikerPercent.toFixed(0)}%)
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '500', color: theme.colors.textSecondary }}>
-                        {liveData?.non_striker?.name || 'Non-Striker'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
-                        {nonStrikerRuns} runs ({nonStrikerPercent.toFixed(0)}%)
-                      </Text>
-                    </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
+                    <Text style={{ fontSize: 11, color: theme.colors.primary, fontWeight: '600' }}>
+                      {liveData?.striker?.name?.split(' ')[0]} · {sPct.toFixed(0)}%
+                    </Text>
+                    <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
+                      {liveData?.non_striker?.name?.split(' ')[0]} · {nsPct.toFixed(0)}%
+                    </Text>
                   </View>
                 </View>
               );
             })()}
 
-            <View style={{ height: 0.5, backgroundColor: theme.colors.border, width: '100%', marginVertical: 12 }} />
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginBottom: 12 }} />
 
-            <View style={{ gap: 8, width: '100%' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.textPrimary }}>
-                  🏏 {liveData?.striker?.name || 'No Striker'} *
-                </Text>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
-                  {liveData?.striker?.runs || 0} runs ({liveData?.striker?.balls || 0}b)
-                </Text>
+            {/* Player rows */}
+            <View style={{ gap: 10 }}>
+              {/* Striker */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: theme.colors.primary }} />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.textPrimary }}>
+                    {liveData?.striker?.name || 'Striker'} *
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary }}>
+                    {liveData?.striker?.runs || 0} ({liveData?.striker?.balls || 0}b)
+                  </Text>
+                </View>
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '500', color: theme.colors.textSecondary }}>
-                  {liveData?.non_striker?.name || 'No Non-Striker'}
-                </Text>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>
-                  {liveData?.non_striker?.runs || 0} runs ({liveData?.non_striker?.balls || 0}b)
-                </Text>
+              {/* Non-striker */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: theme.colors.border }} />
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.textSecondary }}>
+                    {liveData?.non_striker?.name || 'Non-Striker'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                    {liveData?.non_striker?.runs || 0} ({liveData?.non_striker?.balls || 0}b)
+                  </Text>
+                </View>
               </View>
             </View>
+
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginVertical: 14 }} />
+
+            {/* Innings Lineup Section Header */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setBattersListExpanded(!battersListExpanded)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Users size={15} color={theme.colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.textPrimary }}>
+                  Batting Order & Status
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: theme.colors.primary, fontWeight: '700' }}>
+                {battersListExpanded ? 'Collapse' : 'Expand'}
+              </Text>
+            </TouchableOpacity>
+
+            {battersListExpanded && (
+              <ScrollView
+                style={{ maxHeight: 150, marginTop: 4 }}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={{ gap: 6 }}
+              >
+                {battingPlayers.map((player, idx) => {
+                  const stat = liveData.live_player_stats?.find((s: any) =>
+                    player.player_id ? s.player_id === player.player_id : s.guest_name === player.guest_name
+                  );
+                  const status = stat?.status || 'not_batted';
+                  const runs = stat?.runs || 0;
+                  const balls = stat?.balls_faced || 0;
+
+                  // Determine styling and badges based on status
+                  let statusLabel = '';
+                  let statusBg = 'transparent';
+                  let statusColor = theme.colors.textSecondary;
+                  let isBold = false;
+                  let namePrefix = `${idx + 1}. `;
+
+                  if (status === 'batting') {
+                    const isStriker = strikerKey === getPlayerKey(player);
+                    statusLabel = isStriker ? 'Batting *' : 'Batting';
+                    statusBg = theme.colors.primary + '15';
+                    statusColor = theme.colors.primary;
+                    isBold = true;
+                  } else if (status === 'out') {
+                    const howOutText = stat?.how_out ? stat.how_out.replace('_', ' ') : 'out';
+                    statusLabel = `Out (${howOutText})`;
+                    statusBg = mode === 'dark' ? 'rgba(239, 83, 80, 0.15)' : '#FFCDD2';
+                    statusColor = mode === 'dark' ? '#E57373' : '#C62828';
+                  } else if (status === 'retired_hurt') {
+                    statusLabel = 'Retired Hurt';
+                    statusBg = mode === 'dark' ? 'rgba(255, 179, 0, 0.15)' : '#FFF9C4';
+                    statusColor = mode === 'dark' ? '#FFB300' : '#F57F17';
+                  } else if (status === 'retired_out') {
+                    statusLabel = 'Retired Out';
+                    statusBg = mode === 'dark' ? 'rgba(120, 144, 156, 0.15)' : '#CFD8DC';
+                    statusColor = mode === 'dark' ? '#90A4AE' : '#37474F';
+                  } else {
+                    statusLabel = 'Yet to bat';
+                    statusBg = mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5';
+                    statusColor = theme.colors.textSecondary;
+                  }
+
+                  return (
+                    <View
+                      key={getPlayerKey(player)}
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingVertical: 4,
+                        paddingHorizontal: 6,
+                        borderRadius: 4,
+                        backgroundColor: status === 'batting' ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)') : 'transparent',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12.5,
+                          color: isBold ? theme.colors.textPrimary : theme.colors.textSecondary,
+                          fontWeight: isBold ? '700' : '400',
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {namePrefix}{player.name}
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {(status === 'batting' || status === 'out' || status === 'retired_hurt' || status === 'retired_out') && (
+                          <Text style={{ fontSize: 12, fontWeight: isBold ? '700' : '500', color: theme.colors.textPrimary }}>
+                            {runs} ({balls}b)
+                          </Text>
+                        )}
+                        <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: statusBg }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: statusColor, textTransform: 'capitalize' }}>
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
 
             <TouchableOpacity
               activeOpacity={0.7}
@@ -1324,6 +1456,7 @@ export default function LiveViewerScreen() {
               <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1339,7 +1472,8 @@ export default function LiveViewerScreen() {
           activeOpacity={1}
           onPress={() => setBowlerModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
             <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
               Bowling Performance Details
@@ -1390,6 +1524,7 @@ export default function LiveViewerScreen() {
               <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1405,7 +1540,8 @@ export default function LiveViewerScreen() {
           activeOpacity={1}
           onPress={() => setOverModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
             <Text style={[styles.drawerTitleText, { color: theme.colors.textPrimary }]}>
               Over Ball-by-Ball Summary
@@ -1451,6 +1587,7 @@ export default function LiveViewerScreen() {
               <Text style={{ color: theme.colors.textPrimary, fontWeight: '600', fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1657,7 +1794,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   situationCard: {
-    paddingVertical: 8,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,

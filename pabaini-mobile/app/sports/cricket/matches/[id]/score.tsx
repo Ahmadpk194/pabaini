@@ -9,10 +9,11 @@ import {
   Alert,
   Modal,
   FlatList,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RotateCcw, ShieldAlert, Award, RefreshCw, Info, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, RotateCcw, ShieldAlert, Award, RefreshCw, Info, MoreVertical, Users } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../../src/context/ThemeContext';
 import { useSportsStore } from '../../../../../src/store/sports/sportsStore';
@@ -91,6 +92,7 @@ export default function ScorerScreen() {
   const [thisOverModalVisible, setThisOverModalVisible] = useState(false);
   const [extrasModalVisible, setExtrasModalVisible] = useState(false);
   const [expandedOvers, setExpandedOvers] = useState<Record<number, boolean>>({});
+  const [battersListExpanded, setBattersListExpanded] = useState(false);
 
   // Helper to parse liveData.extras string
   const parseExtras = (extrasStr: string | null | undefined) => {
@@ -799,8 +801,16 @@ export default function ScorerScreen() {
         </LinearGradient>
 
         {/* Match Situation Card */}
-        <View style={[styles.situationCard, { backgroundColor: '#F0F9EB', borderColor: '#E1F3D8' }]}>
-          <Text style={[styles.situationText, { color: '#67C23A' }]}>
+        <View
+          style={[
+            styles.situationCard,
+            {
+              backgroundColor: mode === 'dark' ? 'rgba(76, 175, 80, 0.12)' : '#F0F9EB',
+              borderColor: mode === 'dark' ? 'rgba(76, 175, 80, 0.25)' : '#E1F3D8',
+            },
+          ]}
+        >
+          <Text style={[styles.situationText, { color: mode === 'dark' ? '#81C784' : '#67C23A' }]}>
             📢 {getMatchSituationMessage()}
           </Text>
         </View>
@@ -811,7 +821,10 @@ export default function ScorerScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             style={[styles.rosterCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => setPartnershipModalVisible(true)}
+            onPress={() => {
+              setBattersListExpanded(false);
+              setPartnershipModalVisible(true);
+            }}
           >
             <View style={[styles.battersGridHeader, { borderBottomColor: theme.colors.border, marginTop: 2, alignItems: 'center' }]}>
               <View style={styles.colName}>
@@ -1131,7 +1144,8 @@ export default function ScorerScreen() {
           activeOpacity={1}
           onPress={() => setThisOverModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -1324,6 +1338,7 @@ export default function ScorerScreen() {
               <Text style={{ color: theme.colors.textPrimary, fontWeight: '700' }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1767,7 +1782,8 @@ export default function ScorerScreen() {
           activeOpacity={1}
           onPress={() => setPartnershipModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
 
             {/* Title + partnership runs */}
@@ -1889,6 +1905,116 @@ export default function ScorerScreen() {
               </TouchableOpacity>
             )}
 
+            {/* Divider */}
+            <View style={{ height: 0.5, backgroundColor: theme.colors.border, marginVertical: 14 }} />
+
+            {/* Innings Lineup Section Header */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setBattersListExpanded(!battersListExpanded)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Users size={15} color={theme.colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.textPrimary }}>
+                  Batting Order & Status
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: theme.colors.primary, fontWeight: '700' }}>
+                {battersListExpanded ? 'Collapse' : 'Expand'}
+              </Text>
+            </TouchableOpacity>
+
+            {battersListExpanded && (
+              <ScrollView
+                style={{ maxHeight: 150, marginTop: 4 }}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={{ gap: 6 }}
+              >
+                {battingPlayers.map((player, idx) => {
+                  const stat = liveData.live_player_stats?.find((s: any) =>
+                    player.player_id ? s.player_id === player.player_id : s.guest_name === player.guest_name
+                  );
+                  const status = stat?.status || 'not_batted';
+                  const runs = stat?.runs || 0;
+                  const balls = stat?.balls_faced || 0;
+
+                  // Determine styling and badges based on status
+                  let statusLabel = '';
+                  let statusBg = 'transparent';
+                  let statusColor = theme.colors.textSecondary;
+                  let isBold = false;
+                  let namePrefix = `${idx + 1}. `;
+
+                  if (status === 'batting') {
+                    const isStriker = strikerKey === getPlayerKey(player);
+                    statusLabel = isStriker ? 'Batting *' : 'Batting';
+                    statusBg = theme.colors.primary + '15';
+                    statusColor = theme.colors.primary;
+                    isBold = true;
+                  } else if (status === 'out') {
+                    const howOutText = stat?.how_out ? stat.how_out.replace('_', ' ') : 'out';
+                    statusLabel = `Out (${howOutText})`;
+                    statusBg = mode === 'dark' ? 'rgba(239, 83, 80, 0.15)' : '#FFCDD2';
+                    statusColor = mode === 'dark' ? '#E57373' : '#C62828';
+                  } else if (status === 'retired_hurt') {
+                    statusLabel = 'Retired Hurt';
+                    statusBg = mode === 'dark' ? 'rgba(255, 179, 0, 0.15)' : '#FFF9C4';
+                    statusColor = mode === 'dark' ? '#FFB300' : '#F57F17';
+                  } else if (status === 'retired_out') {
+                    statusLabel = 'Retired Out';
+                    statusBg = mode === 'dark' ? 'rgba(120, 144, 156, 0.15)' : '#CFD8DC';
+                    statusColor = mode === 'dark' ? '#90A4AE' : '#37474F';
+                  } else {
+                    statusLabel = 'Yet to bat';
+                    statusBg = mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5';
+                    statusColor = theme.colors.textSecondary;
+                  }
+
+                  return (
+                    <View
+                      key={getPlayerKey(player)}
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingVertical: 4,
+                        paddingHorizontal: 6,
+                        borderRadius: 4,
+                        backgroundColor: status === 'batting' ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)') : 'transparent',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12.5,
+                          color: isBold ? theme.colors.textPrimary : theme.colors.textSecondary,
+                          fontWeight: isBold ? '700' : '400',
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {namePrefix}{player.name}
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {(status === 'batting' || status === 'out' || status === 'retired_hurt' || status === 'retired_out') && (
+                          <Text style={{ fontSize: 12, fontWeight: isBold ? '700' : '500', color: theme.colors.textPrimary }}>
+                            {runs} ({balls}b)
+                          </Text>
+                        )}
+                        <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: statusBg }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: statusColor, textTransform: 'capitalize' }}>
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+
             {/* Close */}
             <TouchableOpacity
               activeOpacity={0.7}
@@ -1906,6 +2032,7 @@ export default function ScorerScreen() {
               <Text style={{ color: theme.colors.textSecondary, fontWeight: '600', fontSize: 14 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1921,7 +2048,8 @@ export default function ScorerScreen() {
           activeOpacity={1}
           onPress={() => setExtrasModalVisible(false)}
         >
-          <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.drawerContentContainer, { backgroundColor: theme.colors.surface, paddingBottom: Math.max(24, insets.bottom + 12) }]}>
             <View style={styles.drawerDragHandle} />
 
             {/* Title & Total Extras */}
@@ -1995,6 +2123,7 @@ export default function ScorerScreen() {
               <Text style={{ color: theme.colors.textSecondary, fontWeight: '600', fontSize: 14 }}>Close</Text>
             </TouchableOpacity>
           </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
@@ -2029,7 +2158,7 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     gap: 6,
   },
   gridRowText: {
